@@ -1,0 +1,1295 @@
+[
+    {
+        "name": "app-window",
+        "aliases": [
+            "fa-window-maximize"
+        ]
+    },
+    {
+        "name": "arrow-down",
+        "aliases": [
+            "fa-arrow-down"
+        ]
+    },
+    {
+        "name": "arrow-down-a-z",
+        "aliases": [
+            "fa-arrow-down-a-z"
+        ]
+    },
+    {
+        "name": "arrow-down-wide-narrow",
+        "aliases": [
+            "fa-arrow-down-9-1"
+        ]
+    },
+    {
+        "name": "arrow-left",
+        "aliases": [
+            "fa-arrow-left"
+        ]
+    },
+    {
+        "name": "arrow-right",
+        "aliases": [
+            "fa-arrow-right"
+        ]
+    },
+    {
+        "name": "arrow-right-left",
+        "aliases": [
+            "fa-arrow-right-arrow-left",
+            "fa-right-left"
+        ]
+    },
+    {
+        "name": "arrow-up",
+        "aliases": [
+            "fa-arrow-up"
+        ]
+    },
+    {
+        "name": "arrow-up-right-from-square",
+        "aliases": [
+            "fa-arrow-up-right-from-square"
+        ]
+    },
+    {
+        "name": "asterisk",
+        "aliases": [
+            "fa-asterisk",
+            "fa-star-of-life"
+        ]
+    },
+    {
+        "name": "at-sign",
+        "aliases": [
+            "fa-at"
+        ]
+    },
+    {
+        "name": "ban",
+        "aliases": [
+            "fa-ban"
+        ]
+    },
+    {
+        "name": "binary",
+        "aliases": [
+            "fa-1"
+        ]
+    },
+    {
+        "name": "bird",
+        "aliases": [
+            "fa-crow",
+            "fa-kiwi-bird"
+        ]
+    },
+    {
+        "name": "blocks",
+        "aliases": [
+            "fa-cubes"
+        ]
+    },
+    {
+        "name": "bolt",
+        "aliases": [
+            "fa-bolt"
+        ]
+    },
+    {
+        "name": "book",
+        "aliases": [
+            "fa-book"
+        ]
+    },
+    {
+        "name": "book-open",
+        "aliases": [
+            "fa-book-open-reader"
+        ]
+    },
+    {
+        "name": "book-open-text",
+        "aliases": [
+            "fa-book-atlas"
+        ]
+    },
+    {
+        "name": "book-user",
+        "aliases": [
+            "fa-passport"
+        ]
+    },
+    {
+        "name": "bookmark",
+        "aliases": [
+            "fa-bookmark"
+        ]
+    },
+    {
+        "name": "bot",
+        "aliases": [
+            "fa-robot"
+        ]
+    },
+    {
+        "name": "brain",
+        "aliases": [
+            "fa-brain"
+        ]
+    },
+    {
+        "name": "broom",
+        "aliases": [
+            "fa-broom"
+        ]
+    },
+    {
+        "name": "bug",
+        "aliases": [
+            "fa-bug",
+            "fa-frog"
+        ]
+    },
+    {
+        "name": "bug-off",
+        "aliases": [
+            "fa-bug-slash"
+        ]
+    },
+    {
+        "name": "calendar",
+        "aliases": [
+            "fa-calendar"
+        ]
+    },
+    {
+        "name": "camera",
+        "aliases": [
+            "fa-camera"
+        ]
+    },
+    {
+        "name": "chart-bar",
+        "aliases": [
+            "fa-square-poll-horizontal"
+        ]
+    },
+    {
+        "name": "chart-no-axes-combined",
+        "aliases": [
+            "fa-ranking-star"
+        ]
+    },
+    {
+        "name": "check",
+        "aliases": [
+            "fa-check"
+        ]
+    },
+    {
+        "name": "check-check",
+        "aliases": [
+            "fa-check-double"
+        ]
+    },
+    {
+        "name": "check-circle",
+        "aliases": [
+            "fa-check-circle"
+        ]
+    },
+    {
+        "name": "check-square",
+        "aliases": [
+            "fa-check-square"
+        ]
+    },
+    {
+        "name": "chevron-down",
+        "aliases": [
+            "fa-chevron-down"
+        ]
+    },
+    {
+        "name": "chevron-left",
+        "aliases": [
+            "fa-chevron-left"
+        ]
+    },
+    {
+        "name": "chevron-right",
+        "aliases": [
+            "fa-chevron-right"
+        ]
+    },
+    {
+        "name": "chevron-up",
+        "aliases": [
+            "fa-chevron-up"
+        ]
+    },
+    {
+        "name": "circle-alert",
+        "aliases": [
+            "fa-circle-exclamation",
+            "fa-exclamation-circle"
+        ]
+    },
+    {
+        "name": "circle-arrow-right",
+        "aliases": [
+            "fa-arrow-alt-circle-right"
+        ]
+    },
+    {
+        "name": "circle-check",
+        "aliases": [
+            "fa-circle-check"
+        ]
+    },
+    {
+        "name": "circle-chevron-down",
+        "aliases": [
+            "fa-circle-chevron-down"
+        ]
+    },
+    {
+        "name": "circle-chevron-up",
+        "aliases": [
+            "fa-circle-chevron-up"
+        ]
+    },
+    {
+        "name": "circle-help",
+        "aliases": [
+            "fa-circle-question",
+            "fa-question",
+            "fa-question-circle"
+        ]
+    },
+    {
+        "name": "circle-play",
+        "aliases": [
+            "fa-circle-play"
+        ]
+    },
+    {
+        "name": "circle-stop",
+        "aliases": [
+            "fa-circle-stop"
+        ]
+    },
+    {
+        "name": "circle-user-round",
+        "aliases": [
+            "fa-circle-user"
+        ]
+    },
+    {
+        "name": "circle-x",
+        "aliases": [
+            "fa-circle-xmark"
+        ]
+    },
+    {
+        "name": "clipboard-paste",
+        "aliases": [
+            "fa-paste"
+        ]
+    },
+    {
+        "name": "cloud-download",
+        "aliases": [
+            "fa-cloud-arrow-down"
+        ]
+    },
+    {
+        "name": "contact",
+        "aliases": [
+            "fa-address-book"
+        ]
+    },
+    {
+        "name": "contact-round",
+        "aliases": [
+            "fa-address-card",
+            "fa-user-tie"
+        ]
+    },
+    {
+        "name": "copy",
+        "aliases": [
+            "fa-clone",
+            "fa-copy"
+        ]
+    },
+    {
+        "name": "corner-right-up",
+        "aliases": [
+            "fa-arrow-turn-up"
+        ]
+    },
+    {
+        "name": "crown",
+        "aliases": [
+            "fa-crown"
+        ]
+    },
+    {
+        "name": "database",
+        "aliases": [
+            "fa-database"
+        ]
+    },
+    {
+        "name": "download",
+        "aliases": [
+            "fa-download"
+        ]
+    },
+    {
+        "name": "ellipsis",
+        "aliases": [
+            "fa-ellipsis"
+        ]
+    },
+    {
+        "name": "ellipsis-vertical",
+        "aliases": [
+            "fa-ellipsis-vertical"
+        ]
+    },
+    {
+        "name": "expand",
+        "aliases": [
+            "fa-expand"
+        ]
+    },
+    {
+        "name": "external-link",
+        "aliases": [
+            "fa-up-right-from-square"
+        ]
+    },
+    {
+        "name": "eye",
+        "aliases": [
+            "fa-eye"
+        ]
+    },
+    {
+        "name": "eye-off",
+        "aliases": [
+            "fa-eye-slash"
+        ]
+    },
+    {
+        "name": "file",
+        "aliases": [
+            "fa-file"
+        ]
+    },
+    {
+        "name": "file-archive",
+        "aliases": [
+            "fa-file-zipper"
+        ]
+    },
+    {
+        "name": "file-input",
+        "aliases": [
+            "fa-file-import"
+        ]
+    },
+    {
+        "name": "file-output",
+        "aliases": [
+            "fa-file-export"
+        ]
+    },
+    {
+        "name": "file-plus-2",
+        "aliases": [
+            "fa-file-circle-plus"
+        ]
+    },
+    {
+        "name": "file-text",
+        "aliases": [
+            "fa-file-alt",
+            "fa-file-lines"
+        ]
+    },
+    {
+        "name": "file-up",
+        "aliases": [
+            "fa-file-arrow-up"
+        ]
+    },
+    {
+        "name": "film",
+        "aliases": [
+            "fa-film"
+        ]
+    },
+    {
+        "name": "filter-x",
+        "aliases": [
+            "fa-filter-circle-xmark"
+        ]
+    },
+    {
+        "name": "flag",
+        "aliases": [
+            "fa-flag"
+        ]
+    },
+    {
+        "name": "flag-triangle-right",
+        "aliases": [
+            "fa-flag-checkered"
+        ]
+    },
+    {
+        "name": "flame",
+        "aliases": [
+            "fa-dragon",
+            "fa-fire"
+        ]
+    },
+    {
+        "name": "flask-conical",
+        "aliases": [
+            "fa-flask"
+        ]
+    },
+    {
+        "name": "folder",
+        "aliases": [
+            "fa-folder"
+        ]
+    },
+    {
+        "name": "folder-input",
+        "aliases": [
+            "fa-truck-arrow-right"
+        ]
+    },
+    {
+        "name": "folder-minus",
+        "aliases": [
+            "fa-folder-minus"
+        ]
+    },
+    {
+        "name": "folder-open",
+        "aliases": [
+            "fa-folder-open"
+        ]
+    },
+    {
+        "name": "folder-plus",
+        "aliases": [
+            "fa-folder-plus"
+        ]
+    },
+    {
+        "name": "folder-tree",
+        "aliases": [
+            "fa-folder-tree"
+        ]
+    },
+    {
+        "name": "footprints",
+        "aliases": [
+            "fa-shoe-prints"
+        ]
+    },
+    {
+        "name": "ghost",
+        "aliases": [
+            "fa-ghost"
+        ]
+    },
+    {
+        "name": "git-branch",
+        "aliases": [
+            "fa-code-branch"
+        ]
+    },
+    {
+        "name": "git-compare",
+        "aliases": [
+            "fa-code-compare"
+        ]
+    },
+    {
+        "name": "globe",
+        "aliases": [
+            "fa-globe"
+        ]
+    },
+    {
+        "name": "graduation-cap",
+        "aliases": [
+            "fa-user-graduate"
+        ]
+    },
+    {
+        "name": "grid-2x2",
+        "aliases": [
+            "fa-table-cells-large"
+        ]
+    },
+    {
+        "name": "grip",
+        "aliases": [
+            "fa-grip"
+        ]
+    },
+    {
+        "name": "grip-vertical",
+        "aliases": [
+            "fa-grip-vertical"
+        ]
+    },
+    {
+        "name": "hard-drive",
+        "aliases": [
+            "fa-hdd"
+        ]
+    },
+    {
+        "name": "headphones",
+        "aliases": [
+            "fa-headphones-simple"
+        ]
+    },
+    {
+        "name": "history",
+        "aliases": [
+            "fa-clock-rotate-left"
+        ]
+    },
+    {
+        "name": "hourglass",
+        "aliases": [
+            "fa-hourglass",
+            "fa-hourglass-half"
+        ]
+    },
+    {
+        "name": "image",
+        "aliases": [
+            "fa-image",
+            "fa-panorama"
+        ]
+    },
+    {
+        "name": "images",
+        "aliases": [
+            "fa-images",
+            "fa-photo-film"
+        ]
+    },
+    {
+        "name": "info",
+        "aliases": [
+            "fa-circle-info",
+            "fa-info-circle"
+        ]
+    },
+    {
+        "name": "key",
+        "aliases": [
+            "fa-key"
+        ]
+    },
+    {
+        "name": "keyboard",
+        "aliases": [
+            "fa-keyboard"
+        ]
+    },
+    {
+        "name": "languages",
+        "aliases": [
+            "fa-language"
+        ]
+    },
+    {
+        "name": "layers",
+        "aliases": [
+            "fa-layer-group"
+        ]
+    },
+    {
+        "name": "lightbulb",
+        "aliases": [
+            "fa-lightbulb"
+        ]
+    },
+    {
+        "name": "link",
+        "aliases": [
+            "fa-chain",
+            "fa-link"
+        ]
+    },
+    {
+        "name": "list",
+        "aliases": [
+            "fa-list-ul"
+        ]
+    },
+    {
+        "name": "list-ordered",
+        "aliases": [
+            "fa-list-ol"
+        ]
+    },
+    {
+        "name": "loader-circle",
+        "aliases": [
+            "fa-spinner"
+        ]
+    },
+    {
+        "name": "lock",
+        "aliases": [
+            "fa-lock"
+        ]
+    },
+    {
+        "name": "lock-open",
+        "aliases": [
+            "fa-lock-open"
+        ]
+    },
+    {
+        "name": "log-out",
+        "aliases": [
+            "fa-right-from-bracket"
+        ]
+    },
+    {
+        "name": "mail-open",
+        "aliases": [
+            "fa-envelope-open-text"
+        ]
+    },
+    {
+        "name": "maximize",
+        "aliases": [
+            "fa-maximize"
+        ]
+    },
+    {
+        "name": "megaphone",
+        "aliases": [
+            "fa-bullhorn"
+        ]
+    },
+    {
+        "name": "memory-stick",
+        "aliases": [
+            "fa-sd-card"
+        ]
+    },
+    {
+        "name": "menu",
+        "aliases": [
+            "fa-bars"
+        ]
+    },
+    {
+        "name": "message-circle",
+        "aliases": [
+            "fa-comment"
+        ]
+    },
+    {
+        "name": "message-circle-more",
+        "aliases": [
+            "fa-comment-dots"
+        ]
+    },
+    {
+        "name": "message-circle-off",
+        "aliases": [
+            "fa-comment-slash"
+        ]
+    },
+    {
+        "name": "message-square",
+        "aliases": [
+            "fa-message"
+        ]
+    },
+    {
+        "name": "messages-square",
+        "aliases": [
+            "fa-comments"
+        ]
+    },
+    {
+        "name": "minimize",
+        "aliases": [
+            "fa-minimize"
+        ]
+    },
+    {
+        "name": "minimize-2",
+        "aliases": [
+            "fa-compress"
+        ]
+    },
+    {
+        "name": "minus",
+        "aliases": [
+            "fa-minus"
+        ]
+    },
+    {
+        "name": "monitor",
+        "aliases": [
+            "fa-desktop"
+        ]
+    },
+    {
+        "name": "move",
+        "aliases": [
+            "fa-arrows-alt"
+        ]
+    },
+    {
+        "name": "move-left",
+        "aliases": [
+            "fa-left-long"
+        ]
+    },
+    {
+        "name": "music",
+        "aliases": [
+            "fa-music"
+        ]
+    },
+    {
+        "name": "notebook-pen",
+        "aliases": [
+            "fa-notes-medical"
+        ]
+    },
+    {
+        "name": "package-open",
+        "aliases": [
+            "fa-box-open"
+        ]
+    },
+    {
+        "name": "paintbrush",
+        "aliases": [
+            "fa-paintbrush"
+        ]
+    },
+    {
+        "name": "palette",
+        "aliases": [
+            "fa-palette"
+        ]
+    },
+    {
+        "name": "panels-top-left",
+        "aliases": [
+            "fa-window-restore"
+        ]
+    },
+    {
+        "name": "paperclip",
+        "aliases": [
+            "fa-paperclip"
+        ]
+    },
+    {
+        "name": "pause",
+        "aliases": [
+            "fa-pause"
+        ]
+    },
+    {
+        "name": "pencil",
+        "aliases": [
+            "fa-pencil"
+        ]
+    },
+    {
+        "name": "pie-chart",
+        "aliases": [
+            "fa-pie-chart"
+        ]
+    },
+    {
+        "name": "pin",
+        "aliases": [
+            "fa-thumb-tack",
+            "fa-thumbtack"
+        ]
+    },
+    {
+        "name": "plane",
+        "aliases": [
+            "fa-plane-slash"
+        ]
+    },
+    {
+        "name": "play",
+        "aliases": [
+            "fa-play"
+        ]
+    },
+    {
+        "name": "plug",
+        "aliases": [
+            "fa-plug"
+        ]
+    },
+    {
+        "name": "plug-zap",
+        "aliases": [
+            "fa-plug-circle-check"
+        ]
+    },
+    {
+        "name": "plus",
+        "aliases": [
+            "fa-plus"
+        ]
+    },
+    {
+        "name": "plus-square",
+        "aliases": [
+            "fa-plus-square"
+        ]
+    },
+    {
+        "name": "power-off",
+        "aliases": [
+            "fa-power-off"
+        ]
+    },
+    {
+        "name": "quote",
+        "aliases": [
+            "fa-quote-left"
+        ]
+    },
+    {
+        "name": "radio",
+        "aliases": [
+            "fa-radio"
+        ]
+    },
+    {
+        "name": "recycle",
+        "aliases": [
+            "fa-recycle"
+        ]
+    },
+    {
+        "name": "redo",
+        "aliases": [
+            "fa-redo"
+        ]
+    },
+    {
+        "name": "refresh-cw",
+        "aliases": [
+            "fa-arrows-rotate",
+            "fa-sync"
+        ]
+    },
+    {
+        "name": "repeat",
+        "aliases": [
+            "fa-repeat"
+        ]
+    },
+    {
+        "name": "rocket",
+        "aliases": [
+            "fa-rocket"
+        ]
+    },
+    {
+        "name": "rotate-ccw",
+        "aliases": [
+            "fa-rotate-left"
+        ]
+    },
+    {
+        "name": "rotate-cw",
+        "aliases": [
+            "fa-arrow-right-rotate"
+        ]
+    },
+    {
+        "name": "save",
+        "aliases": [
+            "fa-floppy-disk",
+            "fa-save"
+        ]
+    },
+    {
+        "name": "scale",
+        "aliases": [
+            "fa-scale-balanced"
+        ]
+    },
+    {
+        "name": "scissors",
+        "aliases": [
+            "fa-cut",
+            "fa-scissors"
+        ]
+    },
+    {
+        "name": "scroll",
+        "aliases": [
+            "fa-scroll"
+        ]
+    },
+    {
+        "name": "search",
+        "aliases": [
+            "fa-magnifying-glass",
+            "fa-search"
+        ]
+    },
+    {
+        "name": "send",
+        "aliases": [
+            "fa-paper-plane"
+        ]
+    },
+    {
+        "name": "server",
+        "aliases": [
+            "fa-server"
+        ]
+    },
+    {
+        "name": "settings",
+        "aliases": [
+            "fa-cog",
+            "fa-gear"
+        ]
+    },
+    {
+        "name": "share",
+        "aliases": [
+            "fa-share-from-square"
+        ]
+    },
+    {
+        "name": "skull",
+        "aliases": [
+            "fa-skull"
+        ]
+    },
+    {
+        "name": "sliders-horizontal",
+        "aliases": [
+            "fa-sliders"
+        ]
+    },
+    {
+        "name": "smartphone",
+        "aliases": [
+            "fa-mobile-screen-button"
+        ]
+    },
+    {
+        "name": "smile",
+        "aliases": [
+            "fa-face-smile"
+        ]
+    },
+    {
+        "name": "square",
+        "aliases": [
+            "fa-square",
+            "fa-stop"
+        ]
+    },
+    {
+        "name": "square-pen",
+        "aliases": [
+            "fa-edit",
+            "fa-pen-to-square"
+        ]
+    },
+    {
+        "name": "square-user-round",
+        "aliases": [
+            "fa-image-portrait"
+        ]
+    },
+    {
+        "name": "squirrel",
+        "aliases": [
+            "fa-otter"
+        ]
+    },
+    {
+        "name": "star",
+        "aliases": [
+            "fa-star"
+        ]
+    },
+    {
+        "name": "sticky-note",
+        "aliases": [
+            "fa-note-sticky"
+        ]
+    },
+    {
+        "name": "stop-circle",
+        "aliases": [
+            "fa-stop-circle"
+        ]
+    },
+    {
+        "name": "syringe",
+        "aliases": [
+            "fa-syringe"
+        ]
+    },
+    {
+        "name": "tags",
+        "aliases": [
+            "fa-tags"
+        ]
+    },
+    {
+        "name": "terminal",
+        "aliases": [
+            "fa-terminal"
+        ]
+    },
+    {
+        "name": "test-tube-diagonal",
+        "aliases": [
+            "fa-vial"
+        ]
+    },
+    {
+        "name": "thumbs-up",
+        "aliases": [
+            "fa-thumbs-up"
+        ]
+    },
+    {
+        "name": "toggle-left",
+        "aliases": [
+            "fa-toggle-off"
+        ]
+    },
+    {
+        "name": "toggle-right",
+        "aliases": [
+            "fa-toggle-on"
+        ]
+    },
+    {
+        "name": "trash",
+        "aliases": [
+            "fa-trash"
+        ]
+    },
+    {
+        "name": "trash-2",
+        "aliases": [
+            "fa-trash-alt",
+            "fa-trash-can"
+        ]
+    },
+    {
+        "name": "triangle-alert",
+        "aliases": [
+            "fa-exclamation-triangle",
+            "fa-triangle-exclamation"
+        ]
+    },
+    {
+        "name": "trophy",
+        "aliases": [
+            "fa-trophy"
+        ]
+    },
+    {
+        "name": "type",
+        "aliases": [
+            "fa-font"
+        ]
+    },
+    {
+        "name": "undo",
+        "aliases": [
+            "fa-undo"
+        ]
+    },
+    {
+        "name": "unlink",
+        "aliases": [
+            "fa-chain-broken",
+            "fa-link-slash"
+        ]
+    },
+    {
+        "name": "unlock",
+        "aliases": [
+            "fa-unlock"
+        ]
+    },
+    {
+        "name": "unplug",
+        "aliases": [
+            "fa-plug-circle-exclamation"
+        ]
+    },
+    {
+        "name": "upload",
+        "aliases": [
+            "fa-upload"
+        ]
+    },
+    {
+        "name": "user",
+        "aliases": [
+            "fa-user"
+        ]
+    },
+    {
+        "name": "user-check",
+        "aliases": [
+            "fa-user-check"
+        ]
+    },
+    {
+        "name": "user-pen",
+        "aliases": [
+            "fa-user-pen"
+        ]
+    },
+    {
+        "name": "user-plus",
+        "aliases": [
+            "fa-user-plus"
+        ]
+    },
+    {
+        "name": "user-round-cog",
+        "aliases": [
+            "fa-user-cog"
+        ]
+    },
+    {
+        "name": "user-round-search",
+        "aliases": [
+            "fa-person-circle-question"
+        ]
+    },
+    {
+        "name": "user-round-x",
+        "aliases": [
+            "fa-user-slash"
+        ]
+    },
+    {
+        "name": "user-shield",
+        "aliases": [
+            "fa-user-shield"
+        ]
+    },
+    {
+        "name": "users",
+        "aliases": [
+            "fa-users"
+        ]
+    },
+    {
+        "name": "users-round",
+        "aliases": [
+            "fa-people-arrows",
+            "fa-people-group",
+            "fa-users-gear"
+        ]
+    },
+    {
+        "name": "venetian-mask",
+        "aliases": [
+            "fa-user-secret"
+        ]
+    },
+    {
+        "name": "volume-1",
+        "aliases": [
+            "fa-volume-low"
+        ]
+    },
+    {
+        "name": "volume-2",
+        "aliases": [
+            "fa-volume-high"
+        ]
+    },
+    {
+        "name": "volume-off",
+        "aliases": [
+            "fa-volume-off"
+        ]
+    },
+    {
+        "name": "volume-x",
+        "aliases": [
+            "fa-volume-xmark"
+        ]
+    },
+    {
+        "name": "vote",
+        "aliases": [
+            "fa-check-to-slot"
+        ]
+    },
+    {
+        "name": "wand",
+        "aliases": [
+            "fa-wand-magic"
+        ]
+    },
+    {
+        "name": "wand-sparkles",
+        "aliases": [
+            "fa-magic-wand-sparkles",
+            "fa-wand-magic-sparkles"
+        ]
+    },
+    {
+        "name": "wrench",
+        "aliases": [
+            "fa-wrench"
+        ]
+    },
+    {
+        "name": "x",
+        "aliases": [
+            "fa-close",
+            "fa-times",
+            "fa-x",
+            "fa-xmark"
+        ]
+    }
+]

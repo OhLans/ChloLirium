@@ -1,0 +1,85 @@
+/* New controls can use class="cl-icon cl-icon-settings"; old fa-* classes keep working. */
+html[data-icon-set="lucide"] .cl-icon {
+    display: inline-block;
+    font-style: normal;
+    line-height: 1;
+}
+
+/* Native controls that draw an icon directly in a pseudo-element. */
+html[data-icon-set="lucide"] .menu_button.toggleable::before,
+html[data-icon-set="lucide"] .bg_example.locked-background::after,
+html[data-icon-set="lucide"] .bg_example.selected-background::before,
+html[data-icon-set="lucide"] #Backgrounds.bg-selection-mode #bg_menu_content .bg_example.folder-group-selected::before,
+html[data-icon-set="lucide"] .rm_tag_bogus_drilldown .tag:not(:first-child)::before {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    background-color: currentColor;
+    -webkit-mask: var(--cl-icon) center / contain no-repeat;
+    mask: var(--cl-icon) center / contain no-repeat;
+    pointer-events: none;
+}
+
+html[data-icon-set="lucide"] .menu_button.toggleable.toggled::before,
+html[data-icon-set="lucide"] .bg_example.selected-background::before,
+html[data-icon-set="lucide"] #Backgrounds.bg-selection-mode #bg_menu_content .bg_example.folder-group-selected::before {
+    --cl-icon: var(--cl-lucide-check);
+}
+
+html[data-icon-set="lucide"] .menu_button.toggleable:not(.toggled)::before {
+    --cl-icon: var(--cl-lucide-x);
+}
+
+html[data-icon-set="lucide"] .bg_example.locked-background::after {
+    --cl-icon: var(--cl-lucide-lock);
+}
+
+html[data-icon-set="lucide"] .rm_tag_bogus_drilldown .tag:not(:first-child)::before {
+    --cl-icon: var(--cl-lucide-chevron-right);
+}
+
+/* Moonlit keeps its layout, click handlers, portraits, and 20px icon geometry.
+   Only replace its bundled mask images; no extension update or DOM observer is needed. */
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="aiconfig"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-sliders-horizontal);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="api"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-plug);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="formatting"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-type);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="worldinfo"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-book-open-text);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="usersettings"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-user-round-cog);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="backgrounds"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-image);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="extensions"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-blocks);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="quickreplies"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-message-square);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-top-worldinfo > .stwii--trigger > .rni-worldinfo-icon {
+    -webkit-mask-image: var(--cl-lucide-book-open-text) !important;
+    mask-image: var(--cl-lucide-book-open-text) !important;
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled .rn-manager-duplicate[data-rn-manager-duplicate="characters"]:not(.stcs--char) .rn-manager-fallback::before,
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled.rivelle-navigator-enabled #rightNavHolder > .drawer-toggle:not(.stcs--char)::before {
+    -webkit-mask-image: var(--cl-lucide-contact-round) !important;
+    mask-image: var(--cl-lucide-contact-round) !important;
+}
