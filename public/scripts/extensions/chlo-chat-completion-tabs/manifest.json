@@ -1,0 +1,18 @@
+{
+    "display_name": "Chat Completion Tabs",
+    "description": "Adds tabs to the Chat Completion presets settings.",
+    "loading_order": 10,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Rivelle <rivelle.days@gmail.com>",
+    "version": "1.0.0",
+    "license": "AGPL-3.0",
+    "homepage": "https://github.com/RivelleDays/SillyTavern-ChatCompletionTabs",
+    "auto_update": false,
+    "i18n": {
+        "zh-tw": "i18n/zh-tw.json",
+        "zh-cn": "i18n/zh-cn.json"
+    }
+}

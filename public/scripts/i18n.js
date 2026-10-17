@@ -151,7 +151,10 @@ function findLang(language) {
  * @param {Element} element The element to translate
  */
 function translateElement(element) {
-    const keys = element.getAttribute('data-i18n').split(';'); // Multi-key entries are ; delimited
+    const translation = element.getAttribute('data-i18n');
+    // A queued observer record can outlive an attribute removed by a UI module.
+    if (translation === null) return;
+    const keys = translation.split(';'); // Multi-key entries are ; delimited
     for (const key of keys) {
         const attributeMatch = key.match(/\[(\S+)\](.+)/); // [attribute]key
         if (attributeMatch) { // attribute-tagged key

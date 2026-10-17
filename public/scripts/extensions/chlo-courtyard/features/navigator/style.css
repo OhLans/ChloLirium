@@ -1,0 +1,899 @@
+:root {
+    --rn-rail: 48px;
+
+    /* Follow Moonlit Echoes instead of maintaining a second sizing system. */
+    --rn-top: var(--topBarBlockSize, 42px);
+    --rn-switch-size: var(--stis--iconSize, min(calc(var(--rn-top) - 8px), calc(var(--topBarIconSize, 24px) + 2px)));
+    --rn-top-inset: 10px;
+    --rn-switch-gap: 6px;
+
+    /* Larger portrait buttons used in the left manager section. */
+    --rn-manager-size: 42px;
+
+    /*
+     * Moonlit's "Top Menu Color" setting writes --customTopBarColor,
+     * including its alpha channel. Using it directly means changing the
+     * transparency in Moonlit immediately changes Rivelle Navigator too.
+     */
+    --rn-surface: var(--customTopBarColor, var(--SmartThemeBlurTintColor, #111));
+
+    --rn-line: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 5%, transparent);
+    --rn-text: var(--SmartThemeBodyColor, #ddd);
+    --rn-accent: var(--customThemeColor, var(--SmartThemeQuoteColor, #bbb));
+}
+
+#rn-shell {
+    display: none;
+}
+
+@media (min-width: 1050px) {
+    body.rivelle-navigator-enabled #rn-shell {
+        display: contents;
+    }
+
+    #rn-left-rail {
+        position: absolute;
+        z-index: 9200;
+        inset: 0 auto 0 0;
+        width: var(--rn-rail);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        box-sizing: border-box;
+        padding: 0 5px 8px;
+        color: var(--rn-text);
+        /*
+         * Match Moonlit's native navigation glass instead of only restoring
+         * transparency. Moonlit's own #top-bar uses:
+         *   backdrop-filter: blur(var(--SmartThemeBlurStrength))
+         *
+         * We keep the expensive large shadow disabled; the blur itself is the
+         * part needed for the correct frosted appearance.
+         */
+        background-color: var(--rn-surface);
+        border-right: 1px solid var(--rn-line);
+        backdrop-filter: blur(var(--SmartThemeBlurStrength, 8px));
+        -webkit-backdrop-filter: blur(var(--SmartThemeBlurStrength, 8px));
+        box-shadow: none !important;
+        contain: layout style;
+        isolation: isolate;
+        backface-visibility: hidden;
+        pointer-events: auto !important;
+        transition: transform .18s ease;
+    }
+
+    #rn-top-bar {
+        position: absolute;
+        z-index: 3004;
+        top: 0;
+        left: var(--rn-rail);
+        right: 0;
+        height: var(--rn-top);
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 8px;
+        padding: 0 var(--rn-top-inset);
+        box-sizing: border-box;
+        color: var(--rn-text);
+        /*
+         * Use Moonlit's native top-bar blur strength so the custom Navigator
+         * visually matches the theme again. The old 15px shadow remains off
+         * because it is unnecessary and comparatively expensive.
+         */
+        background-color: var(--rn-surface);
+        border-bottom: 1.25px solid var(--rn-line);
+        box-shadow: none !important;
+        backdrop-filter: blur(var(--SmartThemeBlurStrength, 8px));
+        -webkit-backdrop-filter: blur(var(--SmartThemeBlurStrength, 8px));
+        contain: layout style;
+        isolation: isolate;
+        backface-visibility: hidden;
+        pointer-events: auto !important;
+        transition: left .18s ease, padding-left .18s ease;
+    }
+
+
+    /*
+     * WorldInfo Info integration
+     * --------------------------
+     * This is the extension's REAL .stwii--trigger, moved into the top-left
+     * slot that used to contain our Chat button. Its own click, right-click,
+     * badge counter, animations and title remain attached.
+     */
+    #rn-top-worldinfo {
+        justify-self: start;
+        height: var(--rn-top);
+        min-width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        pointer-events: auto;
+    }
+
+    body.rivelle-navigator-enabled #rn-top-worldinfo > .stwii--trigger {
+        position: relative !important;
+        inset: auto !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+
+        width: 36px !important;
+        height: var(--rn-top) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+
+        display: grid !important;
+        place-items: center !important;
+
+        /*
+         * Match the regular left-rail utility icons exactly.
+         * WorldInfo Info still owns the glyph, badge and behavior.
+         */
+        font-size: 17px !important;
+        line-height: 1 !important;
+
+        z-index: auto !important;
+        anchor-name: none !important;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    body.rivelle-navigator-enabled #rn-top-worldinfo > .stwii--trigger::after {
+        /*
+         * Keep WorldInfo Info's count badge, but anchor it cleanly inside the
+         * navigator button rather than to viewport coordinates.
+         */
+        bottom: 2px !important;
+        right: 0 !important;
+    }
+
+    .rn-nav-button,
+    .rn-top-icon,
+    #rn-reopen {
+        pointer-events: auto !important;
+        border: 0;
+        color: inherit;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    #rn-primary-action,
+    #rn-left-actions {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /*
+     * Lock the first rail row directly to the horizontal top bar instead of
+     * allowing flexbox spacing/intrinsic button size to move its boundary.
+     *
+     * The button itself remains 36x36. Only its row position is fixed.
+     */
+    #rn-primary-action {
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: var(--rn-top);
+        min-height: var(--rn-top);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+    }
+
+    /*
+     * Place the small rail separator on the exact same Y coordinate as the
+     * top bar's bottom border.
+     */
+    .rn-divider {
+        position: absolute;
+        top: calc(var(--rn-top) - 1px);
+        left: 0;
+        transform: none;
+
+        width: 100%;
+        height: 1px;
+        margin: 0;
+        background: var(--rn-line);
+    }
+
+    /*
+     * The remaining rail begins immediately below that shared boundary.
+     * 4px preserves the old breathing room without moving the divider.
+     */
+    #rn-left-actions {
+        margin-top: calc(var(--rn-top) + 4px);
+    }
+
+    .rn-nav-button.rn-integration-missing {
+        display: none !important;
+    }
+
+    .rn-nav-button {
+        position: relative;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border-radius: 9px;
+        opacity: .58;
+        font-size: 15px;
+    }
+
+    .rn-primary-button {
+        opacity: .86;
+    }
+
+    /*
+     * Keep the navigator visually neutral.
+     * User CSS snippets own hover/active animations; Rivelle Navigator does
+     * not add a gray selection box or a delayed accent line.
+     */
+    .rn-nav-button:hover,
+    .rn-top-icon:hover,
+    .rn-nav-button.active,
+    .rn-top-icon.active {
+        opacity: 1;
+        background: transparent !important;
+    }
+
+    .rn-nav-button.active::after {
+        content: none !important;
+        display: none !important;
+    }
+
+
+    /*
+     * Character / Persona manager duplicates
+     * ---------------------------------------
+     * The top-right native controls remain untouched. These are additional
+     * left-rail portrait buttons that proxy those same native toggles.
+     */
+    #rn-manager-duplicates {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 8px;
+    }
+
+    .rn-manager-divider {
+        width: 100%;
+        height: 1px;
+        flex: 0 0 1px;
+        margin: 0 0 8px;
+        background: var(--rn-line);
+    }
+
+    #rn-manager-duplicate-buttons {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rn-manager-duplicate {
+        position: relative;
+
+        width: var(--rn-manager-size);
+        height: var(--rn-manager-size);
+        min-width: var(--rn-manager-size);
+        min-height: var(--rn-manager-size);
+
+        padding: 0;
+        margin: 0;
+        border: 0;
+        border-radius: 50%;
+
+        display: grid;
+        place-items: center;
+
+        color: inherit;
+        background: transparent;
+        cursor: pointer;
+
+        opacity: .82;
+        overflow: hidden;
+        box-sizing: border-box;
+
+        transition: opacity .16s ease;
+    }
+
+    .rn-manager-duplicate:hover {
+        opacity: 1;
+    }
+
+    /*
+     * Portrait geometry intentionally follows the old avatar-strip look:
+     * circular, edge-to-edge, larger than the normal utility icons.
+     */
+    .rn-manager-duplicate.stcs--char::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+
+        background-image: var(--rn-manager-avatar);
+        background-size: cover;
+        background-position: top center;
+        background-repeat: no-repeat;
+
+        pointer-events: none;
+    }
+
+    .rn-manager-duplicate.stcs--char .rn-manager-fallback {
+        visibility: hidden;
+    }
+
+    .rn-manager-fallback {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        font-size: calc(var(--rn-manager-size) * .42);
+        opacity: .7;
+        pointer-events: none;
+    }
+
+    /*
+     * Characters Hotswap
+     * ------------------
+     * Clean merged implementation:
+     * - native ST Hotswap remains the data/behavior source
+     * - left-rail avatars use our clean 42px presentation
+     * - scrolling is the original v1.3.4 CSS-only flex scroller
+     * - no hard-coded item count and no wheel interception
+     */
+    .rn-hotswap-divider {
+        margin: 8px 0 8px;
+    }
+
+    .rn-hotswap-divider[hidden],
+    body.no-hotswap .rn-hotswap-divider {
+        display: none !important;
+    }
+
+    #rn-hotswap-section {
+        width: var(--rn-rail);
+        align-self: center;
+        min-height: 0;
+        flex: 1 1 auto;
+        margin-top: 0;
+        padding: 0 0 4px;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        contain: layout paint;
+        isolation: isolate;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    #rn-hotswap-section[hidden],
+    body.no-hotswap #rn-hotswap-section {
+        display: none !important;
+    }
+
+    #rn-hotswap-section::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+
+    #rn-hotswap-list {
+        width: var(--rn-rail);
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rn-hotswap-item {
+        position: relative;
+        inline-size: var(--rn-manager-size) !important;
+        block-size: var(--rn-manager-size) !important;
+        width: var(--rn-manager-size) !important;
+        height: var(--rn-manager-size) !important;
+        min-width: var(--rn-manager-size) !important;
+        min-height: var(--rn-manager-size) !important;
+        max-width: var(--rn-manager-size) !important;
+        max-height: var(--rn-manager-size) !important;
+        aspect-ratio: 1 / 1 !important;
+        flex: 0 0 var(--rn-manager-size) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        outline: 0;
+        border-radius: 50% !important;
+        display: block !important;
+        overflow: hidden !important;
+        color: inherit;
+        background: transparent !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        box-sizing: border-box !important;
+        opacity: .82;
+        transform: none !important;
+        transition: opacity .16s ease;
+    }
+
+    .rn-hotswap-item:hover,
+    .rn-hotswap-item:focus-visible,
+    .rn-hotswap-item.active {
+        opacity: 1;
+    }
+
+    .rn-hotswap-item:focus-visible {
+        outline: 1px solid color-mix(in srgb, var(--rn-text) 38%, transparent);
+        outline-offset: 1px;
+    }
+
+    /* Same portrait geometry used by the normal Character/Persona bubbles. */
+    .rn-hotswap-character::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-image: var(--rn-hotswap-avatar);
+        background-size: cover;
+        background-position: top center;
+        background-repeat: no-repeat;
+        pointer-events: none;
+    }
+
+    .rn-hotswap-group-visual {
+        width: var(--rn-manager-size) !important;
+        height: var(--rn-manager-size) !important;
+        min-width: var(--rn-manager-size) !important;
+        min-height: var(--rn-manager-size) !important;
+        max-width: var(--rn-manager-size) !important;
+        max-height: var(--rn-manager-size) !important;
+        aspect-ratio: 1 / 1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 50% !important;
+        overflow: hidden !important;
+        display: block !important;
+        pointer-events: none !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        outline: 0 !important;
+        opacity: 1 !important;
+    }
+
+    .rn-hotswap-group-visual img {
+        box-shadow: none !important;
+        border: 0 !important;
+    }
+
+    /* Original v1.3.4 flex behavior: Hotswap uses the remaining rail space. */
+    #rn-left-rail.rn-hotswap-active .rn-spacer {
+        flex: 0 0 0;
+        min-height: 0;
+    }
+
+    .rn-spacer {
+        flex: 1;
+    }
+
+    /*
+     * Keep ST's real Hotswap in its native DOM for favsToHotswap() updates,
+     * but remove its visual footprint from Character Management.
+     */
+    body.rivelle-navigator-enabled #right-nav-panel #HotSwapWrapper {
+        display: none !important;
+    }
+
+    /*
+     * SillyTavern changes this header's flex direction when Characters Hotswap
+     * is disabled. Since Navigator presents Hotswap elsewhere, normalize the
+     * right-hand panel so enabling/disabling Hotswap does not create/remove
+     * blank vertical space there.
+     */
+    body.rivelle-navigator-enabled #right-nav-panel #CharListButtonAndHotSwaps {
+        flex-flow: row nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
+    body.rivelle-navigator-enabled
+    #right-nav-panel
+    #CharListButtonAndHotSwaps > .flex-container:first-child {
+        flex-flow: row nowrap !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: auto !important;
+        min-height: 0 !important;
+    }
+
+    .rn-collapse-button {
+        opacity: .38;
+    }
+
+    .rn-icon-host {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+    }
+
+    .rn-native-visual {
+        width: 22px;
+        height: 22px;
+        display: grid !important;
+        place-items: center !important;
+        position: static !important;
+        inset: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 1 !important;
+        pointer-events: none !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        background-size: contain !important;
+
+        /*
+         * Conservative native fallback size. The standalone icon pack may
+         * replace this glyph entirely without Navigator knowing about it.
+         */
+        font-size: 15px !important;
+        line-height: 1 !important;
+    }
+
+    .rn-native-visual::before {
+        /* Native fallback only; separate icon/theme extensions may override. */
+        content: attr(data-rn-content);
+        font-size: inherit !important;
+        line-height: 1 !important;
+    }
+
+    .rn-top-empty {
+        min-width: 1px;
+        min-height: 1px;
+        pointer-events: none;
+    }
+
+    #rn-chat-identity {
+        min-width: 0;
+        max-width: 48vw;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-self: center;
+    }
+
+    #rn-chat-avatar {
+        width: var(--rn-switch-size);
+        height: var(--rn-switch-size);
+        flex: 0 0 auto;
+        border-radius: 50%;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 8%, transparent);
+    }
+
+    #rn-chat-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #rn-chat-name {
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: .81rem;
+        font-weight: 650;
+    }
+
+    #rn-chat-subtitle {
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        opacity: .42;
+        font-size: .67rem;
+    }
+
+    #rn-top-actions {
+        justify-self: end;
+        width: calc((var(--rn-switch-size) * 2) + var(--rn-switch-gap));
+        height: var(--rn-top);
+        min-height: var(--rn-top);
+        pointer-events: none;
+    }
+
+    /*
+     * IMPORTANT: Character Management and Persona Management remain in
+     * #top-settings-holder. We only position their REAL native toggles over
+     * the navigator. Their drawer panels never leave Moonlit's DOM context.
+     */
+    body.rivelle-navigator-enabled #rightNavHolder > .drawer-toggle,
+    body.rivelle-navigator-enabled #persona-management-button > .drawer-toggle {
+        visibility: visible !important;
+        pointer-events: auto !important;
+        position: fixed !important;
+
+        /*
+         * Keep v1.2.5's larger Navigator size, but center both buttons from
+         * the exact same midpoint so browser zoom cannot shift one by a pixel.
+         */
+        top: calc(var(--rn-top) / 2) !important;
+        transform: translateY(-50%) !important;
+
+        bottom: auto !important;
+        left: auto !important;
+
+        width: var(--rn-switch-size) !important;
+        height: var(--rn-switch-size) !important;
+        min-width: var(--rn-switch-size) !important;
+        min-height: var(--rn-switch-size) !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+        display: grid !important;
+        place-items: center !important;
+
+        box-sizing: border-box !important;
+        border-radius: 50% !important;
+        line-height: 1 !important;
+
+        opacity: 1 !important;
+        background: transparent !important;
+        cursor: pointer;
+
+        /* Shared by Identity Switch / Char Switch compatibility. */
+        --stcs--iconSize: var(--rn-switch-size) !important;
+    }
+
+    /* Same order as before: Character on the left, Persona on the right. */
+    body.rivelle-navigator-enabled #rightNavHolder > .drawer-toggle {
+        right: calc(var(--rn-top-inset) + var(--rn-switch-size) + var(--rn-switch-gap)) !important;
+    }
+
+    body.rivelle-navigator-enabled #persona-management-button > .drawer-toggle {
+        right: var(--rn-top-inset) !important;
+    }
+
+    body.rivelle-navigator-enabled #rightNavHolder > .drawer-toggle > .drawer-icon,
+    body.rivelle-navigator-enabled #persona-management-button > .drawer-toggle > .drawer-icon {
+        visibility: visible !important;
+        pointer-events: none !important;
+        position: static !important;
+        inset: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: var(--rn-switch-size) !important;
+        height: var(--rn-switch-size) !important;
+        display: grid !important;
+        place-items: center !important;
+        line-height: 1 !important;
+    }
+
+    /* One visible circle for both roles. The former character-only fractional
+       inset/translation made the pair differ even when their hitboxes matched. */
+    body.rivelle-navigator-enabled #persona-management-button > .drawer-toggle.stcs--char::after,
+    body.rivelle-navigator-enabled #rightNavHolder > .drawer-toggle.stcs--char::after {
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        box-sizing: border-box !important;
+        border-radius: 50% !important;
+        background-size: cover !important;
+        background-position: top center !important;
+        transform: none !important;
+    }
+
+    /*
+     * Keep SillyTavern/Moonlit's native toolbar and drawer DOM completely in
+     * place. We suppress only the old toolbar hit targets. We intentionally do
+     * NOT set drawer background, opacity, size, position, blur, or z-index.
+     */
+    body.rivelle-navigator-enabled #top-settings-holder {
+        pointer-events: none !important;
+    }
+
+    /*
+     * Hide the old native toolbar controls EXCEPT the two real toggles that
+     * Rivelle Navigator intentionally repositions into the top-right corner.
+     */
+    body.rivelle-navigator-enabled #top-settings-holder
+        > .drawer:not(#rightNavHolder):not(#persona-management-button)
+        > .drawer-toggle,
+    body.rivelle-navigator-enabled #top-settings-holder
+        > .drawer:not(#rightNavHolder):not(#persona-management-button)
+        > .drawer-header {
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /*
+     * Explicitly keep the two native switch-extension targets alive. These
+     * declarations come after the hiding rule on purpose.
+     */
+    body.rivelle-navigator-enabled #top-settings-holder > #rightNavHolder > .drawer-toggle,
+    body.rivelle-navigator-enabled #top-settings-holder > #persona-management-button > .drawer-toggle {
+        visibility: visible !important;
+        pointer-events: auto !important;
+        z-index: 1 !important;
+    }
+
+    /*
+     * Char Switch context menu compatibility
+     * --------------------------------------
+     * Char Switch normally positions its menu from trigger.getBoundingClientRect().left.
+     * Our Character toggle sits at the far right, so that native calculation
+     * makes the menu extend beyond the viewport and get cropped.
+     *
+     * Keep Char Switch's own menu and behavior; only flip its horizontal
+     * placement so it opens leftward from the relocated Character button.
+     */
+    body.rivelle-navigator-enabled .stcs--ctxBlocker > .stcs--ctxMenu {
+        left: auto !important;
+        right: calc(10px + var(--rn-switch-size) + 6px) !important;
+        max-width: min(360px, calc(100vw - 32px)) !important;
+        box-sizing: border-box;
+    }
+
+    body.rivelle-navigator-enabled .stcs--ctxBlocker > .stcs--ctxMenu > .stcs--ctxItem {
+        min-width: 0;
+    }
+
+    body.rivelle-navigator-enabled .stcs--ctxBlocker > .stcs--ctxMenu > .stcs--ctxItem > .stcs--ctxName {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Native drawers must remain interactive, but Moonlit owns their visuals. */
+    body.rivelle-navigator-enabled #top-settings-holder .drawer-content {
+        pointer-events: auto !important;
+    }
+
+    /* Current staging's native #top-bar is empty; avoid a second horizontal strip. */
+    body.rivelle-navigator-enabled #top-bar {
+        display: none !important;
+    }
+
+
+
+
+    body.rn-collapsed #rn-left-rail {
+        transform: translateX(calc(-1 * var(--rn-rail)));
+    }
+
+    body.rn-collapsed #rn-top-bar {
+        left: 0;
+    }
+
+    #rn-reopen {
+        display: none;
+        position: absolute;
+        z-index: 9300;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 46px;
+        padding: 0;
+        border-radius: 0 8px 8px 0;
+        color: var(--rn-text);
+
+        /* Keep the hit area, hide the visual tab until hover/focus. */
+        background: transparent;
+        border: 1px solid transparent;
+        border-left: 0;
+        opacity: 0;
+
+        transition:
+            opacity .15s ease,
+            background-color .15s ease,
+            border-color .15s ease;
+    }
+
+    body.rn-collapsed #rn-reopen {
+        display: grid;
+        place-items: center;
+    }
+
+    body.rn-collapsed #rn-reopen:hover,
+    body.rn-collapsed #rn-reopen:focus-visible {
+        opacity: .8;
+        background: var(--rn-surface);
+        border-color: var(--rn-line);
+        border-left: 0;
+    }
+
+    /*
+     * AI Configuration temporarily folds the rail into the header. Keep the
+     * original nodes and rail layout: visibility also removes hidden controls
+     * from keyboard/pointer navigation without collapsing the hotswap scroller.
+     * Mirror the right-hand native controls' edge inset and spacing.
+     */
+    body.rn-ai-config-open #rn-left-rail {
+        visibility: hidden;
+        pointer-events: none !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        transform: none;
+        transition: none;
+    }
+
+    body.rn-ai-config-open #rn-primary-action {
+        visibility: visible;
+        left: var(--rn-top-inset);
+        width: var(--rn-switch-size);
+    }
+
+    body.rn-ai-config-open #rn-primary-action > .rn-primary-button {
+        width: 100%;
+    }
+
+    body.rn-ai-config-open #rn-top-bar {
+        /* Extend the same glass surface across the vacant corner, while
+         * keeping the grid (and centered chat identity) in its original place.
+         * Left + padding also cancel out during the existing close transition.
+         */
+        left: 0;
+        padding-left: calc(var(--rn-rail) + var(--rn-top-inset));
+        border-bottom-color: transparent;
+        transition: none;
+    }
+
+    body.rn-ai-config-open #rn-top-worldinfo {
+        position: relative;
+        left: calc(var(--rn-switch-size) + var(--rn-switch-gap) - var(--rn-rail));
+        min-width: var(--rn-switch-size);
+    }
+
+    body.rn-ai-config-open #rn-top-worldinfo > .stwii--trigger {
+        width: var(--rn-switch-size) !important;
+    }
+
+    /* Moonlit draws the same boundary on the native header and drawer.
+     * Hide its color, retaining border widths so the content does not jump.
+     */
+    body.rn-ai-config-open #top-settings-holder {
+        border-bottom-color: transparent !important;
+    }
+
+    body.rn-ai-config-open #left-nav-panel {
+        border-top-color: transparent !important;
+    }
+
+    /* A native/keyboard open may happen while the rail is manually collapsed.
+     * Preserve rn-collapsed so closing AI restores that previous preference.
+     */
+    body.rn-ai-config-open #rn-reopen {
+        display: none;
+    }
+}

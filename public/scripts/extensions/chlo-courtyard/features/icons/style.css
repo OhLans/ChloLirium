@@ -1,0 +1,198 @@
+/*
+ * Rivelle Navigator Icons v1.0.0
+ * --------------------------------
+ * Standalone version of the local SVG icon set introduced in Navigator v1.2.9
+ * and finalized for 20px rendering / native fallbacks in v1.3.0.
+ *
+ * This extension owns visuals only. Rivelle Navigator / SillyTavern continue
+ * to own every click handler, drawer state, portrait state and panel.
+ */
+
+body.rivelle-navigator-icons-enabled {
+    --rni-icon-size: 20px;
+}
+
+/* =========================================================
+   LEFT RAIL UTILITY ICONS
+   ========================================================= */
+
+body.rivelle-navigator-icons-enabled [data-rn-key="aiconfig"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/ai-response-configuration.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="api"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/api-connection.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="formatting"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/ai-response-formatting.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="worldinfo"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/world-info.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="usersettings"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/user-settings.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="backgrounds"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/backgrounds.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="extensions"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/extensions.svg");
+}
+
+body.rivelle-navigator-icons-enabled [data-rn-key="quickreplies"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/quick-replies.svg");
+}
+
+/*
+ * Remove the mirrored Font Awesome/native glyph, but keep the same DOM node.
+ * Any hover/active animation on .rn-native-visual therefore still applies to
+ * the SVG because the mask is drawn on its ::before.
+ */
+body.rivelle-navigator-icons-enabled
+#rn-left-rail [data-rn-key] .rn-native-visual {
+    width: 22px !important;
+    height: 22px !important;
+    display: grid !important;
+    place-items: center !important;
+    position: static !important;
+    inset: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    background-image: none !important;
+    font-size: 0 !important;
+    line-height: 1 !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+}
+
+body.rivelle-navigator-icons-enabled
+#rn-left-rail [data-rn-key] .rn-native-visual::before {
+    content: "" !important;
+    width: var(--rni-icon-size) !important;
+    height: var(--rni-icon-size) !important;
+    display: block !important;
+    flex: 0 0 var(--rni-icon-size) !important;
+    background: currentColor !important;
+    background-color: currentColor !important;
+    -webkit-mask-image: var(--rni-icon) !important;
+    mask-image: var(--rni-icon) !important;
+    -webkit-mask-repeat: no-repeat !important;
+    mask-repeat: no-repeat !important;
+    -webkit-mask-position: center !important;
+    mask-position: center !important;
+    -webkit-mask-size: contain !important;
+    mask-size: contain !important;
+    font-family: initial !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+}
+
+/* =========================================================
+   WORLD INFO INFO — TOP-LEFT TRIGGER
+   ========================================================= */
+
+/*
+ * WorldInfo Info uses its own Font Awesome pseudo-element. We leave its real
+ * trigger in place (right-click, badge, click behavior all remain native) and
+ * add one passive SVG-mask child on top.
+ */
+body.rivelle-navigator-icons-enabled
+#rn-top-worldinfo > .stwii--trigger::before {
+    display: none !important;
+    content: none !important;
+}
+
+body.rivelle-navigator-icons-enabled
+#rn-top-worldinfo > .stwii--trigger > .rni-worldinfo-icon {
+    width: var(--rni-icon-size) !important;
+    height: var(--rni-icon-size) !important;
+    display: block !important;
+    flex: 0 0 var(--rni-icon-size) !important;
+    background: currentColor !important;
+    background-color: currentColor !important;
+    -webkit-mask-image: url("../../assets/icons/world-info.svg") !important;
+    mask-image: url("../../assets/icons/world-info.svg") !important;
+    -webkit-mask-repeat: no-repeat !important;
+    mask-repeat: no-repeat !important;
+    -webkit-mask-position: center !important;
+    mask-position: center !important;
+    -webkit-mask-size: contain !important;
+    mask-size: contain !important;
+    pointer-events: none !important;
+}
+
+/* Keep the WorldInfo Info count badge untouched. */
+body.rivelle-navigator-icons-enabled
+#rn-top-worldinfo > .stwii--trigger::after {
+    pointer-events: none;
+}
+
+/* =========================================================
+   CHARACTER MANAGEMENT FALLBACKS
+   ========================================================= */
+
+/* Left-rail Character Manager duplicate: portrait wins whenever present. */
+body.rivelle-navigator-icons-enabled
+.rn-manager-duplicate[data-rn-manager-duplicate="characters"]:not(.stcs--char)
+.rn-manager-fallback > i {
+    display: none !important;
+}
+
+body.rivelle-navigator-icons-enabled
+.rn-manager-duplicate[data-rn-manager-duplicate="characters"]:not(.stcs--char)
+.rn-manager-fallback::before {
+    content: "" !important;
+    width: var(--rni-icon-size) !important;
+    height: var(--rni-icon-size) !important;
+    display: block !important;
+    background: currentColor !important;
+    background-color: currentColor !important;
+    -webkit-mask-image: url("../../assets/icons/character-management.svg") !important;
+    mask-image: url("../../assets/icons/character-management.svg") !important;
+    -webkit-mask-repeat: no-repeat !important;
+    mask-repeat: no-repeat !important;
+    -webkit-mask-position: center !important;
+    mask-position: center !important;
+    -webkit-mask-size: contain !important;
+    mask-size: contain !important;
+    pointer-events: none !important;
+}
+
+/*
+ * Upper-right native Character Manager fallback.
+ * Identity Switch / Char Switch portraits still win through .stcs--char.
+ */
+body.rivelle-navigator-icons-enabled.rivelle-navigator-enabled
+#rightNavHolder > .drawer-toggle:not(.stcs--char) > .drawer-icon {
+    visibility: hidden !important;
+}
+
+body.rivelle-navigator-icons-enabled.rivelle-navigator-enabled
+#rightNavHolder > .drawer-toggle:not(.stcs--char)::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    width: var(--rni-icon-size) !important;
+    height: var(--rni-icon-size) !important;
+    transform: translate(-50%, -50%) !important;
+    background: currentColor !important;
+    background-color: currentColor !important;
+    -webkit-mask-image: url("../../assets/icons/character-management.svg") !important;
+    mask-image: url("../../assets/icons/character-management.svg") !important;
+    -webkit-mask-repeat: no-repeat !important;
+    mask-repeat: no-repeat !important;
+    -webkit-mask-position: center !important;
+    mask-position: center !important;
+    -webkit-mask-size: contain !important;
+    mask-size: contain !important;
+    pointer-events: none !important;
+}
+
+/* Persona stays portrait-first and keeps the normal SillyTavern fallback. */

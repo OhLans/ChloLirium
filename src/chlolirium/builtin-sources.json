@@ -1,0 +1,33 @@
+[
+    {
+        "component": "courtyard",
+        "repository": "https://github.com/OhLans/SillyTavern-MoonlitCourtyardSuit",
+        "revision": "19f5d8f354e1413e1664314b420bcd6b47ff5621"
+    },
+    {
+        "component": "echoes",
+        "repository": "https://github.com/RivelleDays/SillyTavern-MoonlitEchoesTheme",
+        "revision": "5336f368a41871275317c60a5bc9a806d59f4000"
+    },
+    {
+        "component": "tabs",
+        "repository": "https://github.com/RivelleDays/SillyTavern-ChatCompletionTabs",
+        "revision": "a427446a7625ca19606fedfdc39891e2e3f8f3d1"
+    },
+    {
+        "component": "emoji",
+        "repository": "https://github.com/SillyTavern/Extension-EmojiPicker",
+        "revision": "996a3bab4121ed750b80af524b24177972c2bc9c"
+    },
+    {
+        "component": "quick-persona",
+        "repository": "https://github.com/SillyTavern/Extension-QuickPersona",
+        "revision": "5509fb6bee903c833683cb860fbf437d4479b1cb"
+    },
+    {
+        "component": "identity-switch",
+        "source": "User-supplied SillyTavern-IdentitySwitch(1).rar",
+        "sha256": "e3c44d9849cdd244ea44e3ebd41beeac03ef6f942f5e426b69d537086d5b6d21",
+        "version": "1.0.1-no-ring"
+    }
+]
