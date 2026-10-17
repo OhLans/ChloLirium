@@ -1,78 +1,85 @@
-# Built-in interface features
+# Native ChloLirium interface
 
-ChloLirium bundles Moonlit Echoes, Moonlit Courtyard Suit, Identity Switch,
-Chat Completion Tabs, Emoji Picker, and Quick Persona as system modules in
-`public/scripts/extensions/chlo-*`. They are maintained and updated with the
-fork. They keep SillyTavern's existing module lifecycle, per-module enable
-switches, native drawer elements, and original settings panels.
+Moonlit Echoes, Courtyard's Navigator and character/persona panels, Identity
+Switch, Chat Completion Tabs, Emoji Picker and Quick Persona are integrated
+into core startup. Their source lives in `public/scripts/chlolirium/`, outside
+the extension directories. They have no extension manifests, registration,
+loader enable flags or entries in extension management.
 
-## Existing installations
+`public/script.js` calls `initChloLirium()` after settings load, whether or not
+extensions are enabled in the server configuration. Startup explicitly calls
+each feature's initializer once. The core page owns the composer buttons and
+native setting locations; `public/css/chlolirium-interface.css` owns the shared
+styles. Theme styles remain switchable with the appearance setting.
 
-Run `UpdateAndStart.bat` from the installation tracking this fork's `staging`
-branch, then hard-refresh the browser. The integration does not relocate or
-replace chats, characters, personas, lorebooks, API profiles, or theme files.
+## Settings and controls
 
-`public/scripts/chlolirium-builtins.js` filters matching standalone copies
-before their scripts or styles execute. It recognizes the known repository
-folder names and manifest display names. A disabled standalone component
-starts disabled as a built-in; this is migrated once per component so later
-choices made through the built-in switches persist. Standalone folders are
-left untouched and can be removed after checking the update. They are not
-needed for the built-in features to work.
+- **User Settings → Moonlit Echoes Theme** holds all 59 appearance controls,
+  named presets, custom CSS, theme enable switch and original-image preference.
+  The existing sidebar shortcut and popout remain available. A Customize
+  Moonlit appearance shortcut beside UI Theme opens the same controls.
+- **User Settings → Navigation portraits** holds character/persona visibility
+  and character-switcher favorite/count preferences.
+- **Chat Completion Presets** in the API settings panel holds the switch for
+  separating Parameters and Prompts into tabs. Changing API and presets uses
+  native events, with no polling timer.
+- The persona selector and emoji button belong to the chat composer. The emoji
+  picker loads local Emoji Mart/data on first use and stays open while typing
+  and selecting multiple emojis. Close and Escape dismiss it.
 
-Settings remain in their original locations:
+Historical storage keys are retained for compatibility; their names do not
+imply extension loading:
 
-| Component | Preserved state |
+| Feature | Preserved settings |
 | --- | --- |
-| Moonlit Echoes | `extension_settings.SillyTavernMoonlitEchoesTheme`, all 59 controls, named/active presets, raw CSS, original-avatar preference |
+| Moonlit appearance | `extension_settings.SillyTavernMoonlitEchoesTheme`, all controls, named/active presets, raw CSS, original-avatar preference |
 | Courtyard | `extension_settings.moonlitCourtyardSuit` and existing Navigator/browser view preferences |
-| Identity Switch | `extension_settings.identitySwitch`, with existing `charSwitch`/`charSwitchx` preferences as fallbacks |
+| Identity | `extension_settings.identitySwitch`, with `charSwitch`/`charSwitchx` fallbacks; `showPersonaAvatar` defaults to true |
 | Completion tabs | `extension_settings.ChatCompletionTabs` and `openai-active-tab` browser preference |
-| Emoji picker | Emoji Mart's existing browser storage for frequent emoji and skin tone |
-| Quick Persona | SillyTavern's native persona, avatar, title, and default-persona data |
+| Emoji | Emoji Mart browser storage for frequent emoji and skin tone |
+| Quick Persona | Native persona, avatar, title and default-persona data |
 
-The former custom `em-emoji-picker` positioning/color snippet is included in
-the built-in picker and can be removed from custom CSS. The built-in CSS
-also tolerates that snippet remaining during the transition.
+## Updating an existing installation
 
-## Integration changes
+Run `UpdateAndStart.bat` on this fork's `staging` branch and hard-refresh the
+browser. Chats, characters, personas, lorebooks, API profiles, theme files and
+standalone extension folders are not relocated or deleted.
 
-- Identity's two portraits share size, crop, and visible-circle geometry in
-  both toolbar layouts. Navigator uses the same size with vertical clearance.
-  Removed the character-only fractional inset and translation, and restricted
-  the character-only geometry animation to opacity.
-- Emoji Mart's runtime and native Unicode data load locally on first use.
-  The picker stays mounted for subsequent opens. Selection preserves the
-  composing caret and leaves the panel open; the close button and Escape
-  close it. Only the emoji button toggles the panel. No outside-click handler
-  is installed. Manual popover anchoring escapes the transformed page root,
-  with a positioning fallback and visual-viewport handling for phone keyboards.
-- Quick Persona handles overlapping open/close requests and observes native
-  persona changes. Identity discards stale asynchronous character portraits.
-- The translation observer tolerates an attribute removed before its queued
-  mutation is processed.
-- Lucide aliases cover the bundled components; unknown extension and brand
-  icons still use the existing Font Awesome fallback.
+`legacy-extensions.js` excludes known standalone copies and stale `chlo-*`
+bundles before scripts, styles or update checks can run. This prevents duplicate
+implementations; original standalone files remain available as backups. The
+six obsolete bundle manifests and tracked extension files are removed by Git.
 
-## Sources and maintenance
+Unchecked standalone-extension boxes do not disable native features. Migration
+removes only obsolete `chlo-*` disabled flags and the previous bundle migration
+marker. It preserves original third-party checkbox choices and feature-level
+preferences, including a deliberately disabled Moonlit theme or completion
+tabs. Old standalone folders may be removed after verifying the native UI.
 
-Exact upstream revisions and the supplied Identity archive's SHA-256 are
-recorded in `builtin-sources.json`. Source authorship and AGPL licenses are
-retained in each component. Emoji Mart 5.6.0 and `@emoji-mart/data` 1.2.1 are
-MIT-licensed and bundled with their license texts. Courtyard's existing
-MingCute icon assets retain their Apache 2.0 attribution/license; shared
-interface rendering uses the fork's Lucide mappings.
+The former `em-emoji-picker` positioning/color snippet is included and can be
+removed from custom CSS. The core picker also tolerates it remaining during
+the transition.
 
-Emoji Mart's vendored ESM runtime was minified with Terser (`module: true`,
-`compress: true`, `mangle: true`, no source map) from the npm package's
-`dist/module.js`; native data is `@emoji-mart/data/sets/15/native.json`.
-No additional npm install or CDN is needed at runtime.
+## Retained fixes and maintenance
 
-When updating a component, retain its original settings keys, rebase external
-relative imports for its built-in location, update `builtin-sources.json`,
-and run the focused settings/migration/browser checks as well as repository
-lint and unit tests. Keep the character/persona drawer DOM in its native
-parent; Navigator repositions the toggles without moving the drawer panels.
+- Portraits share size, crop, visible-circle geometry and vertical clearance in
+  both toolbar layouts. Fractional character-only positioning and geometry
+  animations remain removed. Narrow toolbar observers and native events
+  replace Identity's polling interval.
+- Emoji Mart/data remain local and load on demand. The picker instance is
+  reused; insertion respects the caret and keeps the picker open. Manual
+  popover positioning handles transformed page roots and phone keyboards.
+- Quick Persona retains asynchronous menu safeguards and native persona events.
+  Identity discards stale asynchronous character portraits.
+- Theme presets, color/alpha controls, checkbox CSS rules and avatar settings
+  retain their original keys. Core live bindings replace the extension API
+  global. Original authorship, licenses and translation files are retained.
+
+Exact source revisions and the supplied Identity archive hash are recorded in
+`builtin-sources.json`. Emoji Mart 5.6.0 and `@emoji-mart/data` 1.2.1 are
+MIT-licensed. Courtyard's original MingCute assets retain Apache 2.0 attribution;
+shared icons use the fork's Lucide mappings. No CDN or new package install is
+required at runtime.
 
 ```sh
 npm run lint
@@ -81,9 +88,9 @@ npm exec --prefix tests -- playwright test --config tests/playwright.config.js C
 node src/chlolirium/build-icons.mjs --check
 ```
 
-Browser checks use isolated temporary data and make no paid model requests.
-They cover settings/preset preservation and persistence, duplicate prevention,
-portrait geometry at several scales, native drawers and selection, prompt
-tabs, repeated emoji insertion, retained picker instances, legacy CSS, and
-phone viewport bounds. Actual Windows and iPhone hardware remain separate
-manual validation targets.
+Browser tests use isolated data and make no paid model requests. They cover
+migration from unchecked bundles/originals, no duplicate loading, initialization
+without the extension system, theme settings/presets, native setting locations,
+portrait geometry/preferences, emoji behavior, persona/character selection,
+API tabs and phone viewport bounds. Actual Windows and iPhone hardware remain
+separate manual validation targets.

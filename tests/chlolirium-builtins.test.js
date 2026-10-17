@@ -1,44 +1,44 @@
 import { describe, test, expect, jest } from '@jest/globals';
-import { builtinFeatures, resolveBuiltinFeatures } from '../public/scripts/chlolirium-builtins.js';
+import { integratedFeatures, isIntegratedExtension, migrateNativeInterfaceSettings } from '../public/scripts/chlolirium/legacy-extensions.js';
 
 jest.unstable_mockModule('../public/scripts/i18n.js', () => ({ t: (strings, ...values) => String.raw({ raw: strings }, ...values) }));
-const { themeCustomSettings } = await import('../public/scripts/extensions/chlo-moonlit-echoes/src/config/theme-settings.js');
-const { defaultSettings, ensureSettingsStructure } = await import('../public/scripts/extensions/chlo-moonlit-echoes/src/config/default-settings.js');
+const { themeCustomSettings } = await import('../public/scripts/chlolirium/moonlit-echoes/src/config/theme-settings.js');
+const { defaultSettings, ensureSettingsStructure } = await import('../public/scripts/chlolirium/moonlit-echoes/src/config/default-settings.js');
 
-describe('Built-in feature migration', () => {
-    for (const feature of builtinFeatures) {
-        test(`${feature.id} replaces only its matching standalone copy`, () => {
-            const legacy = `third-party/${feature.folders[0]}`;
-            const other = 'third-party/unrelated-extension';
-            const settings = { disabledExtensions: [], identitySwitch: { numCards: 7 } };
-            const manifests = { [feature.id]: {}, [legacy]: {}, [other]: {} };
-            const result = resolveBuiltinFeatures(Object.keys(manifests), manifests, settings);
-            expect(result.names).toEqual([feature.id, other]);
-            expect(result.manifests[legacy]).toBeUndefined();
-            expect(settings.identitySwitch).toEqual({ numCards: 7 });
+describe('Native interface migration', () => {
+    for (const feature of integratedFeatures) {
+        test(`${feature.id} excludes its former bundle and standalone copy from extension loading`, () => {
+            expect(isIntegratedExtension(feature.id, {})).toBe(true);
+            expect(isIntegratedExtension(`third-party/${feature.folders[0]}`, {})).toBe(true);
+            expect(isIntegratedExtension('third-party/unrelated-extension', {})).toBe(false);
         });
     }
 
     test('a renamed installed copy is recognized by its manifest title', () => {
-        const manifests = { 'chlo-identity-switch': {}, 'third-party/MyIdentityCopy': { display_name: 'Identity Switch' } };
-        expect(resolveBuiltinFeatures(Object.keys(manifests), manifests, {}).names).toEqual(['chlo-identity-switch']);
+        expect(isIntegratedExtension('third-party/MyIdentityCopy', { display_name: 'Identity Switch' })).toBe(true);
     });
 
-    test('a previously disabled feature stays disabled, and later built-in choices survive reloads', () => {
+    test('unchecked standalone copies do not disable core features; obsolete bundle flags are cleaned once', () => {
         const legacy = 'third-party/SillyTavern-MoonlitEchoesTheme';
-        const manifests = { 'chlo-moonlit-echoes': {}, [legacy]: {} };
-        const settings = { disabledExtensions: [legacy] };
-        resolveBuiltinFeatures(Object.keys(manifests), manifests, settings);
-        expect(settings.disabledExtensions).toContain('chlo-moonlit-echoes');
-        settings.disabledExtensions = [legacy]; // User enables the new built-in.
-        const second = resolveBuiltinFeatures(Object.keys(manifests), manifests, settings);
-        expect(second.changed).toBe(false);
-        expect(settings.disabledExtensions).not.toContain('chlo-moonlit-echoes');
+        const settings = {
+            disabledExtensions: [legacy, ...integratedFeatures.map(f => f.id), 'third-party/Other'],
+            chloliriumBuiltinsMigrated: integratedFeatures.map(f => f.id),
+            SillyTavernMoonlitEchoesTheme: { enabled: false, rawCustomCss: '#chat { width: 950px; }' },
+            identitySwitch: { numCards: 7 },
+        };
+        const theme = structuredClone(settings.SillyTavernMoonlitEchoesTheme);
+        expect(migrateNativeInterfaceSettings(settings)).toBe(true);
+        expect(settings.disabledExtensions).toEqual([legacy, 'third-party/Other']);
+        expect(settings.chloliriumBuiltinsMigrated).toBeUndefined();
+        expect(settings.SillyTavernMoonlitEchoesTheme).toEqual(theme);
+        expect(settings.identitySwitch).toEqual({ numCards: 7 });
+        expect(migrateNativeInterfaceSettings(settings)).toBe(false);
     });
 
-    test('a missing built-in never suppresses a usable standalone extension', () => {
-        const name = 'third-party/Extension-EmojiPicker';
-        expect(resolveBuiltinFeatures([name], { [name]: {} }, {}).names).toEqual([name]);
+    test('fresh settings do not acquire extension flags', () => {
+        const settings = {};
+        expect(migrateNativeInterfaceSettings(settings)).toBe(false);
+        expect(settings).toEqual({});
     });
 });
 

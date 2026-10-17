@@ -10,7 +10,7 @@ import { addLocaleData, getCurrentLocale, t } from './i18n.js';
 import { debounce_timeout } from './constants.js';
 import { accountStorage } from './util/AccountStorage.js';
 import { SimpleMutex } from './util/SimpleMutex.js';
-import { resolveBuiltinFeatures } from './chlolirium-builtins.js';
+import { isIntegratedExtension } from './chlolirium/legacy-extensions.js';
 
 export {
     getContext,
@@ -1798,11 +1798,11 @@ export async function loadExtensionSettings(settings, versionChanged, enableAuto
     extensionTypes = Object.fromEntries(extensions.map(x => [x.name, x.type]));
     manifests = await getManifests(extensionNames);
 
-    const bundled = resolveBuiltinFeatures(extensionNames, manifests, extension_settings);
-    extensionNames = bundled.names;
-    manifests = bundled.manifests;
+    // These features now initialize in core startup. Installed legacy copies
+    // remain on disk as backups but cannot execute a second implementation.
+    extensionNames = extensionNames.filter(name => !isIntegratedExtension(name, manifests[name]));
+    manifests = Object.fromEntries(Object.entries(manifests).filter(([name]) => extensionNames.includes(name)));
     Object.keys(extensionTypes).filter(name => !extensionNames.includes(name)).forEach(name => delete extensionTypes[name]);
-    if (bundled.changed) saveSettingsDebounced();
 
     // An extension without a loadable manifest cannot be used: drop it so state queries
     // and the extensions list do not report a ghost entry (e.g. leftover folder on disk)

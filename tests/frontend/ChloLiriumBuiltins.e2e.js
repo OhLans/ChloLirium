@@ -13,13 +13,15 @@ test.use({ video: 'off' });
 
 test.beforeAll(async () => {
     test.setTimeout(60000);
-    dataRoot = await mkdtemp(path.join(tmpdir(), 'chlolirium-builtins-'));
+    dataRoot = await mkdtemp(path.join(tmpdir(), 'chlolirium-native-'));
     const user = path.join(dataRoot, 'default-user');
     await mkdir(user, { recursive: true });
     const settings = JSON.parse(await readFile(path.join(root, 'default/content/settings.json'), 'utf8'));
     settings.main_api = 'openai';
     settings.firstRun = false;
-    settings.extension_settings.disabledExtensions = [];
+    const { integratedFeatures } = await import('../../public/scripts/chlolirium/legacy-extensions.js');
+    settings.extension_settings.disabledExtensions = integratedFeatures.flatMap(f => [f.id, `third-party/${f.folders[0]}`]);
+    settings.extension_settings.chloliriumBuiltinsMigrated = integratedFeatures.map(f => f.id);
     settings.extension_settings.SillyTavernMoonlitEchoesTheme = {
         enabled: true,
         activePreset: 'Courtyard QA',
@@ -28,11 +30,13 @@ test.beforeAll(async () => {
     await writeFile(path.join(user, 'settings.json'), JSON.stringify(settings));
     await mkdir(path.join(user, 'User Avatars'), { recursive: true });
     await copyFile(path.join(root, 'default/content/user-default.png'), path.join(user, 'User Avatars/qa-second.png'));
-    // A leftover standalone copy must never execute alongside its built-in.
-    const legacy = path.join(user, 'extensions/SillyTavern-MoonlitCourtyardSuit');
-    await mkdir(legacy, { recursive: true });
-    await writeFile(path.join(legacy, 'manifest.json'), JSON.stringify({ display_name: 'Moonlit Courtyard Suit', js: 'index.js', loading_order: 65 }));
-    await writeFile(path.join(legacy, 'index.js'), 'throw new Error("Duplicate standalone copy executed");');
+    // Installed originals remain untouched; none may execute alongside core.
+    for (const feature of integratedFeatures) {
+        const legacy = path.join(user, 'extensions', feature.folders[0]);
+        await mkdir(legacy, { recursive: true });
+        await writeFile(path.join(legacy, 'manifest.json'), JSON.stringify({ display_name: feature.titles[0], js: 'index.js', loading_order: 65 }));
+        await writeFile(path.join(legacy, 'index.js'), 'throw new Error("Duplicate standalone copy executed");');
+    }
     const port = 19000 + Math.floor(Math.random() * 10000);
     url = `http://127.0.0.1:${port}`;
     server = spawn(process.execPath, ['server.js', '--dataRoot', dataRoot, '--port', String(port), '--browserLaunchEnabled', 'false', '--listen', 'false'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -70,7 +74,7 @@ test.afterEach(async ({ page }) => {
     expect(pageErrors.get(page), 'Unexpected browser errors').toEqual([]);
 });
 
-test('all six built-ins load once, keep the saved theme, and ignore the installed duplicate', async ({ page }) => {
+test('core features load with all old extension boxes unchecked and retain settings without extension entries', async ({ page }) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     const result = await page.evaluate(async () => {
@@ -84,19 +88,105 @@ test('all six built-ins load once, keep the saved theme, and ignore the installe
             rawCss: getComputedStyle(document.documentElement).getPropertyValue('--qa-preserved-css').trim(),
         };
     });
-    expect(result.names).toHaveLength(6);
+    expect(result.names).toHaveLength(0);
     expect(result.duplicate).toBe(false);
     expect(result.activePreset).toBe('Courtyard QA');
     expect(result.color).toBe('rgba(174, 149, 149, 1)');
     expect(result.rawCss).toBe('1');
     await expect(page.locator('#quickPersona')).toHaveCount(1);
     await expect(page.locator('#addEmojiButton')).toHaveCount(1);
+    await expect(page.locator('#user-settings-block #SillyTavernMoonlitEchoesTheme-drawer')).toHaveCount(1);
+    await expect(page.locator('#openai_api-presets #ChatCompletionTabs-enabled')).toHaveCount(1);
+    await expect(page.locator('#extensions_settings2 #SillyTavernMoonlitEchoesTheme-drawer')).toHaveCount(0);
+    const native = await page.evaluate(async () => {
+        const { initChloLirium } = await import('/scripts/chlolirium/index.js');
+        await initChloLirium();
+        await initChloLirium();
+        const settings = SillyTavern.getContext().extensionSettings;
+        return {
+            obsoleteFlags: settings.disabledExtensions.filter(name => name.startsWith('chlo-')),
+            marker: settings.chloliriumBuiltinsMigrated,
+            extensionResources: performance.getEntriesByType('resource').map(r => r.name).filter(name => /\/scripts\/extensions\/chlo-/.test(name)),
+        };
+    });
+    expect(native.obsoleteFlags).toEqual([]);
+    expect(native.marker).toBeUndefined();
+    expect(native.extensionResources).toEqual([]);
+    await expect(page.locator('#quickPersona')).toHaveCount(1);
+    for (const name of ['SillyTavern-MoonlitEchoesTheme', 'SillyTavern-MoonlitCourtyardSuit', 'SillyTavern-ChatCompletionTabs', 'SillyTavern-IdentitySwitch', 'Extension-EmojiPicker', 'Extension-QuickPersona']) {
+        expect(await readFile(path.join(dataRoot, 'default-user/extensions', name, 'index.js'), 'utf8')).toContain('Duplicate standalone copy executed');
+    }
     expect(errors).toEqual([]);
+});
+
+test('all native interface features work when the entire extension system is disabled', async ({ page }) => {
+    await page.route('**/api/settings/get', async route => {
+        const response = await route.fetch();
+        const data = await response.json();
+        data.enable_extensions = false;
+        await route.fulfill({ response, json: data });
+    });
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('preloader'));
+    await page.locator('#rn-left-rail').waitFor();
+    await expect(page.locator('#quickPersona')).toHaveCount(1);
+    await expect(page.locator('#openai-tab-btn-prompts')).toBeAttached();
+    await expect(page.locator('#user-settings-block #SillyTavernMoonlitEchoesTheme-drawer')).toBeAttached();
+    await expect(page.locator('#persona-management-button > .stis--identity-toggle')).toHaveCount(1);
+    expect(await page.evaluate(async () => (await import('/scripts/extensions.js')).extensionNames)).toEqual([]);
+    await page.locator('#quickPersona').click();
+    await expect(page.locator('#quickPersonaMenu')).toBeVisible();
+    await page.locator('#addEmojiButton').click();
+    await expect(page.locator('em-emoji-picker').locator('input[type="search"]')).toBeVisible();
+});
+
+test('native settings are accessible, theme popout clears the rail, and extension management has no integrated feature entries', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator('[data-rn-key="usersettings"]').click();
+    await expect(page.locator('#user-settings-block')).toHaveClass(/openDrawer/);
+    await expect(page.locator('#moonlit-theme-buttons-hint')).toBeVisible();
+    await page.locator('#moonlit-theme-buttons-hint').click();
+    const popout = page.locator('#moonlit_echoes_popout');
+    await expect(popout).toBeVisible();
+    const rail = await page.locator('#rn-left-rail').boundingBox();
+    const box = await popout.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(rail.x + rail.width);
+    await expect(popout.locator('#cts-customTopBarColor-text')).toHaveCount(1);
+    await popout.locator('.dragClose').click();
+    await expect(popout).toHaveCount(0);
+    await expect(page.locator('#user-settings-block #cts-customTopBarColor-text')).toHaveCount(1);
+    await page.locator('[data-rn-key="extensions"]').click();
+    await page.locator('#extensions_details').click();
+    await expect(page.locator('.extensions_info')).toBeVisible();
+    const names = await page.locator('.extensions_info .extension_block').allTextContents();
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.some(name => /Moonlit|Identity Switch|Chat Completion Tabs|Emoji Picker|Quick Persona/.test(name))).toBe(false);
+});
+
+test('native portrait preferences update immediately and persist without extension switches', async ({ page }) => {
+    await page.evaluate(() => {
+        const checkbox = document.getElementById('chlo-persona-portrait');
+        checkbox.checked = false;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(page.locator('#persona-management-button > .drawer-toggle')).not.toHaveClass(/stcs--char/);
+    await expect.poll(async () => JSON.parse(await readFile(path.join(dataRoot, 'default-user/settings.json'), 'utf8')).extension_settings.identitySwitch.showPersonaAvatar).toBe(false);
+    await page.reload();
+    await page.locator('#rn-left-rail').waitFor();
+    await expect(page.locator('#chlo-persona-portrait')).not.toBeChecked();
+    await expect(page.locator('#persona-management-button > .drawer-toggle')).not.toHaveClass(/stcs--char/);
+    await page.evaluate(() => {
+        const checkbox = document.getElementById('chlo-persona-portrait');
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(page.locator('#persona-management-button > .drawer-toggle')).toHaveClass(/stcs--char/);
+    await expect.poll(async () => JSON.parse(await readFile(path.join(dataRoot, 'default-user/settings.json'), 'utf8')).extension_settings.identitySwitch.showPersonaAvatar).toBe(true);
 });
 
 test('theme color, alpha, layout and checkbox controls still apply and save', async ({ page }) => {
     const result = await page.evaluate(async () => {
-        const { themeCustomSettings } = await import('/scripts/extensions/chlo-moonlit-echoes/src/config/theme-settings.js');
+        const { themeCustomSettings } = await import('/scripts/chlolirium/moonlit-echoes/src/config/theme-settings.js');
         const ids = themeCustomSettings.filter(s => s.varId).map(s => {
             const prefix = s.type === 'color' ? `cts-${s.varId}-text` : s.type === 'slider' ? `cts-slider-${s.varId}` : s.type === 'checkbox' ? `cts-checkbox-${s.varId}` : `cts-${s.varId}`;
             return { id: s.varId, type: s.type, found: !!document.getElementById(prefix) };

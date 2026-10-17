@@ -1,0 +1,21 @@
+@import url('../scripts/chlolirium/chat-completion-tabs/style.css');
+@import url('../scripts/chlolirium/courtyard/style.css');
+@import url('../scripts/chlolirium/identity-switch/style.css');
+@import url('../scripts/chlolirium/emoji-picker/style.css');
+@import url('../scripts/chlolirium/quick-persona/style.css');
+
+#chlo-theme-settings,
+#chlo-identity-settings {
+    min-width: 0;
+    width: 100%;
+}
+
+#chlo-identity-settings > summary {
+    cursor: pointer;
+    padding: 8px 0;
+}
+
+body.rivelle-navigator-enabled #moonlit_echoes_popout {
+    left: var(--rn-rail);
+    max-width: calc(100dvw - var(--rn-rail));
+}
