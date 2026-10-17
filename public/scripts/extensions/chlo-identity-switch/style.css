@@ -1,0 +1,223 @@
+:root {
+    /*
+     * One shared geometry for Character + Persona.
+     *
+     * The portrait is intentionally a little larger than the old Char Switch
+     * avatar so its visual weight is closer to the surrounding top-bar icons.
+     *
+     * This is the one value to adjust later if desired.
+     */
+    --stis--iconSize:
+        min(
+            calc(var(--topBarBlockSize, 40px) - 8px),
+            max(26px, calc(var(--topBarIconSize, 22px) + 4px))
+        );
+
+    --stis--gap: 2px;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Native Character + Persona top-bar controls                               */
+/* ------------------------------------------------------------------------- */
+
+#rightNavHolder,
+#persona-management-button {
+    /*
+     * Neutralize theme/native wrapper margins so the visual distance between
+     * the two portraits is controlled here instead of stacking multiple gaps.
+     */
+    margin: 0 !important;
+}
+
+/* One small, predictable gap between the Character and Persona portraits. */
+#persona-management-button {
+    margin-left: var(--stis--gap) !important;
+}
+
+
+#rightNavHolder > .drawer-toggle,
+#persona-management-button > .drawer-toggle {
+    --stcs--iconSize: var(--stis--iconSize);
+
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+
+    width: var(--stis--iconSize) !important;
+    height: var(--stis--iconSize) !important;
+    min-width: var(--stis--iconSize) !important;
+    min-height: var(--stis--iconSize) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: grid !important;
+    place-items: center !important;
+
+    box-sizing: border-box;
+    border-radius: 50%;
+
+    line-height: 1 !important;
+    /* Moonlit's character-only transition:all used to animate box geometry,
+       making one portrait drift during drawer/layout changes. */
+    transition: opacity 160ms ease !important;
+}
+
+
+/*
+ * Both roles use the same portrait box, border, crop and opacity.
+ * No 25px Persona-only correction is necessary anymore.
+ */
+#rightNavHolder > .drawer-toggle.stcs--char::after,
+#persona-management-button > .drawer-toggle.stcs--char::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+
+    background-image: var(--stcs--avatar);
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
+
+    border: 0;
+    border-radius: 50%;
+    box-shadow: none;
+
+    filter: none;
+    pointer-events: none;
+
+    opacity: .9;
+    transition:
+        opacity 160ms ease,
+        border-color 160ms ease;
+}
+
+
+#rightNavHolder > .drawer-toggle.stcs--char:hover::after,
+#persona-management-button > .drawer-toggle.stcs--char:hover::after {
+    opacity: 1;
+}
+
+
+/* Hide the native glyph only while a portrait is available. */
+#rightNavHolder > .drawer-toggle.stcs--char > .drawer-icon::before,
+#persona-management-button > .drawer-toggle.stcs--char > .drawer-icon::before {
+    display: none !important;
+}
+
+
+/*
+ * Keep the portrait circular when its drawer is open. Upstream Char Switch
+ * changes this to 40% in Discord-style layouts; unified Identity Switch uses
+ * one shape for both Character and Persona instead.
+ */
+#rightNavHolder > .drawer-toggle.stcs--char::after,
+body:not(.stcs--nonDiscord)
+    #rightNavHolder > .drawer-toggle.stcs--char:has(.drawer-icon.openIcon)::after {
+    border-radius: 50% !important;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Character right-click switch menu                                         */
+/* ------------------------------------------------------------------------- */
+
+.stis--ctxBlocker,
+.stcs--ctxBlocker {
+    cursor: default;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+}
+
+
+.stis--ctxMenu,
+.stcs--ctxMenu {
+    position: fixed !important;
+
+    margin: 0;
+    padding: 5px 8px;
+
+    overflow: auto;
+
+    font-size: var(--mainFontSize);
+
+    box-sizing: border-box;
+
+    /*
+     * Width remains content-driven, but never large enough to fall outside the
+     * viewport when the Character button lives at the far-right.
+     */
+    width: max-content;
+    max-width: min(360px, calc(100vw - 16px));
+
+    flex-direction: column !important;
+}
+
+
+.stis--ctxItem,
+.stcs--ctxItem {
+    display: flex;
+    gap: 10px !important;
+    align-items: center;
+
+    min-width: 0;
+
+    opacity: .55;
+    transition: opacity 160ms ease;
+}
+
+
+.stis--ctxItem:hover,
+.stcs--ctxItem:hover {
+    opacity: 1;
+}
+
+
+.stis--ctxAvatar,
+.stcs--ctxAvatar {
+    width: var(--stis--iconSize) !important;
+    min-width: var(--stis--iconSize) !important;
+    height: var(--stis--iconSize) !important;
+
+    box-sizing: border-box;
+
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
+
+    border: 0;
+    border-radius: 50%;
+
+    flex: 0 0 var(--stis--iconSize);
+}
+
+
+.stis--ctxName,
+.stcs--ctxName {
+    flex: 1 1 auto;
+
+    min-width: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* Keep upstream / Moonlit favorite styling compatible. */
+.stcs--ctxItem.stcs--fav > .stcs--ctxAvatar,
+.stis--ctxItem.stcs--fav > .stis--ctxAvatar {
+    outline: 1px solid var(--customThemeColor, gold) !important;
+}
+
+
+.stcs--ctxItem.stcs--fav > .stcs--ctxName,
+.stis--ctxItem.stcs--fav > .stis--ctxName {
+    color: var(--customThemeColor, gold) !important;
+}

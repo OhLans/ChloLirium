@@ -1,0 +1,6 @@
+/* Feature styles: Navigator, Character Panels, Persona Panels, Icons.
+   Relative SVG URLs resolve against features/icons/style.css. */
+@import url('./features/navigator/style.css');
+@import url('./features/character-panels/style.css');
+@import url('./features/persona-panels/style.css');
+@import url('./features/icons/style.css');

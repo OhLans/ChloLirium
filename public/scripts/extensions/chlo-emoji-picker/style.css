@@ -1,0 +1,90 @@
+#chlo-emoji-panel {
+    position: fixed;
+    inset: auto 124px 3px auto;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    width: 352px;
+    margin: 0;
+    padding: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(var(--chlo-emoji-viewport-height, 100dvh) - 16px);
+    overflow: hidden;
+    border: 1px solid #ffffff1a;
+    border-radius: 12px;
+    background: rgba(30, 30, 30, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    color: rgb(222, 222, 221);
+}
+
+#chlo-emoji-panel[hidden],
+#chlo-emoji-panel [hidden] {
+    display: none !important;
+}
+
+.chlo-emoji-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px 4px 12px;
+    font-size: 13px;
+}
+
+.chlo-emoji-close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.chlo-emoji-status {
+    padding: 18px;
+}
+
+#chlo-emoji-panel em-emoji-picker {
+    /* Override the former standalone positioning snippet, if still installed. */
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    height: min(435px, calc(var(--chlo-emoji-viewport-height, 100dvh) - 60px));
+    min-height: 0;
+    flex: 1 1 auto;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    --rgb-background: 30, 30, 30;
+    --rgb-color: 222, 222, 221;
+    --rgb-accent: 174, 149, 149;
+    --rgb-input: 15, 15, 15;
+    --color-border: #ffffff1a;
+    --color-border-over: #ffffff33;
+}
+
+#addEmojiButton {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: var(--bottomFormBlockSize, 32px);
+    height: var(--bottomFormBlockSize, 32px);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    #chlo-emoji-panel {
+        right: 8px;
+        bottom: max(3px, env(safe-area-inset-bottom));
+    }
+}

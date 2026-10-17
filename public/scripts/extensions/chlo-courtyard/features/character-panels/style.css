@@ -1,0 +1,1388 @@
+:root {
+    --rcp-panel-bg: color-mix(in srgb, var(--SmartThemeBlurTintColor, #151515) 88%, transparent);
+    --rcp-panel-bg-soft: color-mix(in srgb, var(--SmartThemeBlurTintColor, #151515) 68%, transparent);
+    --rcp-line: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 12%, transparent);
+    --rcp-line-strong: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 20%, transparent);
+    --rcp-text-muted: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 58%, transparent);
+}
+
+/* ============================ CHARACTER LIST ============================ */
+/*
+ * Important rule for this section:
+ * SillyTavern remains the source of truth for:
+ *   - list vs grid (`body.charListGrid`)
+ *   - avatar style (`body.big-avatars`, `.square-avatars`, `.rounded-avatars`)
+ *   - character/group card internals
+ *
+ * Character Panels only reorganizes the toolbar and adds light visual polish.
+ * We deliberately do NOT force the list into a grid or force avatar geometry.
+ */
+body.rivelle-character-panels #rm_characters_block.rcp-list-mode {
+    position: relative;
+}
+
+body.rivelle-character-panels #charListFixedTop.rcp-toolbar-relocated {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    overflow: visible !important;
+}
+
+/* Native topbar is replaced by our compact grouped toolbar. */
+body.rivelle-character-panels #rm_button_bar {
+    display: none !important;
+}
+
+
+/* No character/name strip at all in the all-characters view. */
+body.rivelle-character-panels.rcp-character-list-active #rm_PinAndTabs {
+    display: none !important;
+}
+
+#rcp-list-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+}
+
+/* In list mode the toolbar lives in SillyTavern's persistent panel header,
+   immediately to the right of the native pin/lock control. */
+body.rivelle-character-panels #CharListButtonAndHotSwaps > #rcp-list-toolbar {
+    flex: 1 1 auto;
+    width: auto;
+    padding: 4px 8px 4px 4px;
+}
+
+body.rivelle-character-panels #CharListButtonAndHotSwaps > .flex-container:first-child {
+    flex: 0 0 auto;
+}
+
+#rcp-list-mainline {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(88px, 1fr) minmax(68px, 82px);
+    gap: 6px;
+    align-items: center;
+}
+
+#rcp-search-slot {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#rcp-search-slot #form_character_search_form {
+    display: block !important;
+    flex: 1;
+    margin: 0 !important;
+}
+
+#rcp-search-slot #character_search_bar,
+#rcp-sort-slot #character_sort_order {
+    width: 100% !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    margin: 0 !important;
+    border-radius: 9px !important;
+    border: 1px solid var(--rcp-line) !important;
+    background: var(--rcp-panel-bg-soft) !important;
+    box-shadow: none !important;
+    font-size: .78rem !important;
+}
+
+#rcp-search-slot #rm_button_search {
+    width: 30px !important;
+    height: 30px !important;
+    display: grid !important;
+    place-items: center !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+    filter: none !important;
+    color: var(--SmartThemeBodyColor, #ddd) !important;
+}
+
+#rcp-list-groups {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.rcp-group {
+    position: relative;
+}
+
+.rcp-group-toggle {
+    appearance: none;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #ddd) !important;
+    display: inline-grid;
+    place-items: center;
+    gap: 0;
+    cursor: pointer;
+    opacity: 1 !important;
+    filter: none !important;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.rcp-group-toggle > i {
+    opacity: 1 !important;
+    filter: none !important;
+    color: var(--SmartThemeBodyColor, #ddd) !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+}
+
+.rcp-group-toggle span {
+    display: none;
+    font-size: .72rem;
+}
+
+.rcp-group-toggle:hover,
+.rcp-group.open > .rcp-group-toggle {
+    opacity: 1;
+    border-color: var(--rcp-line);
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 7%, transparent);
+}
+
+#rcp-list-utility-tray {
+    width: calc(100% - 16px);
+    margin: 3px 8px 7px;
+    padding: 7px 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--rcp-line);
+    border-radius: 12px;
+    background-color: #1b1a1a !important;
+    background-color: rgb(from var(--SmartThemeBlurTintColor, #1b1a1a) r g b / 1) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#rcp-list-utility-tray[hidden] {
+    display: none !important;
+}
+
+.rcp-group-panel {
+    display: none;
+    position: static !important;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    overflow: visible;
+}
+
+.rcp-group-panel.rcp-panel-open {
+    display: flex;
+}
+
+/* The three group toggles are ours, so keep their icon rendering stable.
+   Native controls moved into the panels intentionally keep Moonlit Echoes /
+   SillyTavern's own color, opacity, hover and active-state styling. */
+body.rivelle-character-panels #rcp-list-toolbar .rcp-group-toggle {
+    opacity: 1 !important;
+    filter: none !important;
+    color: var(--SmartThemeBodyColor, #ddd) !important;
+}
+
+/* ---------- Actions ---------- */
+.rcp-group-panel[data-rcp-owner="rcp-actions-group"] {
+    display: none;
+    grid-template-columns: repeat(4, 38px);
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    justify-items: center;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-actions-group"].rcp-panel-open {
+    display: grid;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-actions-group"] .menu_button,
+.rcp-group-panel[data-rcp-owner="rcp-actions-group"] .right_menu_button {
+    margin: 0 !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    box-sizing: border-box !important;
+    border-radius: 9px !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-actions-group"] #rm_buttons_container {
+    display: contents !important;
+}
+
+/* ---------- Filters ---------- */
+.rcp-group-panel[data-rcp-owner="rcp-filters-group"] {
+    flex-direction: column;
+    gap: 7px;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-filters-group"] .rm_tag_controls {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* SillyTavern has six standard actionable filter buttons. Keep all six on
+   one clean row instead of allowing the last one to drop underneath. */
+.rcp-group-panel[data-rcp-owner="rcp-filters-group"] .rm_tag_filter {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-filters-group"] .rm_tag_filter > .tag.actionable {
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    height: 34px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+}
+
+/* Actual user tags only appear when ST's Show Tag List action enables them.
+   Let those wrap naturally below the six controls. */
+.rcp-group-panel[data-rcp-owner="rcp-filters-group"] .rm_tag_filter > .tag:not(.actionable) {
+    flex: 0 1 auto !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-filters-group"] .rm_tag_bogus_drilldown {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+}
+
+/* ---------- View / pagination ---------- */
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] {
+    flex-direction: column;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #rm_print_characters_pagination {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+}
+
+/* Pagination.js is one logical row. Give its range, arrows and page-size
+   their own columns so they cannot overlap one another. */
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #rm_print_characters_pagination > .paginationjs {
+    order: -10;
+    flex: 1 0 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: auto auto auto;
+    grid-template-areas: 'nav pages size';
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] .paginationjs-nav {
+    grid-area: nav;
+    width: max-content !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+    font-size: .7rem !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] .paginationjs-pages {
+    grid-area: pages;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] .paginationjs-pages ul {
+    min-width: 0 !important;
+    margin: 0 !important;
+    gap: 3px !important;
+    justify-content: center !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] .paginationjs-pages ul li a {
+    min-width: 25px !important;
+    height: 27px !important;
+    padding: 0 5px !important;
+    display: grid !important;
+    place-items: center !important;
+    box-sizing: border-box !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] .paginationjs-size-changer {
+    grid-area: size;
+    min-width: 0 !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] .paginationjs-size-changer select {
+    min-width: 72px !important;
+    max-width: 82px !important;
+    height: 29px !important;
+    margin: 0 !important;
+    padding: 2px 18px 2px 6px !important;
+    font-size: .7rem !important;
+}
+
+/* Grid view + bulk edit belong on the second centered row. Bulk-mode controls
+   may appear beside them later; they inherit the same compact geometry. */
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #rm_print_characters_pagination > .menu_button,
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #rm_print_characters_pagination > .bulkEditOptionElement {
+    margin: 0 !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #charListGridToggle,
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #bulkEditButton,
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #bulkSelectAllButton,
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #bulkDeleteButton {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    box-sizing: border-box !important;
+}
+
+.rcp-group-panel[data-rcp-owner="rcp-view-group"] #bulkSelectedCount:empty {
+    display: none !important;
+}
+
+/*
+ * Card area: do not set display:grid/flex here.
+ * ST/Moonlit switch it themselves when the native grid button toggles
+ * `body.charListGrid`.
+ */
+body.rivelle-character-panels #rm_print_characters_block {
+    padding: 8px 8px 22px !important;
+}
+
+/* Light common polish without changing native card structure. */
+body.rivelle-character-panels
+#rm_print_characters_block > .rcp-character-card {
+    border: 1px solid transparent !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+body.rivelle-character-panels
+#rm_print_characters_block > .rcp-character-card:hover {
+    border-color: var(--rcp-line);
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 5%, transparent) !important;
+}
+
+/*
+ * The "+++" text is a native spacing placeholder and should never become
+ * user-visible. Our older grid rules accidentally resurrected it.
+ */
+body.rivelle-character-panels
+#rm_print_characters_block .ch_add_placeholder {
+    display: none !important;
+}
+
+/* Names must always win the available line instead of being squeezed into "...". */
+body.rivelle-character-panels
+#rm_print_characters_block .character_name_block,
+body.rivelle-character-panels
+#rm_print_characters_block .group_name_block {
+    min-width: 0 !important;
+}
+
+body.rivelle-character-panels
+#rm_print_characters_block .ch_name {
+    min-width: 0 !important;
+}
+
+/*
+ * GRID MODE
+ * ---------
+ * Keep ST's native grid sizing/toggle, then only tidy the content alignment.
+ * This means the native grid button genuinely switches modes again.
+ */
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card {
+    margin: 0 !important;
+    padding: 5px 4px 7px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
+}
+
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.character_select_container,
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.group_select_container {
+    min-width: 0 !important;
+    align-items: center !important;
+}
+
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.character_name_block,
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.group_name_block {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-bottom: 1px !important;
+    text-align: center !important;
+}
+
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.ch_name {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    text-align: center !important;
+    font-size: .76rem !important;
+    font-weight: 600 !important;
+}
+
+/* Keep real version/group metadata, but never the placeholder. */
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.character_version:not(:empty),
+body.rivelle-character-panels.charListGrid
+#rm_print_characters_block > .rcp-character-card
+.group_select_counter:not(:empty) {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    text-align: center !important;
+    font-size: .66rem !important;
+    opacity: .52;
+}
+
+/*
+ * AVATAR SHAPES
+ * -------------
+ * Intentionally no width/height/border-radius rules here.
+ * ST's own classes provide all four settings:
+ *   default = Circle
+ *   body.square-avatars = Square
+ *   body.rounded-avatars = Rounded
+ *   body.big-avatars = Rectangle
+ *
+ * This also lets Moonlit's own avatar sizing continue to work.
+ */
+
+/* Compact toolbar on narrower panels. */
+@media (max-width: 460px) {
+    #rcp-list-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    #rcp-list-groups {
+        justify-content: flex-end;
+    }
+}
+
+/* ============================ CHARACTER EDITOR ============================ */
+body.rivelle-character-panels #rm_ch_create_block.rcp-editor-mode {
+    position: relative;
+    contain: layout paint style;
+    isolation: isolate;
+    gap: 0 !important;
+    /* The native editor and form are both 100%-height scrollers. Once our
+       shell was a sibling of the form, that left an entire empty viewport
+       below the real content. Let the form be the only editor scroller. */
+    overflow-y: hidden !important;
+}
+
+body.rivelle-character-panels #rm_ch_create_block.rcp-editor-mode #form_create {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 0 2px 12px !important;
+    margin: 0 !important;
+    overscroll-behavior: contain;
+}
+
+#rcp-character-shell {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    margin: 0 0 10px;
+}
+
+/* Hero kept from v0.3: full-resolution character file + clean circular avatar. */
+#rcp-character-hero {
+    position: relative;
+    width: 100%;
+    height: 188px;
+    flex: 0 0 188px;
+    overflow: visible;
+    margin: 0 0 29px;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 94%, transparent);
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.rcp-hero-image {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-image: var(--rcp-hero-image);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center 24%;
+    image-rendering: auto;
+}
+
+.rcp-hero-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,.02) 15%, rgba(0,0,0,.08) 52%, rgba(0,0,0,.50) 100%);
+    pointer-events: none;
+}
+
+.rcp-hero-bottom {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: -26px;
+    z-index: 3;
+    display: flex;
+    align-items: end;
+    justify-content: flex-start;
+}
+
+#rcp-avatar-proxy {
+    appearance: none;
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 92%, transparent);
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+#rcp-avatar-proxy img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: none !important;
+}
+
+#rcp-name-slot {
+    min-width: 0;
+    flex: 1 1 auto;
+    width: 100%;
+    padding: 0;
+}
+
+#rcp-name-slot[hidden] {
+    display: none !important;
+}
+
+#rcp-name-slot #name_div {
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+#rcp-name-slot #character_name_pole {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: var(--SmartThemeBodyColor, #ddd) !important;
+    font-size: 1.02rem !important;
+    font-weight: 700 !important;
+}
+
+#rcp-name-slot .extension_token_counter {
+    display: none !important;
+}
+
+
+/*
+ * The panel-level lock belongs to the global Character Manager. While editing
+ * one character, hide that native global row entirely; it returns in list mode.
+ * The native name/info strip is also redundant because name + eye + usage are
+ * now placed explicitly in our editor header.
+ */
+body.rivelle-character-panels.rcp-character-editor-active #CharListButtonAndHotSwaps,
+body.rivelle-character-panels.rcp-character-editor-active #rm_PinAndTabs {
+    display: none !important;
+}
+
+/* The back-arrow beside Actions replaces the redundant native list button
+   beside the Character Management lock. */
+body.rivelle-character-panels #rm_button_characters.rcp-native-manager-hidden {
+    display: none !important;
+}
+
+
+/* Character name stays clean and separate above the main control row. */
+#rcp-character-name-row {
+    width: calc(100% - 12px);
+    min-height: 34px;
+    flex: 0 0 34px;
+    margin: 0 6px 5px;
+    padding: 1px 4px 1px 9px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    border-left: 2px solid color-mix(in srgb, var(--SmartThemeQuoteColor, var(--SmartThemeBodyColor, #ddd)) 72%, transparent);
+    background: transparent;
+}
+
+#rcp-character-name[hidden] {
+    display: none !important;
+}
+
+#rcp-character-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .98rem;
+    font-weight: 650;
+    letter-spacing: .01em;
+}
+
+/* One centered Actions button. Native action cluster stays hidden until opened. */
+#rcp-actions-zone {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 10px 8px;
+}
+
+#rcp-primary-controls {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+#rcp-actions-toggle,
+#rcp-usage-toggle {
+    appearance: none;
+    min-width: 104px;
+    height: 32px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--rcp-line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 70%, transparent);
+    color: inherit;
+    opacity: .78;
+    cursor: pointer;
+    transition: opacity .15s ease, background-color .15s ease, border-color .15s ease;
+}
+
+#rcp-actions-toggle span,
+#rcp-usage-toggle span {
+    font-size: .76rem;
+}
+
+#rcp-actions-toggle:hover,
+#rcp-usage-toggle:hover,
+#rcp-character-shell.rcp-actions-open #rcp-actions-toggle,
+#rcp-character-shell.rcp-usage-open #rcp-usage-toggle {
+    opacity: 1;
+    border-color: var(--rcp-line-strong);
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 9%, transparent);
+}
+
+#rcp-actions-toggle i,
+#rcp-usage-toggle i {
+    font-size: .66rem;
+    transition: transform .15s ease;
+}
+
+#rcp-character-shell.rcp-actions-open #rcp-actions-toggle i,
+#rcp-character-shell.rcp-usage-open #rcp-usage-toggle i {
+    transform: rotate(180deg);
+}
+
+#rcp-back-slot {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+}
+
+#rcp-back-slot #rm_button_back {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid var(--rcp-line) !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 70%, transparent) !important;
+    box-shadow: none !important;
+    opacity: .78;
+}
+
+#rcp-back-slot #rm_button_back:hover {
+    opacity: 1;
+    border-color: var(--rcp-line-strong) !important;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 9%, transparent) !important;
+}
+
+
+#rcp-eye-slot {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+}
+
+#rcp-eye-slot #hideCharPanelAvatarButton {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid var(--rcp-line) !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 70%, transparent) !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    opacity: .78;
+    cursor: pointer;
+}
+
+#rcp-eye-slot #hideCharPanelAvatarButton:hover {
+    opacity: 1;
+    border-color: var(--rcp-line-strong) !important;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 9%, transparent) !important;
+}
+
+#rcp-actions-panel,
+#rcp-usage-panel {
+    display: none;
+    width: 100%;
+    margin-top: 7px;
+    padding: 8px;
+    border: 1px solid var(--rcp-line);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 94%, transparent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+#rcp-character-shell.rcp-actions-open #rcp-actions-panel {
+    display: block;
+}
+
+#rcp-character-shell.rcp-usage-open #rcp-usage-panel {
+    display: flex;
+}
+
+#rcp-actions-panel #avatar_controls {
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+}
+
+#rcp-actions-panel .form_create_bottom_buttons_block {
+    width: max-content !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+}
+
+#rcp-actions-panel .menu_button,
+#rcp-actions-panel .right_menu_button,
+#rcp-actions-panel .menu_button_icon {
+    flex: 0 0 auto !important;
+    min-width: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+}
+
+#rcp-actions-panel label[for="char-management-dropdown"] {
+    flex: 0 0 auto !important;
+    width: 118px !important;
+    height: 32px !important;
+    margin: 0 auto !important;
+}
+
+#rcp-actions-panel #char-management-dropdown {
+    width: 118px !important;
+    height: 32px !important;
+    margin: 0 !important;
+}
+
+/* The native submit label is only meaningful while creating a new card. */
+#rcp-actions-panel #create_button_label.rcp-create-submit-hidden {
+    display: none !important;
+}
+
+/* New-character mode: these native controls operate on an already-existing
+   card/chat and should not be exposed until SillyTavern finishes creation.
+   We only hide them visually; the upstream nodes and handlers stay intact. */
+body.rivelle-character-panels.rcp-creating-character #rcp-actions-panel #delete_button,
+body.rivelle-character-panels.rcp-creating-character #rcp-actions-panel #dupe_button,
+body.rivelle-character-panels.rcp-creating-character #rcp-actions-panel .chat_lorebook_button,
+body.rivelle-character-panels.rcp-creating-character #rcp-field-actions #character_open_media_overrides {
+    display: none !important;
+}
+
+
+#rcp-usage-panel {
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+#rcp-usage-token-slot {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+#rcp-usage-token-slot #result_info_text {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 7px !important;
+    font-size: .76rem;
+    opacity: .82;
+}
+
+#rcp-usage-token-slot #result_info_text > div {
+    display: inline-flex;
+    align-items: baseline;
+}
+
+#rcp-usage-token-slot #result_info_text small {
+    opacity: .72;
+}
+
+
+#rcp-usage-token-slot #chartokenwarning {
+    margin-left: 6px !important;
+    flex: 0 0 auto;
+}
+
+#rcp-usage-stats-slot {
+    flex: 0 0 auto;
+}
+
+#rcp-usage-stats-slot .rcp-show-stats {
+    appearance: none !important;
+    width: max-content !important;
+    min-width: 86px !important;
+    height: 31px !important;
+    margin: 0 !important;
+    padding: 0 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid var(--rcp-line) !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    opacity: .68;
+    cursor: pointer;
+    font-family: inherit !important;
+    font-size: .74rem !important;
+    font-style: normal !important;
+    line-height: 1 !important;
+}
+
+#rcp-usage-stats-slot .rcp-show-stats:hover {
+    opacity: 1;
+    border-color: var(--rcp-line-strong) !important;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 10%, transparent) !important;
+}
+
+/* Token text + stats moved to Usage. Keep warning/eye in ST's native row. */
+body.rivelle-character-panels #result_info {
+    min-width: 0;
+}
+
+.rcp-divider {
+    width: calc(100% - 12px);
+    height: 1px;
+    margin: 0 6px;
+    background: var(--rcp-line);
+}
+
+/* All three section buttons share one centered row. */
+#rcp-section-nav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 9px;
+    padding: 10px 10px 9px;
+}
+
+.rcp-section-tab {
+    appearance: none;
+    width: max-content;
+    max-width: 100%;
+    height: 31px;
+    padding: 0 13px;
+    border: 1px solid var(--rcp-line);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    opacity: .62;
+    cursor: pointer;
+    font-size: .74rem;
+    white-space: nowrap;
+    transition: opacity .15s ease, background-color .15s ease, border-color .15s ease;
+}
+
+
+
+
+.rcp-section-tab:hover,
+.rcp-section-tab.active {
+    opacity: 1;
+    border-color: var(--rcp-line-strong);
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 10%, transparent);
+}
+
+.rcp-divider-bottom {
+    margin-bottom: 9px;
+}
+
+/* ONE pane at a time. Description pane owns First Message too. */
+#rcp-content-panes {
+    width: 100%;
+    min-width: 0;
+    display: block;
+    padding: 0 8px 10px;
+}
+
+.rcp-content-pane {
+    display: none;
+    width: 100%;
+    min-width: 0;
+}
+
+.rcp-content-pane.active {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rcp-content-pane > #descriptionWrapper,
+.rcp-content-pane > #firstMessageWrapper,
+.rcp-content-pane > #tags_div,
+.rcp-content-pane > #spoiler_free_desc {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.rcp-content-pane > #descriptionWrapper,
+.rcp-content-pane > #firstMessageWrapper {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.rcp-content-pane textarea,
+.rcp-content-pane .text_pole {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Native field headers stay clean; Ext. Media and Alt. Greetings now live
+   together underneath First Message. */
+body.rivelle-character-panels #description_div,
+body.rivelle-character-panels #first_message_div {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+#rcp-field-actions {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    padding: 0 6px 1px;
+    margin-top: -2px;
+}
+
+#rcp-field-actions .rcp-field-action {
+    appearance: none !important;
+    width: max-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 31px !important;
+    margin: 0 !important;
+    padding: 0 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    flex: 0 0 auto !important;
+    border: 1px solid var(--rcp-line) !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+    opacity: .62;
+    cursor: pointer;
+    font-size: .74rem !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+    filter: none !important;
+    transition: opacity .15s ease, background-color .15s ease, border-color .15s ease;
+}
+
+#rcp-field-actions .rcp-field-action:hover {
+    opacity: 1;
+    border-color: var(--rcp-line-strong) !important;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 10%, transparent) !important;
+}
+
+/* Ext. Media's native state is still controlled by ST, but its paperclip /
+   link glyphs are hidden so the button visually matches our text pills. */
+#rcp-field-actions #character_open_media_overrides > i {
+    display: none !important;
+}
+
+#rcp-field-actions .rcp-field-action > span {
+    font-size: inherit !important;
+}
+
+/* Original avatar/name shell now contains only hidden native upload internals. */
+body.rivelle-character-panels #rm_ch_create_block .rcp-original-header-shell {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    clip-path: inset(50%) !important;
+}
+
+body.rivelle-character-panels #rm_ch_create_block .title_restorable,
+body.rivelle-character-panels #rm_ch_create_block .standoutHeader,
+body.rivelle-character-panels #rm_ch_create_block .inline-drawer-toggle {
+    border-radius: 10px;
+}
+
+body.rivelle-character-panels #rm_ch_create_block textarea,
+body.rivelle-character-panels #rm_ch_create_block .text_pole {
+    border-radius: 9px !important;
+}
+
+body.rivelle-character-panels #rm_ch_create_block .extension_token_counter {
+    opacity: .66;
+    font-size: .72rem;
+}
+
+@media (max-width: 700px) {
+    #rcp-list-toolbar { grid-template-columns: 1fr; }
+    #rcp-list-groups { justify-content: flex-end; }
+    .rcp-group-panel { right: 0; max-width: calc(100vw - 30px); }
+    body.rivelle-character-panels #rm_print_characters_block { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); }
+    #rcp-character-hero { height: 172px; }
+    #rcp-section-nav { padding-inline: 7px; gap: 6px; }
+    .rcp-section-tab { padding-inline: 9px; font-size: .69rem; }
+}
+
+
+/* ====================== INLINE ADVANCED DEFINITIONS ====================== */
+/* The original #advanced_div remains in the DOM for compatibility, but its
+   function is now represented by the inline Advanced Definitions drawer. */
+body.rivelle-character-panels #advanced_div.rcp-native-advanced-hidden {
+    display: none !important;
+}
+
+#rcp-advanced-inline {
+    width: 100%;
+    min-width: 0;
+    margin: 2px 0 0;
+    padding-top: 2px;
+}
+
+.rcp-advanced-header {
+    width: 100%;
+    min-height: 38px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 7px 5px 10px;
+    border: 1px solid var(--rcp-line);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111) 76%, transparent);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color .15s ease, border-color .15s ease, filter .15s ease;
+}
+
+.rcp-advanced-header:hover,
+.rcp-advanced-header:focus-visible {
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 8%, var(--SmartThemeBlurTintColor, #111));
+    border-color: var(--rcp-line-strong);
+    outline: none;
+}
+
+.rcp-advanced-title {
+    min-width: 0;
+    font-size: .78rem;
+    font-weight: 600;
+    opacity: .88;
+}
+
+#rcp-advanced-toggle {
+    width: 30px;
+    height: 28px;
+    flex: 0 0 30px;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: inherit;
+    opacity: .68;
+    pointer-events: none;
+    transition: opacity .15s ease;
+}
+
+.rcp-advanced-header:hover #rcp-advanced-toggle,
+.rcp-advanced-header:focus-visible #rcp-advanced-toggle {
+    opacity: 1;
+}
+
+#rcp-advanced-toggle i {
+    font-size: .72rem;
+    transition: transform .16s ease;
+    /* Expanded by default: point upward. */
+    transform: rotate(180deg);
+}
+
+#rcp-advanced-inline.rcp-collapsed #rcp-advanced-toggle i {
+    transform: rotate(0deg);
+}
+
+#rcp-advanced-body {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 2px 2px;
+}
+
+#rcp-advanced-inline.rcp-collapsed #rcp-advanced-body {
+    display: none;
+}
+
+/* These are the real children that normally live in #character_popup. Make
+   them behave as an inline, narrow-panel editor instead of a full-screen popup. */
+#rcp-advanced-body > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+#rcp-advanced-body > hr {
+    height: 1px;
+    margin: 2px 0 !important;
+    border: 0 !important;
+    background: var(--rcp-line);
+}
+
+#rcp-advanced-body textarea,
+#rcp-advanced-body input,
+#rcp-advanced-body select,
+#rcp-advanced-body .text_pole {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Metadata/depth rows were designed for the wide centered popup. Stack them
+   inside the narrow right-hand character panel. */
+#rcp-advanced-body .flex-container.flexnowrap,
+#rcp-advanced-body #depth_prompt_div {
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+}
+
+#rcp-advanced-body .flex1 {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+#rcp-advanced-body #depth_prompt_div > div:last-child {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(70px, 1fr);
+    gap: 4px 8px;
+    align-items: center;
+}
+
+#rcp-advanced-body #depth_prompt_div > div:last-child .extension_token_counter {
+    grid-column: 1 / -1;
+}
+
+
+/* v0.4.3: moved Advanced Definition maximize buttons stay interactive even
+   though they no longer live inside #character_popup. */
+#rcp-advanced-body .editor_maximize {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    opacity: .75;
+    filter: grayscale(1);
+    position: relative;
+    z-index: 2;
+}
+
+#rcp-advanced-body .editor_maximize:hover {
+    opacity: 1;
+}
+
+
+@media (max-width: 460px) {
+    #rcp-primary-controls {
+        gap: 5px;
+    }
+
+    #rcp-actions-toggle,
+    #rcp-usage-toggle {
+        min-width: 92px;
+        padding-inline: 10px;
+    }
+
+    #rcp-actions-panel .form_create_bottom_buttons_block {
+        gap: 3px !important;
+    }
+
+    #rcp-actions-panel .menu_button,
+    #rcp-actions-panel .right_menu_button,
+    #rcp-actions-panel .menu_button_icon {
+        min-width: 30px !important;
+        width: 30px !important;
+        height: 30px !important;
+    }
+}
+
+
+#rcp-character-hero[hidden] {
+    display: none !important;
+    margin: 0 !important;
+}
+
+/* The primary control row is the divider anchor in the "Right of Controls" layout. */
+#rcp-actions-zone {
+    padding-bottom: 8px;
+}
+
+
+#rcp-character-name-row[hidden] {
+    display: none !important;
+}
+
+
+/* Native controls inside the shared tray deliberately inherit the active
+   theme. In Moonlit Echoes, for example, tag/filter controls use the theme's
+   softer opacity and custom accent on hover. Do not normalize them here. */
+
+/* All three top group toggles share identical geometry. */
+body.rivelle-character-panels #rcp-list-groups > .rcp-group > .rcp-group-toggle {
+    width: 30px !important;
+    min-width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    opacity: 1 !important;
+    filter: none !important;
+}

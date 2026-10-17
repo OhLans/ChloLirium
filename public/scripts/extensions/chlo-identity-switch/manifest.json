@@ -1,0 +1,13 @@
+{
+    "display_name": "Identity Switch",
+    "description": "Unified Character + Persona portrait controls for SillyTavern. Includes Char Switch's character menu and Persona portrait integration.",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Lans + ChatGPT, based on LenAnderson's Char Switch",
+    "version": "1.0.1-no-ring",
+    "license": "AGPL-3.0",
+    "auto_update": false
+}

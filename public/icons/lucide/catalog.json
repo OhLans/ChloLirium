@@ -210,6 +210,7 @@
     {
         "name": "chevron-down",
         "aliases": [
+            "fa-caret-down",
             "fa-chevron-down"
         ]
     },
@@ -222,13 +223,21 @@
     {
         "name": "chevron-right",
         "aliases": [
+            "fa-angle-right",
             "fa-chevron-right"
         ]
     },
     {
         "name": "chevron-up",
         "aliases": [
+            "fa-caret-up",
             "fa-chevron-up"
+        ]
+    },
+    {
+        "name": "chevrons-left",
+        "aliases": [
+            "fa-angles-left"
         ]
     },
     {
@@ -408,6 +417,12 @@
         "name": "file-output",
         "aliases": [
             "fa-file-export"
+        ]
+    },
+    {
+        "name": "file-pen",
+        "aliases": [
+            "fa-file-edit"
         ]
     },
     {
@@ -646,6 +661,12 @@
         ]
     },
     {
+        "name": "list-filter",
+        "aliases": [
+            "fa-filter"
+        ]
+    },
+    {
         "name": "list-ordered",
         "aliases": [
             "fa-list-ol"
@@ -757,6 +778,12 @@
         "name": "monitor",
         "aliases": [
             "fa-desktop"
+        ]
+    },
+    {
+        "name": "moon",
+        "aliases": [
+            "fa-moon"
         ]
     },
     {
