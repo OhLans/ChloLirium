@@ -44,6 +44,7 @@
     <link rel="stylesheet" type="text/css" href="css/mobile-styles.css">
     <link rel="stylesheet" type="text/css" href="css/macros.css">
     <link rel="stylesheet" type="text/css" href="css/chlolirium-icons.css">
+    <link rel="stylesheet" type="text/css" href="css/chlolirium-interface.css">
     <link rel="stylesheet" type="text/css" href="css/user.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Scripts are loaded at the end of the body to improve page load speed -->
@@ -212,6 +213,10 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <label class="checkbox_label">
+                                        <input id="ChatCompletionTabs-enabled" type="checkbox">
+                                        <span data-i18n="Separate Parameters and Prompts into tabs">Separate Parameters and Prompts into tabs</span>
+                                    </label>
                                 </div>
                             </div>
                             <div id="textgenerationwebui_api-presets">
@@ -4959,6 +4964,17 @@
                                 </div>
                             </div>
                         </div>
+                        <div id="chlo-theme-settings"></div>
+                        <details id="chlo-identity-settings">
+                            <summary data-i18n="Navigation portraits">Navigation portraits</summary>
+                            <label class="checkbox_label"><input id="chlo-character-portrait" type="checkbox"><span data-i18n="Show character portrait">Show character portrait</span></label>
+                            <label class="checkbox_label"><input id="chlo-persona-portrait" type="checkbox"><span data-i18n="Show persona portrait">Show persona portrait</span></label>
+                            <label class="checkbox_label"><input id="chlo-favorites-first" type="checkbox"><span data-i18n="Show favorites first in character switcher">Show favorites first in character switcher</span></label>
+                            <label class="checkbox_label"><input id="chlo-favorites-only" type="checkbox"><span data-i18n="Only show favorites in character switcher">Only show favorites in character switcher</span></label>
+                            <label class="checkbox_label"><input id="chlo-highlight-favorites" type="checkbox"><span data-i18n="Highlight favorite characters">Highlight favorite characters</span></label>
+                            <label for="chlo-switcher-count" data-i18n="Characters in switcher">Characters in switcher</label>
+                            <input id="chlo-switcher-count" class="text_pole" type="number" min="1" max="100" step="1">
+                        </details>
                         <div name="themeElements" class="flex-container flexFlowColumn flexNoGap">
                             <!-- <h4><span data-i18n="UI Colors">Theme Settings</span></h4> -->
                             <div name="AvatarAndChatDisplay" class="flex-container flexFlowColumn">
@@ -8112,9 +8128,14 @@
                 <div id="nonQRFormItems">
                     <div id="leftSendForm" class="alignContentCenter">
                         <div id="options_button" class="fa-solid fa-bars interactable"></div>
+                        <div id="quickPersona" class="interactable" tabindex="0" role="button" aria-label="Switch persona" data-i18n="[aria-label]Switch persona" aria-expanded="false" aria-controls="quickPersonaMenu">
+                            <img id="quickPersonaImg" src="/img/ai4.png" alt="">
+                            <div id="quickPersonaCaret" class="fa-fw fa-solid fa-caret-up"></div>
+                        </div>
                     </div>
                     <textarea id="send_textarea" name="text" class="mdHotkeys" data-i18n="[no_connection_text]Not connected to API!;[connected_text]Type a message, or /? for help" placeholder="Not connected to API!" no_connection_text="Not connected to API!" connected_text="Type a message, or /? for help" autocomplete="off"></textarea>
                     <div id="rightSendForm" class="alignContentCenter">
+                        <button id="addEmojiButton" type="button" class="fa-solid fa-face-smile interactable" title="Insert emoji" aria-label="Insert emoji" data-i18n="[title]Insert emoji;[aria-label]Insert emoji" aria-expanded="false" aria-controls="chlo-emoji-panel"></button>
                         <div id="stscript_continue" title="Continue script execution" class="stscript_btn stscript_continue" data-i18n="[title]Continue script execution">
                             <i class="fa-solid fa-play"></i>
                         </div>
