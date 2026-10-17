@@ -17,6 +17,7 @@ import { getTagsList } from './tags.js';
 import { groups, selected_group } from './group-chats.js';
 import { getCurrentLocale, t } from './i18n.js';
 import { importWorldInfo } from './world-info.js';
+import { getLucideIconChoices } from './chlolirium-icons.js';
 
 export const shiftUpByOne = (e, i, a) => a[i] = e + 1;
 export const shiftDownByOne = (e, i, a) => a[i] = e - 1;
@@ -2593,12 +2594,15 @@ export async function fetchFa() {
     ])).flat())];
 }
 /**
- * Opens a popup with all the available Font Awesome icons and returns the selected icon's name.
- * @prop {string[]} customList A custom list of Font Awesome icons to use instead of all available icons.
+ * Opens the icon picker and returns a compatible fa-* class. ChloLirium uses
+ * Lucide choices by default; custom lists and the Font Awesome fallback remain supported.
+ * @param {string[][]?} [customList=null] Custom groups of compatible icon classes.
  * @returns {Promise<string>} The icon name (fa-pencil) or null if cancelled.
  */
 export async function showFontAwesomePicker(customList = null) {
-    const faList = customList ?? await fetchFa();
+    const faList = customList ?? await (document.documentElement.dataset.iconSet === 'lucide'
+        ? getLucideIconChoices().catch(() => fetchFa())
+        : fetchFa());
     const fas = {};
     const dom = document.createElement('div'); {
         dom.classList.add('faPicker-container');
@@ -2633,7 +2637,7 @@ export async function showFontAwesomePicker(customList = null) {
                     opt.classList.add('menu_button');
                     opt.classList.add('fa-solid');
                     opt.classList.add(fa[0]);
-                    opt.title = fa.map(it => it.slice(3)).join(', ');
+                    opt.title = [...new Set(fa.map(it => it.replace(/^(?:fa-|cl-icon-)/, '')))].join(', ');
                     opt.dataset.result = POPUP_RESULT.AFFIRMATIVE.toString();
                     opt.addEventListener('click', () => value = fa[0]);
                     grid.append(opt);
