@@ -31,16 +31,24 @@ export function initChloLirium() {
         await loadInterfaceLocale();
         // Theme definitions translate their labels at module evaluation. Import
         // after core localization is ready, avoiding the core module cycles.
-        const [theme, tabs, courtyard, identity, emoji, persona] = await Promise.all([
+        const [theme, tabs, courtyard, identity, emoji, persona, presets] = await Promise.all([
             import('./moonlit-echoes/index.js'),
             import('./chat-completion-tabs/index.js'),
             import('./courtyard/index.js'),
             import('./identity-switch/index.js'),
             import('./emoji-picker/index.js'),
             import('./quick-persona/index.js'),
+            import('./presets/index.js'),
         ]);
         await theme.initMoonlitTheme();
         tabs.initCompletionTabs();
+        try {
+            await presets.initPresetWorkspace();
+        } catch (error) {
+            // Keep the existing native controls and other interface features
+            // usable if the workspace template could not be fetched.
+            console.warn('Preset Library could not be initialized', error);
+        }
         courtyard.initCourtyard();
         identity.initIdentityControls();
         emoji.initEmojiPicker();

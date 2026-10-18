@@ -90,6 +90,7 @@ export const event_types = {
     SECRET_ROTATED: 'secret_rotated',
     SECRET_EDITED: 'secret_edited',
     PRESET_CHANGED: 'preset_changed',
+    PROMPT_PRESET_SAVED: 'prompt_preset_saved',
     PRESET_DELETED: 'preset_deleted',
     PRESET_RENAMED: 'preset_renamed',
     PRESET_RENAMED_BEFORE: 'preset_renamed_before',

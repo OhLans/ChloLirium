@@ -107,6 +107,7 @@
     {
         "name": "book-open",
         "aliases": [
+            "fa-book-open",
             "fa-book-open-reader"
         ]
     },
@@ -831,7 +832,8 @@
     {
         "name": "panels-top-left",
         "aliases": [
-            "fa-window-restore"
+            "fa-window-restore",
+            "fa-columns"
         ]
     },
     {

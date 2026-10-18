@@ -82,6 +82,7 @@ import { ToolManager } from './tool-calling.js';
 import { accountStorage } from './util/AccountStorage.js';
 import { COMETAPI_IGNORE_PATTERNS, IGNORE_SYMBOL, MEDIA_DISPLAY, MEDIA_TYPE } from './constants.js';
 import { syncNanoGptProvidersForModel, syncOpenRouterProvidersForModel, updateNanoGptProvidersWarning, updateOpenRouterProvidersWarning } from './textgen-models.js';
+import { pickPromptPreset, promptPresetKeys } from './chlolirium/presets/model.js';
 
 export {
     openai_messages_count,
@@ -376,6 +377,7 @@ export const settingsToUpdate = {
     stream_openai: ['#stream_toggle', 'stream_openai', true, false],
     prompts: ['', 'prompts', false, false],
     prompt_order: ['', 'prompt_order', false, false],
+    chlo_preset: ['', 'chlo_preset', false, false],
     show_external_models: ['#openai_show_external_models', 'show_external_models', true, true],
     proxy_password: ['#openai_proxy_access_key', 'proxy_password', false, true],
     assistant_prefill: ['#claude_assistant_prefill', 'assistant_prefill', false, false],
@@ -515,6 +517,7 @@ const default_settings = {
     n: 1,
     bind_preset_to_connection: true,
     extensions: {},
+    chlo_preset: {},
 };
 
 const oai_settings = structuredClone(default_settings);
@@ -4582,11 +4585,7 @@ async function getStatusOpen() {
  * @returns {Object} The preset body object
  */
 export function getChatCompletionPreset(settings = oai_settings) {
-    const presetBody = {};
-    for (const [presetKey, [, settingsKey]] of Object.entries(settingsToUpdate)) {
-        presetBody[presetKey] = settings[settingsKey];
-    }
-    return structuredClone(presetBody);
+    return pickPromptPreset(settings);
 }
 
 /**
@@ -4598,6 +4597,11 @@ export function getChatCompletionPreset(settings = oai_settings) {
  * @returns {Promise<void>}
  */
 async function saveOpenAIPreset(name, settings, triggerUi = true) {
+    await saveChatCompletionPromptPreset(name, settings, { select: true, apply: triggerUi });
+}
+
+/** Save a library draft without selecting it or changing shared parameters. */
+export async function saveChatCompletionPromptPreset(name, settings, { select = false, apply = false } = {}) {
     const presetBody = getChatCompletionPreset(settings);
     const savePresetSettings = await fetch('/api/presets/save', {
         method: 'POST',
@@ -4613,20 +4617,27 @@ async function saveOpenAIPreset(name, settings, triggerUi = true) {
         const data = await savePresetSettings.json();
 
         if (Object.keys(openai_setting_names).includes(data.name)) {
-            oai_settings.preset_settings_openai = data.name;
             const value = openai_setting_names[data.name];
-            Object.assign(openai_settings[value], presetBody);
-            $(`#settings_preset_openai option[value="${value}"]`).prop('selected', true);
-            if (triggerUi) $('#settings_preset_openai').trigger('change');
+            openai_settings[value] = presetBody;
         } else {
             openai_settings.push(presetBody);
             openai_setting_names[data.name] = openai_settings.length - 1;
             const option = document.createElement('option');
-            option.selected = true;
+            option.selected = false;
             option.value = String(openai_settings.length - 1);
             option.innerText = data.name;
-            if (triggerUi) $('#settings_preset_openai').append(option).trigger('change');
+            $('#settings_preset_openai').append(option);
         }
+        if (select || apply) {
+            $('#settings_preset_openai').val(openai_setting_names[data.name]);
+            oai_settings.preset_settings_openai = data.name;
+        }
+        if (apply) {
+            $('#settings_preset_openai').trigger('change');
+            await getPresetApplicationPromise();
+        }
+        await eventSource.emit(event_types.PROMPT_PRESET_SAVED, { name: data.name });
+        return data.name;
     } else {
         toastr.error(t`Failed to save preset`);
         throw new Error('Failed to save preset');
@@ -5041,18 +5052,19 @@ function onSettingsPresetChange() {
         savePreset: saveOpenAIPreset,
         presetNameBefore: presetNameBefore,
     }).finally(async () => {
-        if (oai_settings.bind_preset_to_connection) {
-            $('.model_custom_select').empty();
-        }
-
         for (const [key, [selector, setting, isCheckbox, isConnection]] of Object.entries(settingsToUpdate)) {
-            if (isConnection && !oai_settings.bind_preset_to_connection) {
-                continue;
-            }
+            // Connection and generation parameters belong to the current session.
+            // This applies to every selection path: library, quick selector,
+            // slash commands, character bindings and imported legacy presets.
+            if (isConnection || !promptPresetKeys.has(key)) continue;
 
             // Extensions don't need UI updates and shouldn't fallback to current settings
             if (key === 'extensions') {
                 oai_settings.extensions = preset.extensions || {};
+                continue;
+            }
+            if (key === 'chlo_preset') {
+                oai_settings.chlo_preset = preset.chlo_preset || {};
                 continue;
             }
 
@@ -5065,16 +5077,6 @@ function onSettingsPresetChange() {
                 oai_settings[setting] = preset[key];
             }
         }
-
-        // These cannot be changed via preset if unbound to connection
-        if (oai_settings.bind_preset_to_connection) {
-            $('#chat_completion_source').trigger('change');
-            $('#openrouter_providers_chat').trigger('change');
-            $('#openrouter_quantizations_chat').trigger('change');
-            $('#nanogpt_provider').trigger('change');
-        }
-
-        $('#openai_logit_bias_preset').trigger('change');
 
         saveSettingsDebounced();
         await eventSource.emit(event_types.OAI_PRESET_CHANGED_AFTER);

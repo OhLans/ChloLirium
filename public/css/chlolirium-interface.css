@@ -3,6 +3,7 @@
 @import url('../scripts/chlolirium/identity-switch/style.css');
 @import url('../scripts/chlolirium/emoji-picker/style.css');
 @import url('../scripts/chlolirium/quick-persona/style.css');
+@import url('../scripts/chlolirium/presets/style.css');
 
 #chlo-theme-settings,
 #chlo-identity-settings {
