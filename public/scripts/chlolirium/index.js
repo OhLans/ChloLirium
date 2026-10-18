@@ -41,14 +41,8 @@ export function initChloLirium() {
             import('./presets/index.js'),
         ]);
         await theme.initMoonlitTheme();
+        presets.initPresetPanel();
         tabs.initCompletionTabs();
-        try {
-            await presets.initPresetWorkspace();
-        } catch (error) {
-            // Keep the existing native controls and other interface features
-            // usable if the workspace template could not be fetched.
-            console.warn('Preset Library could not be initialized', error);
-        }
         courtyard.initCourtyard();
         identity.initIdentityControls();
         emoji.initEmojiPicker();

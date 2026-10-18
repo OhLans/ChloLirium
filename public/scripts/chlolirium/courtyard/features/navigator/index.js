@@ -14,14 +14,6 @@ const AI_CONFIG = {
 
 const LEFT_NAV = [
     {
-        key: 'presets',
-        title: 'Preset Library',
-        click: '#chlo-preset-library-button',
-        icon: '#chlo-preset-library-button > i',
-        panel: '#chlo-preset-workspace',
-        optional: true,
-    },
-    {
         key: 'api',
         title: 'API Connections',
         click: '#sys-settings-button > .drawer-toggle',
