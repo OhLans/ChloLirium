@@ -6,9 +6,12 @@
 }
 
 #left-nav-panel.chlo-preset-panel #openai_api-presets { min-width: 0; }
+#left-nav-panel.chlo-preset-panel #chlo-native-preset-toolbar { display: none; }
+#left-nav-panel.chlo-preset-panel:not([data-preset-view="parameters"]) > #clickSlidersTips,
+#left-nav-panel.chlo-preset-panel:not([data-preset-view="parameters"]) > a.topRightInset { display: none; }
 #left-nav-panel.chlo-preset-panel .openai-tab-buttons {
     gap: 5px;
-    margin: 16px 0;
+    margin: 8px 0 18px;
     padding: 4px;
     border-radius: 12px;
     box-shadow: none;
@@ -32,30 +35,58 @@
     opacity: 1;
 }
 #left-nav-panel.chlo-preset-panel .openai-tab-content { animation: none; margin-block: 0; }
-#chlo-preset-collection { display: none; }
-#left-nav-panel.chlo-preset-panel #chlo-preset-collection { display: flex; flex-direction: column; gap: 14px; padding: 2px 0 18px; }
+#chlo-preset-collection, #chlo-preset-editor-header, #chlo-preset-layout-setting,
+.chlo-preset-action-label, .chlo-prompt-section { display: none; }
+#left-nav-panel.chlo-preset-panel #chlo-preset-collection { display: block; padding-bottom: 18px; }
+#left-nav-panel.chlo-preset-panel #chlo-preset-editor-header,
+#left-nav-panel.chlo-preset-panel #chlo-preset-layout-setting { display: block; }
+#left-nav-panel.chlo-preset-panel .chlo-preset-action-label { display: inline; }
+#left-nav-panel.chlo-preset-panel #chlo-preset-layout-setting { margin-block: 16px; }
+#chlo-preset-library-header, #chlo-preset-editor-header { margin-bottom: 20px; }
+#chlo-preset-library-header h3, #chlo-preset-editor-title { font-family: var(--mainFontFamily); font-size: max(22px, var(--mainFontSize)); font-weight: 500; line-height: 1.4; margin: 0 0 14px; overflow-wrap: anywhere; }
+#chlo-preset-current { display: block; opacity: .65; margin-top: 12px; overflow-wrap: anywhere; line-height: 1.5; }
+#left-nav-panel.chlo-preset-panel .chlo-preset-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+#left-nav-panel.chlo-preset-panel .chlo-preset-actions .menu_button { display: inline-flex; flex: 1 1 auto; justify-content: center; align-items: center; gap: 7px; min-height: 38px; padding: 8px; margin: 0; border-radius: 9px; font-size: 14px; white-space: nowrap; }
+#left-nav-panel.chlo-preset-panel #update_oai_preset { background: color-mix(in srgb, var(--chlo-preset-accent) 32%, transparent); }
+#chlo-preset-cards { display: flex; flex-direction: column; gap: 12px; }
 #left-nav-panel .chlo-preset-card {
     display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
+    grid-template-columns: 58px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px 12px;
     width: 100%;
-    min-height: 100px;
-    padding: 20px 16px;
+    min-height: 114px;
+    padding: 14px;
     border: 1px solid var(--chlo-preset-line);
     border-radius: 14px;
     background: var(--chlo-preset-surface);
     color: var(--SmartThemeBodyColor);
     text-align: start;
     font: inherit;
-    cursor: pointer;
     box-shadow: none;
 }
 #left-nav-panel .chlo-preset-card.selected { border-color: var(--chlo-preset-accent); background: color-mix(in srgb, var(--chlo-preset-accent) 14%, transparent); }
 #left-nav-panel .chlo-preset-card:hover { background: color-mix(in srgb, var(--chlo-preset-accent) 18%, transparent); }
-#left-nav-panel .chlo-preset-card:focus-visible { outline: 2px solid var(--chlo-preset-accent); outline-offset: 2px; }
-#left-nav-panel .chlo-preset-name { font-size: max(19px, var(--mainFontSize)); line-height: 1.45; overflow-wrap: anywhere; }
-#left-nav-panel .chlo-preset-active { font-size: 11px; padding: 3px 6px; border: 1px solid var(--chlo-preset-line); border-radius: 6px; text-transform: uppercase; }
+#left-nav-panel .chlo-preset-card button { color: inherit; font: inherit; cursor: pointer; }
+#left-nav-panel .chlo-preset-card button:focus-visible { outline: 2px solid var(--chlo-preset-accent); outline-offset: 3px; }
+#left-nav-panel .chlo-preset-cover { position: relative; display: grid; place-items: center; width: 58px; height: 68px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: linear-gradient(145deg, color-mix(in srgb, var(--chlo-preset-accent) 45%, #44443c), #302e2b); }
+#left-nav-panel .chlo-preset-cover > i { font-size: 25px; opacity: .75; }
+#left-nav-panel .chlo-preset-cover:has(> img:not([hidden])) > i { display: none; }
+#left-nav-panel .chlo-preset-cover > img { width: 100%; height: 100%; object-fit: cover; }
+#left-nav-panel .chlo-preset-cover-edit { position: absolute; right: 4px; bottom: 5px; padding: 3px; border-radius: 4px; background: #252222b3; color: #fff; font-size: 10px; opacity: .8; }
+#left-nav-panel .chlo-preset-open { display: flex; flex-direction: column; gap: 6px; min-width: 0; text-align: start; padding: 2px 0; border: 0; background: transparent; }
+#left-nav-panel .chlo-preset-name { font-family: var(--mainFontFamily); font-size: max(18px, var(--mainFontSize)); line-height: 1.4; overflow-wrap: anywhere; }
+#left-nav-panel .chlo-preset-open small { opacity: .6; font-size: 12px; }
+#left-nav-panel .chlo-preset-card-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: end; gap: 10px; }
+#left-nav-panel .chlo-preset-card-footer .menu_button { display: flex; gap: 8px; align-items: center; min-height: 32px; padding: 5px 10px; margin: 0; border-radius: 8px; font-size: 13px; }
+#left-nav-panel .chlo-preset-card-footer .chlo-preset-use { background: color-mix(in srgb, var(--chlo-preset-accent) 30%, transparent); }
+#left-nav-panel .chlo-preset-active { margin-inline-end: auto; font-size: 11px; opacity: .75; text-transform: uppercase; letter-spacing: .08em; }
+.chlo-preset-cover-dialog { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.chlo-preset-cover-dialog h3 { margin: 0; overflow-wrap: anywhere; }
+.chlo-preset-cover-dialog > img { max-width: 200px; max-height: 220px; border-radius: 12px; object-fit: contain; }
+.chlo-preset-cover-dialog > img[hidden] { display: none; }
+.chlo-preset-cover-dialog label { display: flex; flex-direction: column; gap: 10px; }
+.chlo-preset-cover-dialog input { max-width: min(300px, 70vw); }
 
 /* All original controls and their native event handlers stay in the drawer. */
 #left-nav-panel.chlo-preset-panel #range_block_openai > .range-block,
@@ -75,24 +106,27 @@
 #left-nav-panel.chlo-preset-panel textarea { border-radius: 9px; font-size: max(16px, var(--mainFontSize)); min-width: 0; }
 #left-nav-panel.chlo-preset-panel #range_block_openai input:not([type=range]):not([type=checkbox]) { min-height: 40px; }
 
-/* Restyle the native prompt rows, including their real token and action nodes. */
+/* Headings describe consecutive runs; native prompt order is never regrouped. */
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager .completion_prompt_manager_list_head,
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager .completion_prompt_manager_list_separator { display: none; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager .chlo-prompt-section { display: block; padding: 20px 2px 10px; margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .04em; opacity: .7; border: 0; background: none; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list { padding: 0; margin-block: 12px; min-height: 0; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list li.completion_prompt_manager_prompt {
-    grid-template-columns: 16px minmax(0, 1fr) auto;
-    gap: 10px;
-    min-height: 86px;
-    padding: 14px;
-    margin-bottom: 12px !important;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    gap: 4px 8px;
+    min-height: 64px;
+    padding: 12px;
+    margin-bottom: 7px !important;
     border: 1px solid var(--chlo-preset-line);
     border-radius: 12px;
     background: var(--chlo-preset-surface);
 }
-#left-nav-panel.chlo-preset-panel .completion_prompt_manager_prompt > .drag-handle { grid-column: 1; grid-row: 1 / 3; cursor: grab; opacity: .5; }
-#left-nav-panel.chlo-preset-panel .completion_prompt_manager_prompt > .completion_prompt_manager_prompt_name { grid-column: 2; min-width: 0; overflow-wrap: anywhere; white-space: normal; font-size: max(16px, var(--mainFontSize)); }
-#left-nav-panel.chlo-preset-panel .completion_prompt_manager_prompt > span:nth-child(3) { grid-column: 2 / 4; grid-row: 2; }
-#left-nav-panel.chlo-preset-panel .completion_prompt_manager_prompt > .prompt_manager_prompt_tokens { grid-column: 3; grid-row: 1; opacity: .55; }
-#left-nav-panel.chlo-preset-panel #completion_prompt_manager .prompt_manager_prompt_controls { justify-content: end !important; gap: 14px; }
-#left-nav-panel.chlo-preset-panel #completion_prompt_manager .prompt_manager_prompt_controls > span { width: 25px !important; height: 25px !important; margin: 0 !important; align-items: center; opacity: .8; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list .completion_prompt_manager_prompt > .drag-handle { display: flex; position: static; height: auto; padding: 0; grid-column: 1; grid-row: 1 / 3; cursor: grab; opacity: .5; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list .completion_prompt_manager_prompt > .completion_prompt_manager_prompt_name { grid-column: 2; min-width: 0; overflow: visible; overflow-wrap: anywhere; white-space: normal; font-size: max(16px, var(--mainFontSize)); line-height: 1.4; font-weight: 500; }
+#left-nav-panel.chlo-preset-panel .completion_prompt_manager_prompt > span:nth-child(3) { grid-column: 3; grid-row: 1 / 3; align-self: center; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list .completion_prompt_manager_prompt > .prompt_manager_prompt_tokens { grid-column: 2; grid-row: 2; text-align: start; font-size: 11px; opacity: .55; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager .prompt_manager_prompt_controls { justify-content: end !important; gap: 6px; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager .prompt_manager_prompt_controls > span { width: 23px !important; height: 26px !important; margin: 0 !important; align-items: center; opacity: .8; }
 
 /* The existing edit/inspect form becomes the next page inside the same panel. */
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_popup {
