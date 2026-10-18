@@ -1,0 +1,205 @@
+{
+    "name": "Stateful Loom QA",
+    "blocks": [
+        {
+            "id": "state",
+            "name": "Initialization",
+            "content": "\n{{// Reset each turn}}{{setvar::widget::}}{{setvar::voice::Neutral}}{{setchatvar::mind::Neutral}}\n",
+            "role": "system",
+            "enabled": true,
+            "position": "pre_history",
+            "depth": 0,
+            "marker": "category",
+            "group": null,
+            "injectionTrigger": []
+        },
+        {
+            "id": "calm",
+            "name": "Calm voice",
+            "content": "{{setvar::voice::Calm}}{{setchatvar::mind::Calm}}",
+            "role": "system",
+            "enabled": true,
+            "position": "pre_history",
+            "depth": 0,
+            "marker": null,
+            "group": "state",
+            "injectionTrigger": []
+        },
+        {
+            "id": "riot",
+            "name": "Alternate voice",
+            "content": "{{setvar::voice::Alternate}}{{setchatvar::mind::Alternate}}",
+            "role": "system",
+            "enabled": false,
+            "position": "pre_history",
+            "depth": 0,
+            "marker": null,
+            "group": "state",
+            "injectionTrigger": []
+        },
+        {
+            "id": "widget",
+            "name": "Optional weather panel",
+            "content": "{{setvar::widget}}Weather: clear. {{if {{persona}}}}Persona is available.{{else}}No persona.{{/if}}{{/setvar}}",
+            "role": "system",
+            "enabled": true,
+            "position": "pre_history",
+            "depth": 0,
+            "marker": null,
+            "group": "state",
+            "injectionTrigger": []
+        },
+        {
+            "id": "core",
+            "name": "Assembled instructions",
+            "content": "Voice: {{getvar::voice}}. {{getvar::widget}}",
+            "role": "system",
+            "enabled": true,
+            "position": "pre_history",
+            "depth": 0,
+            "marker": null,
+            "group": "state",
+            "injectionTrigger": []
+        },
+        {
+            "id": "history",
+            "name": "Chat history",
+            "content": "",
+            "role": "system",
+            "enabled": true,
+            "position": "pre_history",
+            "depth": 0,
+            "marker": "chat_history",
+            "group": null,
+            "injectionTrigger": []
+        },
+        {
+            "id": "post-a",
+            "name": "Post system A",
+            "content": "POST_SYSTEM_A",
+            "role": "system",
+            "enabled": true,
+            "position": "in_history",
+            "depth": 0,
+            "marker": null,
+            "group": null,
+            "injectionTrigger": []
+        },
+        {
+            "id": "post-b",
+            "name": "Post user B",
+            "content": "POST_USER_B",
+            "role": "user",
+            "enabled": true,
+            "position": "in_history",
+            "depth": 0,
+            "marker": null,
+            "group": null,
+            "injectionTrigger": []
+        },
+        {
+            "id": "post-c",
+            "name": "Post system C",
+            "content": "POST_SYSTEM_C",
+            "role": "system",
+            "enabled": true,
+            "position": "in_history",
+            "depth": 0,
+            "marker": null,
+            "group": null,
+            "injectionTrigger": []
+        }
+    ],
+    "regex_scripts": [
+        {
+            "name": "Active mind note",
+            "folder": "Notes",
+            "find_regex": "\\(\\(OOC ",
+            "flags": "g",
+            "replace_string": "((OOC mind=\"{{getchatvar::mind}}\": ",
+            "placement": [
+                "ai_output"
+            ],
+            "target": [
+                "display"
+            ],
+            "substitute_macros": "escaped",
+            "actions": [],
+            "scope": "global",
+            "disabled": false,
+            "run_on_edit": true,
+            "min_depth": null,
+            "max_depth": null,
+            "sort_order": 0
+        },
+        {
+            "name": "Old panels",
+            "find_regex": "<panel>[\\s\\S]*?</panel>",
+            "flags": "g",
+            "replace_string": "",
+            "placement": [
+                "ai_output"
+            ],
+            "target": [
+                "prompt"
+            ],
+            "substitute_macros": "none",
+            "actions": [],
+            "scope": "global",
+            "disabled": false,
+            "run_on_edit": true,
+            "min_depth": 2,
+            "max_depth": null,
+            "sort_order": 1
+        }
+    ],
+    "extensions": {
+        "regex_scripts": [
+            {
+                "name": "Active mind note",
+                "folder": "Notes",
+                "find_regex": "\\(\\(OOC ",
+                "flags": "g",
+                "replace_string": "((OOC mind=\"{{getchatvar::mind}}\": ",
+                "placement": [
+                    "ai_output"
+                ],
+                "target": [
+                    "display"
+                ],
+                "substitute_macros": "escaped",
+                "actions": [],
+                "scope": "global",
+                "disabled": false,
+                "run_on_edit": true,
+                "min_depth": null,
+                "max_depth": null,
+                "sort_order": 0
+            },
+            {
+                "name": "Old panels",
+                "find_regex": "<panel>[\\s\\S]*?</panel>",
+                "flags": "g",
+                "replace_string": "",
+                "placement": [
+                    "ai_output"
+                ],
+                "target": [
+                    "prompt"
+                ],
+                "substitute_macros": "none",
+                "actions": [],
+                "scope": "global",
+                "disabled": false,
+                "run_on_edit": true,
+                "min_depth": 2,
+                "max_depth": null,
+                "sort_order": 1
+            }
+        ]
+    },
+    "promptBehavior": {
+        "groupNudge": "Others: {{groupOthers}}"
+    },
+    "schemaVersion": 1
+}

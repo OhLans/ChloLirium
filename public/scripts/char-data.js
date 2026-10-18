@@ -99,6 +99,7 @@
 * @property {number} substituteRegex - Whether the regex should be substituted
 * @property {number} minDepth - The minimum depth
 * @property {number} maxDepth - The maximum depth
+* @property {{version: number, mode: string}} [chlo_loom] - Imported Loom replacement semantics
 */
 
 /**

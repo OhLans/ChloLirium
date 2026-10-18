@@ -808,6 +808,15 @@ async function onRegexEditorOpenClick(existingId, scriptType) {
             .prop('checked', true);
     }
 
+    const loomCompatibility = array[existingScriptIndex]?.chlo_loom;
+    if (loomCompatibility?.version === 1) {
+        editorHtml.find('select[name="substitute_regex"] option[value="1"]').prop('disabled', true).attr('title', 'Imported Loom rules support None or Escaped substitution.');
+        editorHtml.find('.regex_trim_strings').prop('disabled', true).attr('title', 'Imported Loom rules use untrimmed JavaScript captures.');
+    }
+    const compatibilityFields = () => loomCompatibility?.version === 1 ? {
+        chlo_loom: { ...loomCompatibility, mode: Number(editorHtml.find('select[name="substitute_regex"]').val()) === substitute_find_regex.ESCAPED ? 'escaped' : 'none' },
+    } : {};
+
     editorHtml.find('#regex_test_mode_toggle').on('click', function () {
         editorHtml.find('#regex_test_mode').toggleClass('displayNone');
         updateTestResult();
@@ -821,6 +830,7 @@ async function onRegexEditorOpenClick(existingId, scriptType) {
         }
 
         const testScript = {
+            ...compatibilityFields(),
             id: uuidv4(),
             scriptName: editorHtml.find('.regex_script_name').val().toString(),
             findRegex: editorHtml.find('.find_regex').val().toString(),
@@ -846,6 +856,7 @@ async function onRegexEditorOpenClick(existingId, scriptType) {
     const popupResult = await callGenericPopup(editorHtml, POPUP_TYPE.CONFIRM, '', { okButton: t`Save`, cancelButton: t`Cancel`, allowVerticalScrolling: true });
     if (popupResult) {
         const newRegexScript = {
+            ...compatibilityFields(),
             id: existingId ? String(existingId) : uuidv4(),
             scriptName: String(editorHtml.find('.regex_script_name').val()),
             findRegex: String(editorHtml.find('.find_regex').val()),

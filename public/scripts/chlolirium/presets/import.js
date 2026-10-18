@@ -1,5 +1,7 @@
 import { pickPromptPreset } from './model.js';
 import { presetCover } from './presentation.js';
+import { parseLoomText } from './loom-macros.js';
+import { convertLoomRegex } from './loom-regex.js';
 
 const markers = {
     chat_history: 'chatHistory', world_info_before: 'worldInfoBefore', world_info_after: 'worldInfoAfter',
@@ -8,17 +10,10 @@ const markers = {
     enhance_definitions: 'enhanceDefinitions', jailbreak: 'jailbreak', nsfw_prompt: 'nsfw',
 };
 const structural = new Set(['chatHistory', 'worldInfoBefore', 'worldInfoAfter', 'charDescription', 'charPersonality', 'personaDescription', 'scenario', 'dialogueExamples']);
-const portableMacros = new Set(['char', 'user', 'group', 'description', 'personality', 'scenario', 'persona', 'mesexamples', 'original', 'trim']);
 const behaviorFields = { continueNudge: 'continue_nudge_prompt', impersonationPrompt: 'impersonation_prompt', groupNudge: 'group_nudge_prompt', newChatPrompt: 'new_chat_prompt', newGroupChatPrompt: 'new_group_chat_prompt', sendIfEmpty: 'send_if_empty' };
 const completionFields = { assistantPrefill: 'assistant_prefill', assistantImpersonation: 'assistant_impersonation', continuePrefill: 'continue_prefill', continuePostfix: 'continue_postfix', namesBehavior: 'names_behavior', squashSystemMessages: 'squash_system_messages', useSystemPrompt: 'use_sysprompt' };
 
-function checkPortableText(text, name) {
-    for (const match of text.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
-        if (!match[1].trim().startsWith('//') && !portableMacros.has(match[1].trim().toLowerCase())) throw new Error(`“${name}” uses a macro outside the supported Loom subset. Nothing was imported.`);
-    }
-}
-
-/** A deliberately limited conversion, not a Loom macro/runtime emulator. Reject
+/** A deliberately limited conversion with isolated macro compatibility. Reject
  * unsupported semantics before the native import writes or selects anything. */
 export function convertLoomPreset(value) {
     const blocks = value.blocks;
@@ -39,13 +34,17 @@ export function convertLoomPreset(value) {
         // Loom can reorder these at generation time; a native static order
         // cannot represent that while preserving the visible block sequence.
         if (afterHistory && !block.marker && (block.position ?? 'pre_history') === 'pre_history') throw new Error(`Move “${block.name}” above Chat History in Loom before importing. Nothing was imported.`);
-        checkPortableText(block.content, block.name);
+        parseLoomText(block.content, block.name);
     }
     const prompts = [], order = [], convertedIds = new Set();
     let category = null;
-    for (const block of blocks) {
-        if (block.marker === 'category') { category = block; continue; }
-        const group = block.group === undefined ? category : categories.get(block.group);
+    for (const [index, block] of blocks.entries()) {
+        if (block.marker === 'category') {
+            category = block;
+            // Category content can initialize state used by all later blocks.
+            if (!block.content.trim()) continue;
+        }
+        const group = block.marker === 'category' ? block : block.group === undefined ? category : categories.get(block.group);
         if (block.group && !group) throw new Error(`Unknown Loom category for “${block.name}”.`);
         const identifier = Object.hasOwn(markers, block.marker) ? markers[block.marker] : block.id;
         if (convertedIds.has(identifier)) throw new Error('Duplicate Loom content marker. Nothing was imported.');
@@ -57,7 +56,10 @@ export function convertLoomPreset(value) {
             identifier, name: block.name, content: block.content, role: block.role ?? 'system',
             system_prompt: ['main', 'nsfw', 'jailbreak', 'enhanceDefinitions'].includes(identifier),
             marker: structural.has(identifier), injection_position: position === 'pre_history' ? 0 : 1,
-            injection_depth: position === 'post_history' ? 0 : (block.depth ?? 4), injection_order: 100,
+            injection_depth: position === 'post_history' ? 0 : (block.depth ?? 4),
+            // Native ST groups equal-priority injections by role. Distinct
+            // priorities retain Loom's interleaved system/user block order.
+            injection_order: position === 'pre_history' ? 100 : 101 + index,
             injection_trigger: block.injectionTrigger ?? [], forbid_overrides: false,
             ...(group ? { chlo_category: group.name } : {}),
         });
@@ -70,14 +72,21 @@ export function convertLoomPreset(value) {
             if (source?.[key] === undefined) continue;
             const expected = ['continue_prefill', 'squash_system_messages', 'use_sysprompt'].includes(nativeKey) ? 'boolean' : nativeKey === 'names_behavior' ? 'number' : 'string';
             if (typeof source[key] !== expected || (expected === 'number' && !Number.isFinite(source[key]))) throw new Error(`Invalid Loom prompt formatting: ${key}.`);
-            if (typeof source[key] === 'string') checkPortableText(source[key], key);
+            if (typeof source[key] === 'string') {
+                // Formatting fields still use ST's ordinary macro engine.
+                const ast = parseLoomText(source[key], key);
+                if (ast.some(node => typeof node !== 'string' && (node.args.length || node.body || node.name === 'random'))) throw new Error(`Loom stateful prompt formatting “${key}” needs further conversion. Nothing was imported.`);
+                if (key !== 'groupNudge' && /\{\{groupOthers\}\}/i.test(source[key])) throw new Error(`Loom groupOthers in “${key}” needs further conversion. Nothing was imported.`);
+            }
             formatting[nativeKey] = source[key];
         }
     }
+    const regex = convertLoomRegex(value);
     return {
         ...formatting,
         prompts, prompt_order: [{ character_id: 100001, order }],
-        chlo_preset: { format: 'Loom', description: value.description ?? value.metadata?.description ?? '', cover: presetCover(value) },
+        ...(regex.length ? { extensions: { regex_scripts: regex } } : {}),
+        chlo_preset: { format: 'Loom', loom_compat: 1, description: value.description ?? value.metadata?.description ?? '', cover: presetCover(value) },
     };
 }
 

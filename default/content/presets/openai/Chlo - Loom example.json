@@ -107,7 +107,7 @@
             "marker": false,
             "injection_position": 1,
             "injection_depth": 0,
-            "injection_order": 100,
+            "injection_order": 113,
             "injection_trigger": [],
             "forbid_overrides": false,
             "chlo_category": "Reply guidance"
@@ -154,6 +154,7 @@
     ],
     "chlo_preset": {
         "format": "Loom",
+        "loom_compat": 1,
         "description": "An original example of the supported Loom block/category subset, converted to native ST prompts.",
         "cover": ""
     }

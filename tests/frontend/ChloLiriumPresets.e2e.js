@@ -352,3 +352,105 @@ test('invalid image input cannot save, and cancelling leaves the preset file int
     await page.locator('dialog[open] .popup-button-cancel').click();
     expect(await readFile(file, 'utf8')).toBe(before);
 });
+
+test('stateful Loom import generates through native controls with either macro engine and keeps preset regex scoped', async ({ page }) => {
+    const before = await shared(page);
+    await page.evaluate(async () => {
+        const ctx = SillyTavern.getContext();
+        const form = new FormData();
+        form.set('ch_name', 'Loom QA Actor');
+        form.set('first_mes', 'A quiet afternoon.');
+        const response = await fetch('/api/characters/create', { method: 'POST', headers: ctx.getRequestHeaders({ omitContentType: true }), body: form });
+        if (!response.ok) throw new Error('Could not create Loom QA character');
+        await ctx.getCharacters();
+        await ctx.selectCharacterById(ctx.characters.findIndex(c => c.name === 'Loom QA Actor'));
+    });
+    await page.locator('#openai_preset_import_file').setInputFiles(path.join(root, 'tests/fixtures/chlolirium/loom-stateful.loom'));
+    await expect(page.locator('dialog[open]')).toContainText('regex');
+    await page.locator('dialog[open] .popup-button-ok').click();
+    const card = page.locator('.chlo-preset-card').filter({ hasText: 'loom-stateful' });
+    await expect(card.locator('.chlo-preset-open')).toHaveAttribute('aria-pressed', 'true');
+    await card.locator('.chlo-preset-open').click();
+    await expect(page.locator('[data-pm-identifier="state"]')).toBeVisible();
+    expect(await shared(page)).toEqual(before);
+    const requests = [];
+    await page.route('**/api/backends/chat-completions/generate', async route => {
+        requests.push(route.request().postDataJSON());
+        await route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: '((OOC hello)) <panel>Weather</panel>' }, finish_reason: 'stop' }] } });
+    });
+    for (const [engine, mind, widget, toggles, count] of [
+        [false, 'Calm', true, [], 1],
+        [true, 'Alternate', false, ['widget', 'calm', 'riot'], 2],
+    ]) {
+        for (const id of toggles) await page.locator(`[data-pm-identifier="${id}"] .prompt-manager-toggle-action`).click();
+        await page.evaluate(async engine => {
+            (await import('/scripts/power-user.js')).power_user.experimental_macro_engine = engine;
+            const script = await import('/script.js');
+            script.setOnlineStatus('Connected');
+            document.getElementById('send_textarea').value = 'Continue the afternoon.';
+            await script.Generate('normal');
+        }, engine);
+        expect(requests).toHaveLength(count);
+        const messages = requests.at(-1).messages;
+        const text = messages.map(message => message.content).join('\n');
+        expect(messages.every(message => message.content.trim().length > 0)).toBe(true);
+        expect(text).toContain(`Voice: ${mind}.`);
+        expect(text.includes('Weather: clear.')).toBe(widget);
+        expect(text).not.toContain('{{');
+        const post = messages.filter(message => /POST_(SYSTEM|USER)_/.test(message.content));
+        expect(post.map(message => message.role)).toEqual(['system', 'user', 'system']);
+        expect(post.map(message => message.content)).toEqual(['POST_SYSTEM_A', 'POST_USER_B', 'POST_SYSTEM_C']);
+        const regex = await page.evaluate(async () => {
+            const { getRegexedString, regex_placement, getScriptsByType, SCRIPT_TYPES } = await import('/scripts/extensions/regex/engine.js');
+            const source = '((OOC hi)) <panel>Weather</panel>';
+            return {
+                count: getScriptsByType(SCRIPT_TYPES.PRESET).length,
+                display: getRegexedString(source, regex_placement.AI_OUTPUT, { isMarkdown: true, depth: 0 }),
+                recent: getRegexedString(source, regex_placement.AI_OUTPUT, { isPrompt: true, depth: 0 }),
+                old: getRegexedString(source, regex_placement.AI_OUTPUT, { isPrompt: true, depth: 2 }),
+                state: SillyTavern.getContext().chatMetadata.chlo_loom_variables,
+            };
+        });
+        expect(regex.count).toBe(2);
+        expect(regex.display).toContain(`mind="${mind}"`);
+        expect(regex.recent).toContain('<panel>');
+        expect(regex.old).not.toContain('<panel>');
+        expect(regex.state).toEqual({ mind });
+    }
+    // Exercise the native regex editor's existing handler, even with its drawer closed.
+    await page.evaluate(() => document.querySelector('#saved_preset_scripts .edit_existing_regex').click());
+    const regexEditor = page.locator('dialog[open]');
+    await expect(regexEditor.locator('.regex_script_name')).toBeVisible();
+    await expect(regexEditor.locator('select[name="substitute_regex"] option[value="1"]')).toHaveJSProperty('disabled', true);
+    await regexEditor.locator('.regex_script_name').fill('Edited Loom note');
+    await regexEditor.locator('#regex_test_mode_toggle').click();
+    await regexEditor.locator('#regex_test_input').fill('((OOC hello');
+    await expect(regexEditor.locator('#regex_test_output')).toContainText('mind="Alternate"');
+    const regexSaved = page.waitForResponse('**/api/presets/save');
+    await regexEditor.locator('.popup-button-ok').click();
+    await regexSaved;
+    await page.locator('#update_oai_preset').click();
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/loom-stateful.json'), 'utf8'));
+    expect(stored.chlo_preset.loom_compat).toBe(1);
+    expect(stored.extensions.regex_scripts).toHaveLength(2);
+    expect(stored.extensions.regex_scripts[0]).toMatchObject({ scriptName: 'Edited Loom note', chlo_loom: { version: 1, mode: 'escaped' } });
+    expect(await shared(page)).toEqual(before);
+    await page.evaluate(async () => (await import('/script.js')).saveMetadata());
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('preloader'));
+    await page.waitForFunction(async () => (await import('/scripts/events.js')).eventSource.autoFireLastArgs.has('app_ready'));
+    await page.evaluate(async () => {
+        document.querySelectorAll('dialog[open] .popup-button-ok').forEach(button => button.click());
+        const ctx = SillyTavern.getContext();
+        await ctx.selectCharacterById(ctx.characters.findIndex(c => c.name === 'Loom QA Actor'));
+    });
+    expect(await page.evaluate(() => SillyTavern.getContext().chatMetadata.chlo_loom_variables)).toEqual({ mind: 'Alternate' });
+    await page.locator('[data-rn-key="aiconfig"]').click();
+    await page.locator('#openai-tab-btn-presets').click();
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-use').click();
+    const ordinary = await page.evaluate(async () => {
+        const { getScriptsByType, SCRIPT_TYPES, getRegexedString, regex_placement } = await import('/scripts/extensions/regex/engine.js');
+        return { count: getScriptsByType(SCRIPT_TYPES.PRESET).length, text: getRegexedString('((OOC hi))', regex_placement.AI_OUTPUT, { isMarkdown: true }) };
+    });
+    expect(ordinary).toEqual({ count: 0, text: '((OOC hi))' });
+});
