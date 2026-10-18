@@ -1,6 +1,6 @@
 /**
- * OpenAI Settings Tab Manager (Refactored)
- * When using the Chat Completion API, add separate tabs for Parameters and Prompt.
+ * Keep preset selection, parameters and the native prompt editor in the
+ * existing Chat Completion drawer.
  */
 
 // Import required functions
@@ -10,14 +10,34 @@ import { TabManager } from './tab-manager.js';
 
 export class OpenAITabManager {
     constructor() {
+        this.panel = document.getElementById('left-nav-panel');
+        this.popup = document.getElementById('completion_prompt_manager_popup');
+        this.popupAnchor = document.createComment('native prompt editor position');
+        this.popup.before(this.popupAnchor);
+        const role = document.getElementById('completion_prompt_manager_popup_entry_form_role').parentElement;
+        const triggers = document.getElementById('completion_prompt_manager_popup_entry_form_injection_trigger').parentElement;
+        const placement = document.getElementById('completion_prompt_manager_popup_entry_form_injection_position').closest('.flex-container');
+        this.promptOptions = [role, triggers, placement].map(node => {
+            const anchor = document.createComment('native prompt option position');
+            node.before(anchor);
+            return { node, anchor };
+        });
+        this.options = document.createElement('details');
+        this.options.className = 'chlo-inline-prompt-options';
+        this.options.innerHTML = '<summary>Role, triggers & placement</summary>';
         this.tabManager = new TabManager({
             containerSelector: '#left-nav-panel #openai_api-presets',
             insertAfterSelector: '#left-nav-panel #openai_api-presets > div',
             tabPrefix: 'openai-tab',
-            activeTabStorageKey: 'openai-active-tab',
-            defaultTab: 'parameters',
+            defaultTab: 'presets',
             className: 'openai-tab',
+            onTabSwitch: view => this.panel.dataset.presetView = view,
             tabs: {
+                presets: {
+                    label: 'Presets',
+                    icon: 'fa-solid fa-layer-group',
+                    contentSelectors: ['#chlo-preset-collection'],
+                },
                 parameters: {
                     label: 'Parameters',
                     icon: 'fa-solid fa-vial',
@@ -45,15 +65,46 @@ export class OpenAITabManager {
         });
 
         this.enabled = true;
+        this.syncLayout();
+        this.wasOpen = this.panel.classList.contains('openDrawer');
+        new MutationObserver(() => {
+            const open = this.panel.classList.contains('openDrawer');
+            if (open && !this.wasOpen && this.enabled && this.isTabsCreated && !this.popup.classList.contains('openDrawer')) this.tabManager.switchTab('presets');
+            this.wasOpen = open;
+        }).observe(this.panel, { attributes: true, attributeFilter: ['class'] });
     }
 
     setEnabled(enabled) {
         this.enabled = enabled;
         this.tabManager.setEnabled(enabled);
+        this.syncLayout();
     }
 
     refreshTabs() {
         this.tabManager.refreshTabs();
+        this.syncLayout();
+    }
+
+    syncLayout() {
+        const active = this.enabled && main_api === 'openai' && this.isTabsCreated;
+        this.panel.classList.toggle('chlo-preset-panel', active);
+        if (active) {
+            const container = document.getElementById('openai-tab-content-prompts');
+            // The outer drawer opens all descendant .drawer-content nodes.
+            // Inline edit/inspect is a page, so it must not open with the drawer.
+            this.popup.classList.remove('drawer-content');
+            if (!container.contains(this.popup)) container.append(this.popup);
+            if (!this.options.isConnected) {
+                const footer = this.popup.querySelector('.completion_prompt_manager_popup_entry_form_footer');
+                footer.before(this.options);
+                this.promptOptions.forEach(({ node }) => this.options.append(node));
+            }
+        } else if (this.popup.previousSibling !== this.popupAnchor) {
+            this.promptOptions.forEach(({ node, anchor }) => anchor.after(node));
+            this.options.remove();
+            this.popup.classList.add('drawer-content');
+            this.popupAnchor.after(this.popup);
+        }
     }
 
     // Backward compatibility methods

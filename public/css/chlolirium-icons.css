@@ -742,10 +742,6 @@ html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail 
     --rni-icon: var(--cl-lucide-sliders-horizontal);
 }
 
-html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="presets"] .rn-native-visual {
-    --rni-icon: var(--cl-lucide-book-open);
-}
-
 html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="api"] .rn-native-visual {
     --rni-icon: var(--cl-lucide-plug);
 }
