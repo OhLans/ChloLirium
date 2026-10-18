@@ -12,6 +12,7 @@ import { renderTemplateAsync } from './templates.js';
 import { Popup } from './popup.js';
 import { t } from './i18n.js';
 import { isMobile } from './RossAscends-mods.js';
+import { promptSection } from './chlolirium/presets/presentation.js';
 
 function debouncePromise(func, delay) {
     let timeoutId;
@@ -1660,9 +1661,16 @@ class PromptManager {
         const { prefix } = this.configuration;
 
         let listItemHtml = await renderTemplateAsync('promptManagerListHeader', { prefix });
+        let previousSection;
 
         this.getPromptsForCharacter(this.activeCharacter).forEach(prompt => {
             if (!prompt) return;
+
+            const section = promptSection(prompt);
+            if (section !== previousSection) {
+                listItemHtml += `<li class="chlo-prompt-section">${escapeHtml(section)}</li>`;
+                previousSection = section;
+            }
 
             const listEntry = this.getPromptOrderEntry(this.activeCharacter, prompt.identifier);
             const enabledClass = listEntry.enabled ? '' : `${prefix}prompt_manager_prompt_disabled`;
@@ -1932,6 +1940,8 @@ class PromptManager {
                 this.log(`Prompt order updated for ${this.activeCharacter.name}.`);
 
                 this.saveServiceSettings();
+                // Refresh headings after a native drag without changing order.
+                if (document.getElementById('left-nav-panel')?.classList.contains('chlo-preset-panel')) this.render(false);
             },
         });
     }
@@ -2139,6 +2149,7 @@ export {
     PromptManager,
     registerPromptManagerMigration,
     chatCompletionDefaultPrompts,
+    promptManagerDefaultPromptOrder,
     promptManagerDefaultPromptOrders,
     Prompt,
 };

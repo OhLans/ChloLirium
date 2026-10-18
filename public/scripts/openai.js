@@ -40,6 +40,7 @@ import {
     INJECTION_POSITION,
     Prompt,
     PromptManager,
+    promptManagerDefaultPromptOrder,
     promptManagerDefaultPromptOrders,
 } from './PromptManager.js';
 
@@ -83,6 +84,7 @@ import { accountStorage } from './util/AccountStorage.js';
 import { COMETAPI_IGNORE_PATTERNS, IGNORE_SYMBOL, MEDIA_DISPLAY, MEDIA_TYPE } from './constants.js';
 import { syncNanoGptProvidersForModel, syncOpenRouterProvidersForModel, updateNanoGptProvidersWarning, updateOpenRouterProvidersWarning } from './textgen-models.js';
 import { pickPromptPreset, promptPresetKeys } from './chlolirium/presets/model.js';
+import { preparePresetImport } from './chlolirium/presets/import.js';
 
 export {
     openai_messages_count,
@@ -4789,9 +4791,9 @@ async function onPresetImportFileChange(e) {
     e.target.value = '';
 
     try {
-        presetBody = JSON.parse(importedFile);
+        presetBody = preparePresetImport(JSON.parse(importedFile), { ...chatCompletionDefaultPrompts, prompt_order: [{ character_id: 100001, order: promptManagerDefaultPromptOrder }] });
     } catch (err) {
-        toastr.error(t`Invalid file`);
+        toastr.error(err.message || t`Invalid file`);
         return;
     }
 

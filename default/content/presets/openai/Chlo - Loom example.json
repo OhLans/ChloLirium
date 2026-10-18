@@ -1,0 +1,160 @@
+{
+    "prompts": [
+        {
+            "identifier": "voice",
+            "name": "Narrative voice",
+            "content": "Write as {{char}}, with clear prose, specific sensory detail and a consistent voice. Leave choices and dialogue for {{user}} to the user.",
+            "role": "system",
+            "system_prompt": false,
+            "marker": false,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Core instructions"
+        },
+        {
+            "identifier": "pacing",
+            "name": "Gentle pacing",
+            "content": "Let small reactions and pauses develop before moving the scene forward.",
+            "role": "system",
+            "system_prompt": false,
+            "marker": false,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Core instructions"
+        },
+        {
+            "identifier": "charDescription",
+            "name": "Character description",
+            "content": "",
+            "role": "system",
+            "system_prompt": false,
+            "marker": true,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Character & persona"
+        },
+        {
+            "identifier": "personaDescription",
+            "name": "User persona",
+            "content": "",
+            "role": "system",
+            "system_prompt": false,
+            "marker": true,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Character & persona"
+        },
+        {
+            "identifier": "worldInfoBefore",
+            "name": "World information",
+            "content": "",
+            "role": "system",
+            "system_prompt": false,
+            "marker": true,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "World & memory"
+        },
+        {
+            "identifier": "dialogueExamples",
+            "name": "Dialogue examples",
+            "content": "",
+            "role": "system",
+            "system_prompt": false,
+            "marker": true,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Conversation"
+        },
+        {
+            "identifier": "chatHistory",
+            "name": "Chat history",
+            "content": "",
+            "role": "system",
+            "system_prompt": false,
+            "marker": true,
+            "injection_position": 0,
+            "injection_depth": 4,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Conversation"
+        },
+        {
+            "identifier": "continuity",
+            "name": "Continuity",
+            "content": "Respond to the latest action and dialogue. Keep established events and the emotional tone of the scene consistent.",
+            "role": "system",
+            "system_prompt": false,
+            "marker": false,
+            "injection_position": 1,
+            "injection_depth": 0,
+            "injection_order": 100,
+            "injection_trigger": [],
+            "forbid_overrides": false,
+            "chlo_category": "Reply guidance"
+        }
+    ],
+    "prompt_order": [
+        {
+            "character_id": 100001,
+            "order": [
+                {
+                    "identifier": "voice",
+                    "enabled": true
+                },
+                {
+                    "identifier": "pacing",
+                    "enabled": false
+                },
+                {
+                    "identifier": "charDescription",
+                    "enabled": true
+                },
+                {
+                    "identifier": "personaDescription",
+                    "enabled": true
+                },
+                {
+                    "identifier": "worldInfoBefore",
+                    "enabled": true
+                },
+                {
+                    "identifier": "dialogueExamples",
+                    "enabled": true
+                },
+                {
+                    "identifier": "chatHistory",
+                    "enabled": true
+                },
+                {
+                    "identifier": "continuity",
+                    "enabled": true
+                }
+            ]
+        }
+    ],
+    "chlo_preset": {
+        "format": "Loom",
+        "description": "An original example of the supported Loom block/category subset, converted to native ST prompts.",
+        "cover": ""
+    }
+}

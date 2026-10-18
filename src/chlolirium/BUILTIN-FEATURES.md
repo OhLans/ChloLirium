@@ -20,8 +20,8 @@ styles. Theme styles remain switchable with the appearance setting.
   Moonlit appearance shortcut beside UI Theme opens the same controls.
 - **User Settings → Navigation portraits** holds character/persona visibility
   and character-switcher favorite/count preferences.
-- **Chat Completion Presets** in the API settings panel holds the switch for
-  separating Parameters and Prompts into tabs. Changing API and presets uses
+- **Parameters → Panel layout** holds the existing switch for separating the
+  collection, parameters and prompts into pages. Changing API and presets uses
   native events, with no polling timer.
 - The persona selector and emoji button belong to the chat composer. The emoji
   picker loads local Emoji Mart/data on first use and stays open while typing
@@ -32,8 +32,15 @@ styles. Theme styles remain switchable with the appearance setting.
 The existing AI Configuration drawer keeps its native position, width, pin
 behavior and theme settings. With the existing tab layout enabled, its opening
 page shows the native preset select's options as a vertical stack of cards.
-Selecting a card uses that select's normal change handler and opens Prompts.
+Use applies a card through that select's normal change handler while staying in
+the collection, so Export/Delete can target it there. Edit or the title opens Prompts.
 Parameters is another page in the same narrow drawer.
+
+Import, Export and Delete are on the collection page, with the active preset
+named beneath them. Save, Rename and Save as are beside the open preset's name
+on the Prompts page. The duplicate native toolbar is replaced while this layout
+is active. These are the actual native control nodes, moved with their IDs and
+handlers intact; disabling the layout restores their original positions.
 
 Import, export, save, save-as, rename, delete, prompt creation, prompt toggles,
 drag ordering, token counts and editing all use their original ST controls and
@@ -42,12 +49,50 @@ layout is active, then restored to its original location when the layout is
 disabled or the API changes. The editor keeps native roles, depth, triggers,
 override controls and macro autocomplete.
 
-The separate workspace, additional Navigator button, chat reflow, custom block
-editor, categories, cover editor, favorites/recent filters, preview and draft
-system have been removed. No user preset or preference data is deleted; any
-metadata saved by the earlier workspace is retained in existing preset records.
-This is a presentation of native ST functionality, without a parallel preset
-engine or a new importer.
+The separate workspace, additional Navigator button, chat reflow, favorites,
+recent filters, previews and draft system remain removed. All of this fits the
+native left drawer; it does not change the drawer or chat geometry.
+
+Prompt section headings label consecutive runs of native blocks as Core
+instructions, Character & persona, World & memory and Conversation. An explicit
+`chlo_category` from an earlier saved preset or Loom conversion takes precedence.
+Headings never regroup/reorder blocks, contribute prompt text or appear in the
+sortable data. Editing, disabling, dragging and saving still use PromptManager.
+
+Cards show existing raster/HTTP cover images instead of the book tile. Clicking
+the tile lets the user upload, replace or remove a cover. Uploaded images are
+resized to at most 384×384 and embedded as JPEG in `chlo_preset.cover`; they travel
+with native saves, rename, save-as, export and backups. This saves the preset
+file immediately, including current prompt edits when it is the active preset;
+it never selects an inactive preset or changes shared generation parameters.
+Cancel leaves the file unchanged. SVG uploads and active URL schemes are rejected.
+
+Two original examples, **Chlo - Loom example** and **Chlo - Legacy example**, are
+seeded through the normal content index on startup. Existing files are not
+overwritten and the active preset is not switched. The source fixtures are in
+`tests/fixtures/chlolirium`; tests compare the installed examples with actual
+conversion results. Deleted examples stay deleted after later starts, as with
+other bundled content.
+
+The existing Import action also accepts JSON `.loom` files. `presets/import.js`
+converts a limited Loom subset to native ST prompts: text blocks, categories,
+enabled state, system/user/assistant roles, known ST content markers, ordered or
+in-history placement, depth, generation triggers and portable prompt formatting.
+Files that need dynamic repositioning around Chat History are rejected with an
+explanation rather than silently changing visible order. Samplers and connection
+settings stay shared. This is not a Loom runtime: variables/placement bindings,
+append roles, radio categories, protected blocks, character-tag conditions,
+custom request bodies, unknown markers and nonportable macros are rejected
+before import writes or changes selection. The current supported macro subset
+is explicit in the adapter. Legacy ST text fields and native prompt-manager
+exports also import through this same action. Existing native extension data
+is retained. No unsupported block is silently dropped.
+
+The importer accepts portable Loom JSON, not database/API records. Format
+reference: LumiVerse's portable `LoomPreset` / `PromptBlock` definitions
+and ST marker map at commit
+[`3ca135a`](https://github.com/prolix-oc/Lumiverse/tree/3ca135a20a31f4ba18c8e96b24724cd73ad7c8eb/frontend/src/lib/loom).
+This fork uses its own small conversion adapter, not LumiVerse's runtime.
 
 `presets/model.js` explicitly separates prompt fields from shared generation
 and connection settings. All chat-completion preset selection paths, including

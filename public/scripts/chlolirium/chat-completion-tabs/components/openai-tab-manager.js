@@ -7,6 +7,7 @@
 import { main_api } from '../../../../script.js';
 import { oai_settings } from './../../../openai.js';
 import { TabManager } from './tab-manager.js';
+import { mountPresetActions } from '../../presets/actions.js';
 
 export class OpenAITabManager {
     constructor() {
@@ -88,6 +89,7 @@ export class OpenAITabManager {
     syncLayout() {
         const active = this.enabled && main_api === 'openai' && this.isTabsCreated;
         this.panel.classList.toggle('chlo-preset-panel', active);
+        mountPresetActions(active);
         if (active) {
             const container = document.getElementById('openai-tab-content-prompts');
             // The outer drawer opens all descendant .drawer-content nodes.

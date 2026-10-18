@@ -1,0 +1,9 @@
+{
+    "main_prompt": "Write the next reply as {{char}} in a collaborative story with {{user}}. Use clear, expressive prose and preserve the character’s voice. Let the user choose their own actions and dialogue.",
+    "nsfw_prompt": "",
+    "jailbreak_prompt": "Continue from the latest exchange. Keep the scene’s established facts and emotional tone consistent.",
+    "chlo_preset": {
+        "format": "Legacy",
+        "description": "An original legacy ST preset, using native prompt markers and automatic section headings."
+    }
+}

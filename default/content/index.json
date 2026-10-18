@@ -674,5 +674,13 @@
     {
         "filename": "errors/url-not-found.html",
         "type": "error_page"
+    },
+    {
+        "filename": "presets/openai/Chlo - Loom example.json",
+        "type": "openai_preset"
+    },
+    {
+        "filename": "presets/openai/Chlo - Legacy example.json",
+        "type": "openai_preset"
     }
 ]
