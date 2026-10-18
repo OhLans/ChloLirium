@@ -78,15 +78,43 @@ The existing Import action also accepts JSON `.loom` files. `presets/import.js`
 converts a limited Loom subset to native ST prompts: text blocks, categories,
 enabled state, system/user/assistant roles, known ST content markers, ordered or
 in-history placement, depth, generation triggers and portable prompt formatting.
+Empty category headers remain presentation metadata; category content is kept
+as a real prompt, because presets can use it to initialize variables. Imported
+absolute blocks receive distinct native priorities to preserve interleaved roles.
 Files that need dynamic repositioning around Chat History are rejected with an
 explanation rather than silently changing visible order. Samplers and connection
-settings stay shared. This is not a Loom runtime: variables/placement bindings,
+settings stay shared. This is not a complete Loom runtime: block-variable definitions/placement bindings,
 append roles, radio categories, protected blocks, character-tag conditions,
 custom request bodies, unknown markers and nonportable macros are rejected
 before import writes or changes selection. The current supported macro subset
 is explicit in the adapter. Legacy ST text fields and native prompt-manager
 exports also import through this same action. Existing native extension data
 is retained. No unsupported block is silently dropped.
+
+For newly converted Loom presets (`chlo_preset.loom_compat: 1`), an isolated
+resolver evaluates enabled prompts in native order. It supports identity/card
+macros, comments, trim/noop/newline/space, inline and scoped setvar/setchatvar,
+getvar/getchatvar, nested if/else with truthiness/negation, weighted random lists,
+numeric random ranges and NdS dice. Local variables reset for each collection;
+chat variables live in `chat_metadata.chlo_loom_variables` and use the normal
+chat save. Disabled and untriggered blocks have no side effects. Unchosen
+conditional branches are not evaluated. Native presets and ST's macro-engine
+preference are unchanged. Group nudges resolve groupOthers without the user or
+focused character. This subset does not support Loom expression conditions,
+macro flags, JSON/iteration macros or other advanced services.
+
+Portable regex rules are converted once into native preset-scoped scripts,
+retaining sort order, disabled state, flags, targets, edit behavior and depths.
+Identical root/embedded collections are not installed twice. Native permission
+and Regex enable controls still apply. Converted scripts retain Loom's `none`
+or `escaped` replacement semantics, including JS captures; captured chat prose
+is never evaluated as a macro. Only persisted chat-variable and identity reads
+are supported in escaped regex templates. Other modes/actions/scopes abort
+import before any write. The native regex editor retains compatibility when
+previewing and saving; unsupported Raw substitution and capture trimming are
+disabled for converted rules. Ordinary native regex editing is unchanged.
+The supplied Sola preset is used only for local QA;
+the repository contains original neutral fixtures, not that preset's content.
 
 The importer accepts portable Loom JSON, not database/API records. Format
 reference: LumiVerse's portable `LoomPreset` / `PromptBlock` definitions

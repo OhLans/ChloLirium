@@ -13,6 +13,7 @@ import { Popup } from './popup.js';
 import { t } from './i18n.js';
 import { isMobile } from './RossAscends-mods.js';
 import { promptSection } from './chlolirium/presets/presentation.js';
+import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
 
 function debouncePromise(func, delay) {
     let timeoutId;
@@ -1275,16 +1276,16 @@ class PromptManager {
      * @param original
      * @returns {Prompt} An object with "role" and "content" properties
      */
-    preparePrompt(prompt, original = null) {
+    preparePrompt(prompt, original = null, resolve = substituteParams) {
         const groupMembers = this.getActiveGroupCharacters();
         const preparedPrompt = new Prompt(prompt);
 
         if (typeof original === 'string') {
-            if (0 < groupMembers.length) preparedPrompt.content = substituteParams(prompt.content ?? '', { original, groupOverride: groupMembers.join(', ') });
-            else preparedPrompt.content = substituteParams(prompt.content, { original });
+            if (0 < groupMembers.length) preparedPrompt.content = resolve(prompt.content ?? '', { original, groupOverride: groupMembers.join(', ') });
+            else preparedPrompt.content = resolve(prompt.content ?? '', { original });
         } else {
-            if (0 < groupMembers.length) preparedPrompt.content = substituteParams(prompt.content ?? '', { groupOverride: groupMembers.join(', ') });
-            else preparedPrompt.content = substituteParams(prompt.content);
+            if (0 < groupMembers.length) preparedPrompt.content = resolve(prompt.content ?? '', { groupOverride: groupMembers.join(', ') });
+            else preparedPrompt.content = resolve(prompt.content ?? '');
         }
 
         return preparedPrompt;
@@ -1518,6 +1519,10 @@ class PromptManager {
         generationType = String(generationType || 'normal').toLowerCase().trim();
         const promptCollection = new PromptCollection();
         const promptOrder = this.getPromptOrderForCharacter(this.activeCharacter);
+        const loomResolve = this.serviceSettings.chlo_preset?.loom_compat === 1 ? createChatLoomResolver() : null;
+        // Loom trims assembled blocks; initialization-only blocks must not send
+        // whitespace messages to providers that reject empty system messages.
+        const resolve = loomResolve ? (text, options) => loomResolve(text, options).trim() : substituteParams;
 
         promptOrder.forEach(entry => {
             const prompt = this.getPromptById(entry.identifier);
@@ -1528,13 +1533,13 @@ class PromptManager {
             }
 
             if (allowedTrigger) {
-                promptCollection.add(this.preparePrompt(prompt));
+                promptCollection.add(this.preparePrompt(prompt, null, resolve));
             } else if (entry.identifier === 'main') {
                 // Some extensions require main prompt to be present for relative inserts.
                 // So we make a GMO-free vegan replacement.
                 const replacementPrompt = structuredClone(prompt);
                 replacementPrompt.content = '';
-                promptCollection.add(this.preparePrompt(replacementPrompt));
+                promptCollection.add(this.preparePrompt(replacementPrompt, null, resolve));
             }
         });
 

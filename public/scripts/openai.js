@@ -85,6 +85,7 @@ import { COMETAPI_IGNORE_PATTERNS, IGNORE_SYMBOL, MEDIA_DISPLAY, MEDIA_TYPE } fr
 import { syncNanoGptProvidersForModel, syncOpenRouterProvidersForModel, updateNanoGptProvidersWarning, updateOpenRouterProvidersWarning } from './textgen-models.js';
 import { pickPromptPreset, promptPresetKeys } from './chlolirium/presets/model.js';
 import { preparePresetImport } from './chlolirium/presets/import.js';
+import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
 
 export {
     openai_messages_count,
@@ -1372,7 +1373,9 @@ async function populateChatCompletion(prompts, chatCompletion, { bias, quietProm
 async function preparePromptsForChatCompletion({ scenario, charPersonality, name2, worldInfoBefore, worldInfoAfter, charDescription, quietPrompt, bias, extensionPrompts, systemPromptOverride, jailbreakPromptOverride, type }) {
     const scenarioText = scenario && oai_settings.scenario_format ? substituteParams(oai_settings.scenario_format) : (scenario || '');
     const charPersonalityText = charPersonality && oai_settings.personality_format ? substituteParams(oai_settings.personality_format) : (charPersonality || '');
-    const groupNudge = substituteParams(oai_settings.group_nudge_prompt);
+    const groupNudge = oai_settings.chlo_preset?.loom_compat === 1
+        ? createChatLoomResolver()(oai_settings.group_nudge_prompt)
+        : substituteParams(oai_settings.group_nudge_prompt);
     const impersonationPrompt = oai_settings.impersonation_prompt ? substituteParams(oai_settings.impersonation_prompt) : '';
 
     // Create entries for system prompts

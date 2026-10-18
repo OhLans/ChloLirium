@@ -3,10 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
 import { convertLoomPreset, preparePresetImport } from '../public/scripts/chlolirium/presets/import.js';
 import { presetCover, promptSection, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
+import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
+import { convertLoomRegex, replaceLoomRegex } from '../public/scripts/chlolirium/presets/loom-regex.js';
 
 const defaults = JSON.parse(await readFile(new URL('../default/content/presets/openai/Default.json', import.meta.url), 'utf8'));
 const loom = JSON.parse(await readFile(new URL('./fixtures/chlolirium/loom-example.loom', import.meta.url), 'utf8'));
 const legacy = JSON.parse(await readFile(new URL('./fixtures/chlolirium/legacy-example.json', import.meta.url), 'utf8'));
+const stateful = JSON.parse(await readFile(new URL('./fixtures/chlolirium/loom-stateful.loom', import.meta.url), 'utf8'));
 
 describe('Shared generation parameters', () => {
     test('prompt presets exclude generation and connection values, including legacy files', () => {
@@ -51,7 +54,7 @@ describe('Native preset presentation', () => {
 });
 
 describe('Supported Loom and legacy conversion', () => {
-    test('Loom categories are presentation metadata, never model instructions or extra messages', () => {
+    test('empty Loom categories are presentation metadata, never extra messages', () => {
         const source = structuredClone(loom);
         const result = convertLoomPreset(source);
         expect(result.prompts).toHaveLength(8);
@@ -138,4 +141,79 @@ describe('Supported Loom and legacy conversion', () => {
             expect(seeded).toEqual(expected);
         });
     }
+});
+
+describe('Stateful Loom compatibility', () => {
+    const native = text => ({ '{{char}}': 'Aster', '{{persona}}': 'A careful observer.' })[text] ?? '';
+    test('category initialization and scoped captures assemble enabled blocks in order', () => {
+        const preset = convertLoomPreset(stateful), chat = {};
+        const resolve = createLoomResolver({ native, chat });
+        const content = preset.prompt_order[0].order.filter(x => x.enabled).map(entry => resolve(preset.prompts.find(p => p.identifier === entry.identifier).content)).join('\n');
+        expect(preset.prompts[0]).toMatchObject({ identifier: 'state', chlo_category: 'Initialization' });
+        expect(content).toContain('Voice: Calm. Weather: clear. Persona is available.');
+        expect(content).not.toContain('Alternate');
+        expect(content).not.toContain('{{');
+        expect(chat).toEqual({ mind: 'Calm' });
+        const orders = preset.prompts.filter(p => p.injection_position === 1).map(p => p.injection_order);
+        expect(orders[0]).toBeLessThan(orders[1]);
+        expect(orders[1]).toBeLessThan(orders[2]);
+    });
+
+    test('locals reset on a new generation while chat state survives and stays chat scoped', () => {
+        const chat = {}, resolve = createLoomResolver({ native, chat });
+        resolve('{{setvar::x::old}}{{setchatvar::mind::Calm}}');
+        expect(resolve('{{getvar::x}}')).toBe('old');
+        expect(createLoomResolver({ native, chat })('{{getvar::x}}/{{getchatvar::mind}}')).toBe('/Calm');
+        expect(createLoomResolver({ native, chat: {} })('{{getchatvar::mind}}')).toBe('');
+        resolve('{{setchatvar::__proto__::safe}}');
+        expect(Object.hasOwn(chat, '__proto__')).toBe(true);
+        expect(Object.getPrototypeOf(chat)).toBe(Object.prototype);
+    });
+
+    test('nested conditionals evaluate only the chosen branch, including false/off/null and inversion', () => {
+        const resolve = createLoomResolver({ native });
+        for (const flag of ['', 'false', '0', 'off', 'no', 'null', 'undefined']) {
+            expect(resolve(`{{setvar::flag::${flag}}}{{if !{{getvar::flag}}}}yes{{if {{persona}}}} persona{{/if}}{{else}}{{setvar::oops::bad}}{{/if}}{{getvar::oops}}`)).toBe('yes persona');
+        }
+        expect(resolve('{{if yes}}{{setvar::x::right}}{{else}}{{setvar::x::wrong}}{{/if}}{{getvar::x}}')).toBe('right');
+    });
+
+    test('captures preserve whitespace and identity values remain data', () => {
+        const resolve = createLoomResolver({ native: () => '{{setvar::injected::bad}}' });
+        expect(resolve('{{setvar::text}}\n body \n{{/setvar}}{{getvar::text}}')).toBe('\n body \n');
+        expect(resolve('{{char}}{{getvar::injected}}')).toBe('{{setvar::injected::bad}}');
+        expect(resolve('{{setvar::x::\n  framed\n}}{{getvar::x}}')).toBe('framed');
+        expect(resolve('{{setvar::x:: - }}{{getvar::x}}')).toBe(' - ');
+    });
+
+    test('random list weights and dice use Loom semantics independently of ST macro engine', () => {
+        const resolve = createLoomResolver({ native, random: () => 0.5 });
+        expect(resolve('{{random::A::A::B}}/{{random::2::4}}/{{roll::1d20}}')).toBe('A/3/11');
+    });
+
+    test('unsupported macros and malformed scopes fail before import, including nested macros', () => {
+        for (const content of ['{{if yes}}{{unknown}}{{/if}}', '{{if yes}}unclosed', '{{/setvar}}', '{{getvar::x', '{{setvar::x}}unclosed', '{{if .x == 1}}bad{{/if}}', '{{if yes}}a{{else}}b{{else}}c{{/if}}']) {
+            expect(() => convertLoomPreset({ ...stateful, blocks: stateful.blocks.map((b, i) => i === 1 ? { ...b, content } : b) })).toThrow(/Nothing was imported/);
+        }
+        expect(() => parseLoomText('{{if yes}}'.repeat(66) + '{{/if}}'.repeat(66))).toThrow(/nesting/);
+    });
+
+    test('regex collections are deduplicated and retain flags, display/prompt targets and depth', () => {
+        const scripts = convertLoomRegex(stateful);
+        expect(scripts).toHaveLength(2);
+        expect(scripts[0]).toMatchObject({ markdownOnly: true, promptOnly: false, placement: [2], chlo_loom: { mode: 'escaped' } });
+        expect(scripts[1]).toMatchObject({ markdownOnly: false, promptOnly: true, minDepth: 2 });
+        expect(scripts[1].findRegex).toBe('/<panel>[\\s\\S]*?<\\/panel>/g');
+        expect(() => convertLoomRegex({ ...stateful, regex_scripts: [] })).toThrow(/Conflicting/);
+        for (const extra of [{ actions: [{}] }, { substitute_macros: 'raw' }, { flags: 'bad' }, { placement: ['unknown'] }]) {
+            expect(() => convertLoomRegex({ regex_scripts: [{ ...stateful.regex_scripts[0], ...extra }] })).toThrow(/Nothing was imported/);
+        }
+    });
+
+    test('Loom regex replacements preserve JS captures and never evaluate captured chat prose', () => {
+        const resolve = createLoomResolver({ native, chat: { mind: '$1 Calm' } });
+        expect(replaceLoomRegex('((OOC hello', /\(\(OOC /g, stateful.regex_scripts[0].replace_string, 'escaped', resolve)).toBe('((OOC mind="$1 Calm": hello');
+        expect(replaceLoomRegex('{{setvar::x::bad}}', /([\s\S]+)/, '$1 $$ $&', 'none', resolve)).toBe('{{setvar::x::bad}} $ {{setvar::x::bad}}');
+        expect(resolve('{{getvar::x}}')).toBe('');
+    });
 });

@@ -3,6 +3,8 @@ import { extension_settings, writeExtensionField } from '../../extensions.js';
 import { getPresetManager } from '../../preset-manager.js';
 import { regexFromString } from '../../utils.js';
 import { lodash } from '../../../lib.js';
+import { createChatLoomResolver } from '../../chlolirium/presets/loom-runtime.js';
+import { replaceLoomRegex } from '../../chlolirium/presets/loom-regex.js';
 
 /**
  * @readonly
@@ -395,6 +397,11 @@ export function runRegexScript(regexScript, rawString, { characterOverride } = {
     }
 
     const getRegexString = () => {
+        if (regexScript.chlo_loom?.version === 1) {
+            return regexScript.chlo_loom.mode === 'escaped'
+                ? createChatLoomResolver({ transform: sanitizeRegexMacro })(regexScript.findRegex)
+                : regexScript.findRegex;
+        }
         switch (Number(regexScript.substituteRegex)) {
             case substitute_find_regex.NONE:
                 return regexScript.findRegex;
@@ -413,6 +420,10 @@ export function runRegexScript(regexScript, rawString, { characterOverride } = {
     // The user skill issued. Return with nothing.
     if (!findRegex) {
         return newString;
+    }
+
+    if (regexScript.chlo_loom?.version === 1) {
+        return replaceLoomRegex(rawString, findRegex, regexScript.replaceString, regexScript.chlo_loom.mode, createChatLoomResolver());
     }
 
     // Run replacement. Currently does not support the Overlay strategy
