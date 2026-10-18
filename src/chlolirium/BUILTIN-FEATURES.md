@@ -27,6 +27,56 @@ styles. Theme styles remain switchable with the appearance setting.
   picker loads local Emoji Mart/data on first use and stays open while typing
   and selecting multiple emojis. Close and Escape dismiss it.
 
+## Preset Library and shared generation settings
+
+The book button in Navigator opens the collection first. Without Navigator,
+use **Preset Library** in the Chat Completion settings panel. The same window
+contains Presets, Blocks and Parameters. Parameters defaults to a resizable
+dock; on desktop the chat occupies the space beside it. The workspace uses a
+manual popover on supported browsers so transformed phone layouts cannot move
+it out of the viewport. Chat input remains accessible while the dock is open.
+
+- Selecting a collection item previews it; **Use** activates it. Search,
+  favorites and recent presets work with the existing collection. Favorite and
+  recent preferences use `extension_settings.chloPresetLibrary`.
+- Blocks edit native ST prompts: identifiers, marker flags, all character
+  orders, roles, content, injection position/depth/order, generation triggers,
+  character overrides and embedded extension data are retained. Numbered rows
+  follow the real prompt order; category labels never reorder generation.
+  Unused blocks remain visible and can be enabled. The preview is prompt text,
+  not a claim to display resolved per-generation lorebook or macro output.
+- Edits stay in a draft until **Save preset** or **Use in chat**. Closing or
+  navigating away asks before discarding changes; failed saves keep the draft.
+  Saving the active preset also persists its current settings before reporting
+  success, so an immediate reload retains the edits. New input arriving during
+  a save remains an unsaved draft instead of being replaced by the response.
+- Covers and descriptions are optional preset metadata under `chlo_preset`;
+  category labels are `chlo_category` on individual blocks. Cover files are
+  resized and stored locally in the preset, with no external image service.
+- Import reviews ST chat-completion JSON, prompt-manager exports and legacy
+  `main_prompt`/`nsfw_prompt`/`jailbreak_prompt` JSON as a draft before writing.
+  This does not implement the LumiVerse Loom engine or `.loom` conversion.
+
+`presets/model.js` explicitly separates prompt fields from shared generation
+and connection settings. All chat-completion preset selection paths, including
+the native selector, `/preset` and character bindings, apply only prompt fields.
+Context, response length, samplers, streaming, reasoning/tool settings, API,
+model, endpoint and credentials remain current. Connection profiles retain
+their own API/model/URL commands. Text-completion preset behavior is unchanged.
+
+Saving a prompt preset writes prompt fields only. Existing legacy files remain
+in place and their embedded generation values are ignored when selecting them;
+they are replaced with prompt-only data when explicitly saved. Native legacy
+prompt migrations may still rewrite the migrated preset as before. Export a
+copy before saving if the original combined parameter values are needed in
+another frontend. The obsolete bind-preset-to-connection switch is hidden;
+the setting key and node remain for older integrations.
+
+The Parameters view temporarily moves the original controls with their IDs and
+handlers intact, using comment anchors to restore their exact positions. Native
+theme colors remain live. Advanced message formatting is still prompt content;
+editing those controls updates an open draft of the active prompt as well.
+
 Historical storage keys are retained for compatibility; their names do not
 imply extension loading:
 

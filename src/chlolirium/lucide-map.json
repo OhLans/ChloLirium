@@ -24,6 +24,7 @@
     "fa-bolt": "bolt",
     "fa-book": "book",
     "fa-book-atlas": "book-open-text",
+    "fa-book-open": "book-open",
     "fa-book-open-reader": "book-open",
     "fa-bookmark": "bookmark",
     "fa-box-open": "package-open",
@@ -246,6 +247,7 @@
     "fa-wand-magic-sparkles": "wand-sparkles",
     "fa-window-maximize": "app-window",
     "fa-window-restore": "panels-top-left",
+    "fa-columns": "panels-top-left",
     "fa-wrench": "wrench",
     "fa-x": "x",
     "fa-xmark": "x"

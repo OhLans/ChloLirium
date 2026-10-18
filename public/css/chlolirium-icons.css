@@ -241,7 +241,7 @@ html[data-icon-set="lucide"] {
 .fa-bolt, .cl-icon-bolt { --cl-icon: var(--cl-lucide-bolt); }
 .fa-book, .cl-icon-book { --cl-icon: var(--cl-lucide-book); }
 .fa-book-atlas, .cl-icon-book-open-text { --cl-icon: var(--cl-lucide-book-open-text); }
-.fa-book-open-reader, .cl-icon-book-open { --cl-icon: var(--cl-lucide-book-open); }
+.fa-book-open, .fa-book-open-reader, .cl-icon-book-open { --cl-icon: var(--cl-lucide-book-open); }
 .fa-bookmark, .cl-icon-bookmark { --cl-icon: var(--cl-lucide-bookmark); }
 .fa-box-open, .cl-icon-package-open { --cl-icon: var(--cl-lucide-package-open); }
 .fa-brain, .cl-icon-brain { --cl-icon: var(--cl-lucide-brain); }
@@ -428,7 +428,7 @@ html[data-icon-set="lucide"] {
 .fa-volume-xmark, .cl-icon-volume-x { --cl-icon: var(--cl-lucide-volume-x); }
 .fa-wand-magic, .cl-icon-wand { --cl-icon: var(--cl-lucide-wand); }
 .fa-window-maximize, .cl-icon-app-window { --cl-icon: var(--cl-lucide-app-window); }
-.fa-window-restore, .cl-icon-panels-top-left { --cl-icon: var(--cl-lucide-panels-top-left); }
+.fa-window-restore, .fa-columns, .cl-icon-panels-top-left { --cl-icon: var(--cl-lucide-panels-top-left); }
 .fa-wrench, .cl-icon-wrench { --cl-icon: var(--cl-lucide-wrench); }
 
 html[data-icon-set="lucide"] .cl-icon::before,
@@ -457,6 +457,7 @@ html[data-icon-set="lucide"] .fa-bars:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-bolt:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-book:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-book-atlas:not(.fa-brands, .fab)::before,
+html[data-icon-set="lucide"] .fa-book-open:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-book-open-reader:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-bookmark:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-box-open:not(.fa-brands, .fab)::before,
@@ -679,6 +680,7 @@ html[data-icon-set="lucide"] .fa-wand-magic:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-wand-magic-sparkles:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-window-maximize:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-window-restore:not(.fa-brands, .fab)::before,
+html[data-icon-set="lucide"] .fa-columns:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-wrench:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-x:not(.fa-brands, .fab)::before,
 html[data-icon-set="lucide"] .fa-xmark:not(.fa-brands, .fab)::before {
@@ -738,6 +740,10 @@ html[data-icon-set="lucide"] .rm_tag_bogus_drilldown .tag:not(:first-child)::bef
    Only replace its bundled mask images; no extension update or DOM observer is needed. */
 html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="aiconfig"] .rn-native-visual {
     --rni-icon: var(--cl-lucide-sliders-horizontal);
+}
+
+html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="presets"] .rn-native-visual {
+    --rni-icon: var(--cl-lucide-book-open);
 }
 
 html[data-icon-set="lucide"] body.rivelle-navigator-icons-enabled #rn-left-rail [data-rn-key="api"] .rn-native-visual {
