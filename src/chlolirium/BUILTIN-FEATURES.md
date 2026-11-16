@@ -53,6 +53,11 @@ layout is active, then restored to its original location when the layout is
 disabled or the API changes. The editor keeps native roles, depth, triggers,
 override controls and macro autocomplete.
 
+The inline edit/inspect page remembers the prompt list's scroll position before
+hiding it. Save and Close restore that position after the form animation, and
+Save retains it through the native list rebuild. Selecting another preset
+clears the previous return position.
+
 The separate workspace, additional Navigator button, chat reflow, favorites,
 recent filters, previews and draft system remain removed. All of this fits the
 native left drawer; it does not change the drawer or chat geometry.

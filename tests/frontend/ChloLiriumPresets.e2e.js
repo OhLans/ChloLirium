@@ -161,6 +161,46 @@ test('disabling the existing tab layout restores the original native editor and 
     await expect(page.locator('#left-nav-panel #completion_prompt_manager_popup')).toHaveCount(1);
 });
 
+for (const width of [1440, 390]) {
+    test(`prompt Save and Close retain middle/end list positions at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-open').click();
+        await page.evaluate(async () => {
+            const { promptManager, oai_settings } = await import('/scripts/openai.js');
+            const extra = Array.from({ length: 120 }, (_, i) => ({ identifier: `scroll-qa-${i}`, name: `Scroll block ${i + 1}`, content: `Neutral instructions for block ${i + 1}.`, role: 'system', system_prompt: false, marker: false, injection_position: 0, injection_depth: 4, injection_order: 100, injection_trigger: [] }));
+            oai_settings.prompts = oai_settings.prompts.filter(prompt => !prompt.identifier.startsWith('scroll-qa-')).concat(extra);
+            const order = promptManager.getPromptOrderForCharacter(promptManager.activeCharacter);
+            order.splice(0, order.length, ...order.filter(entry => !entry.identifier.startsWith('scroll-qa-')), ...extra.map(prompt => ({ identifier: prompt.identifier, enabled: true })));
+            promptManager.render(false);
+        });
+        await expect(page.locator('[data-pm-identifier="scroll-qa-119"]')).toHaveCount(1);
+        const position = () => page.locator('#completion_prompt_manager').evaluate(node => node.closest('.scrollableInner').scrollTop);
+        const popup = page.locator('#completion_prompt_manager_popup');
+        for (const index of [55, 119]) {
+            const row = page.locator(`[data-pm-identifier="scroll-qa-${index}"]`);
+            await row.scrollIntoViewIfNeeded();
+            const before = await position();
+            expect(before).toBeGreaterThan(1000);
+            await row.locator('.prompt-manager-edit-action').click();
+            await expect(popup).toBeVisible();
+            await page.locator('#completion_prompt_manager_popup_entry_form_name').fill(`Scroll block ${index + 1} saved`);
+            await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill(`Edited block ${index + 1}.`);
+            await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
+            await expect(popup).toBeHidden();
+            await expect(row.locator('.completion_prompt_manager_prompt_name')).toContainText('saved');
+            await expect.poll(position).toBeCloseTo(before, 0);
+            expect(await page.evaluate(async id => (await import('/scripts/openai.js')).promptManager.getPromptById(id).content, `scroll-qa-${index}`)).toBe(`Edited block ${index + 1}.`);
+            const savedPosition = await position();
+            await row.locator('.prompt-manager-edit-action').click();
+            await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Discard this unsaved edit.');
+            await page.locator('#completion_prompt_manager_popup_entry_form_close').click();
+            await expect(popup).toBeHidden();
+            await expect.poll(position).toBeCloseTo(savedPosition, 0);
+            expect(await page.evaluate(async id => (await import('/scripts/openai.js')).promptManager.getPromptById(id).content, `scroll-qa-${index}`)).toBe(`Edited block ${index + 1}.`);
+        }
+    });
+}
+
 test('collection, parameters and native prompt form fit a 390px phone viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     for (const view of ['presets', 'parameters', 'prompts']) {

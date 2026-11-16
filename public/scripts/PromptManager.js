@@ -513,9 +513,9 @@ class PromptManager {
 
             this.log('Saved prompt: ' + promptId);
 
-            this.hidePopup();
+            const scrollPosition = this.hidePopup();
             this.clearEditForm();
-            this.render();
+            this.render(true, scrollPosition);
             this.saveServiceSettings();
         };
 
@@ -828,6 +828,7 @@ class PromptManager {
             const jailbreakPrompt = this.getPromptById('jailbreak');
             this.updateQuickEdit('jailbreak', jailbreakPrompt);
 
+            this.popupScrollPosition = undefined;
             this.hidePopup();
             this.clearEditForm();
             this.renderDebounced();
@@ -860,12 +861,16 @@ class PromptManager {
      * Main rendering function
      *
      * @param afterTryGenerate - Whether a dry run should be attempted before rendering
+     * @param {number} [savedScrollPosition] - List position before opening the inline editor
      */
-    render(afterTryGenerate = true) {
+    render(afterTryGenerate = true, savedScrollPosition) {
         if (main_api !== 'openai') return;
 
         if ('character' === this.configuration.promptOrder.strategy && null === this.activeCharacter) return;
         this.error = null;
+        const popupRevision = this.popupScrollRevision;
+        const getScrollPosition = () => savedScrollPosition !== undefined && popupRevision === this.popupScrollRevision
+            ? savedScrollPosition : this.#getScrollPosition();
 
         waitUntilCondition(() => !is_send_press && !is_group_generating, 1024 * 1024, 100).then(async () => {
             if (true === afterTryGenerate) {
@@ -874,7 +879,7 @@ class PromptManager {
                 this.tryGenerate().finally(async () => {
                     this.profileEnd('filling context');
                     this.profileStart('render');
-                    const scrollPosition = this.#getScrollPosition();
+                    const scrollPosition = getScrollPosition();
                     await this.renderPromptManager();
                     await this.renderPromptManagerListItems();
                     this.makeDraggable();
@@ -884,7 +889,7 @@ class PromptManager {
             } else {
                 // Executed during live communication
                 this.profileStart('render');
-                const scrollPosition = this.#getScrollPosition();
+                const scrollPosition = getScrollPosition();
                 await this.renderPromptManager();
                 await this.renderPromptManagerListItems();
                 this.makeDraggable();
@@ -1959,19 +1964,35 @@ class PromptManager {
         const areaElement = document.getElementById(this.configuration.prefix + 'prompt_manager_popup_' + area);
         areaElement.style.display = 'flex';
 
-        $('#' + this.configuration.prefix + 'prompt_manager_popup').first()
+        const popup = $('#' + this.configuration.prefix + 'prompt_manager_popup').first();
+        this.popupScrollRevision = (this.popupScrollRevision ?? 0) + 1;
+        if (!popup.hasClass('openDrawer')) {
+            // The inline form hides the list and collapses its scroll range.
+            this.popupScrollPosition = popup.closest('#left-nav-panel.chlo-preset-panel').length ? this.#getScrollPosition() : undefined;
+        }
+        popup.stop(true, true)
             .slideDown(200, 'swing')
             .addClass('openDrawer');
     }
 
     /**
      * Slides up the edit form and removes the class 'openDrawer' from the first element of '#openai_prompt_manager_popup'.
-     * @returns {void}
+     * @returns {number|undefined} - Previous inline list position, when applicable
      */
     hidePopup() {
-        $('#' + this.configuration.prefix + 'prompt_manager_popup').first()
-            .slideUp(200, 'swing')
+        const popup = $('#' + this.configuration.prefix + 'prompt_manager_popup').first();
+        const scrollPosition = popup.closest('#left-nav-panel.chlo-preset-panel').length ? this.popupScrollPosition : undefined;
+        this.popupScrollPosition = undefined;
+        const revision = this.popupScrollRevision = (this.popupScrollRevision ?? 0) + 1;
+        const restore = () => {
+            if (revision === this.popupScrollRevision) this.#setScrollPosition(scrollPosition);
+        };
+        popup.stop(true, true)
+            .slideUp(200, 'swing', restore)
             .removeClass('openDrawer');
+        // Restore when the list reappears and again after the form animation.
+        restore();
+        return scrollPosition;
     }
 
     /**
