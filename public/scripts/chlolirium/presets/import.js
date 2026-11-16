@@ -1,4 +1,3 @@
-import { pickPromptPreset } from './model.js';
 import { presetCover } from './presentation.js';
 import { parseLoomText } from './loom-macros.js';
 import { convertLoomRegex } from './loom-regex.js';
@@ -100,7 +99,7 @@ export function preparePresetImport(input, defaults) {
     if (value.version && value.data?.prompts) value = value.data;
     const legacy = !Array.isArray(value.prompts) && ['main_prompt', 'nsfw_prompt', 'jailbreak_prompt'].some(key => typeof value[key] === 'string');
     if (legacy) {
-        value = { ...pickPromptPreset(value), prompts: structuredClone(defaults.prompts), prompt_order: structuredClone(defaults.prompt_order), chlo_preset: { ...value.chlo_preset, format: 'Legacy' } };
+        value = { ...value, prompts: structuredClone(defaults.prompts), prompt_order: structuredClone(defaults.prompt_order), chlo_preset: { ...value.chlo_preset, format: 'Legacy' } };
         for (const [key, id] of [['main_prompt', 'main'], ['nsfw_prompt', 'nsfw'], ['jailbreak_prompt', 'jailbreak']]) {
             if (typeof value[key] === 'string') value.prompts.find(prompt => prompt.identifier === id).content = value[key];
             delete value[key];
