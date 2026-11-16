@@ -1,5 +1,4 @@
-/** Selecting a prompt preset never replaces shared generation or connection
- * settings, even when an older preset file includes those values. */
+/** Prompt-only fields for portable prompt examples and conversions. */
 export const promptPresetKeys = new Set([
     'prompts', 'prompt_order', 'extensions', 'chlo_preset',
     'main_prompt', 'nsfw_prompt', 'jailbreak_prompt',
@@ -12,4 +11,16 @@ export const promptPresetKeys = new Set([
 
 export function pickPromptPreset(settings) {
     return structuredClone(Object.fromEntries(Object.entries(settings).filter(([key]) => promptPresetKeys.has(key))));
+}
+
+/** Serialize both live settings (temp_openai) and stored presets (temperature)
+ * using the native field map. Connection profiles remain independent. */
+export function pickChatCompletionPreset(settings, definitions) {
+    const preset = {};
+    for (const [key, [, setting, , isConnection]] of Object.entries(definitions)) {
+        if (isConnection) continue;
+        const value = Object.hasOwn(settings, setting) ? settings[setting] : settings[key];
+        if (value !== undefined) preset[key] = value;
+    }
+    return structuredClone(preset);
 }

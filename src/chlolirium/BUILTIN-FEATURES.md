@@ -27,14 +27,18 @@ styles. Theme styles remain switchable with the appearance setting.
   picker loads local Emoji Mart/data on first use and stays open while typing
   and selecting multiple emojis. Close and Escape dismiss it.
 
-## Native preset panel and shared generation settings
+## Native preset panel and generation settings
 
 The existing AI Configuration drawer keeps its native position, width, pin
 behavior and theme settings. With the existing tab layout enabled, its opening
 page shows the native preset select's options as a vertical stack of cards.
 Use applies a card through that select's normal change handler while staying in
-the collection, so Export/Delete can target it there. Edit or the title opens Prompts.
-Parameters is another page in the same narrow drawer.
+the collection, so Export/Delete can target it there. Use also reloads an active
+preset's saved values. Edit or the title opens Prompts and preserves unsaved
+edits when that preset is already active.
+Parameters is another page in the same narrow drawer. Loading a preset applies
+the generation settings it actually contains. Prompt-only presets leave those
+settings current; missing fields never require manual reconfiguration.
 
 Import, Export and Delete are on the collection page, with the active preset
 named beneath them. Save, Rename and Save as are beside the open preset's name
@@ -64,7 +68,7 @@ the tile lets the user upload, replace or remove a cover. Uploaded images are
 resized to at most 384×384 and embedded as JPEG in `chlo_preset.cover`; they travel
 with native saves, rename, save-as, export and backups. This saves the preset
 file immediately, including current prompt edits when it is the active preset;
-it never selects an inactive preset or changes shared generation parameters.
+it never selects an inactive preset or changes the active generation parameters.
 Cancel leaves the file unchanged. SVG uploads and active URL schemes are rejected.
 
 Two original examples, **Chlo - Loom example** and **Chlo - Legacy example**, are
@@ -82,8 +86,9 @@ Empty category headers remain presentation metadata; category content is kept
 as a real prompt, because presets can use it to initialize variables. Imported
 absolute blocks receive distinct native priorities to preserve interleaved roles.
 Files that need dynamic repositioning around Chat History are rejected with an
-explanation rather than silently changing visible order. Samplers and connection
-settings stay shared. This is not a complete Loom runtime: block-variable definitions/placement bindings,
+explanation rather than silently changing visible order. Loom sampler overrides
+are not mapped by this adapter, so converted prompt-only files retain the current
+parameters. Connection profiles remain independent. This is not a complete Loom runtime: block-variable definitions/placement bindings,
 append roles, radio categories, protected blocks, character-tag conditions,
 custom request bodies, unknown markers and nonportable macros are rejected
 before import writes or changes selection. The current supported macro subset
@@ -122,12 +127,18 @@ and ST marker map at commit
 [`3ca135a`](https://github.com/prolix-oc/Lumiverse/tree/3ca135a20a31f4ba18c8e96b24724cd73ad7c8eb/frontend/src/lib/loom).
 This fork uses its own small conversion adapter, not LumiVerse's runtime.
 
-`presets/model.js` explicitly separates prompt fields from shared generation
-and connection settings. All chat-completion preset selection paths, including
-the native selector, `/preset` and character bindings, apply only prompt fields.
-Context, response length, samplers, streaming, reasoning/tool settings, API,
-model, endpoint and credentials remain current. Connection profiles retain
-their own API/model/URL commands. Text-completion preset behavior is unchanged.
+Native chat-completion preset selection applies supplied context, response
+length, sampler, streaming, reasoning/tool and prompt settings through ST's
+existing field map and input handlers. This covers imports, cards, the native
+selector, `/preset` and character bindings. Fields omitted by a preset remain
+current. `presets/model.js` normalizes live aliases such as `temp_openai` back
+to `temperature` when saving, including Save as, rename and cover changes;
+stored presets already using canonical keys are preserved too. Save/export
+therefore retain generation settings, including zero and false values.
+API, model, endpoint and credentials stay with the active connection profile.
+Existing prompt-only presets remain valid; previously discarded parameter
+values require the original file to be reimported. Text-completion behavior
+is unchanged.
 
 Saving a prompt preset writes prompt fields only. Existing legacy files remain
 in place and their embedded generation values are ignored when selecting them;

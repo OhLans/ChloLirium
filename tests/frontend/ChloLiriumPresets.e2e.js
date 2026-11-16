@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pickPromptPreset } from '../../public/scripts/chlolirium/presets/model.js';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 let dataRoot, server, url;
@@ -21,14 +22,10 @@ test.beforeAll(async () => {
     settings.firstRun = false;
     settings.extension_settings.SillyTavernMoonlitEchoesTheme = { enabled: true, customThemeColor: 'rgba(174, 149, 149, 1)', activePreset: 'QA', presets: { QA: { customThemeColor: 'rgba(174, 149, 149, 1)' } } };
     Object.assign(settings.oai_settings, { chat_completion_source: 'custom', custom_model: 'qa-model', custom_url: 'http://127.0.0.1:9', preset_settings_openai: 'Banana QA', temp_openai: 0.73, top_p_openai: 0.91, openai_max_context: 1000000, max_context_unlocked: true, openai_max_tokens: 11500, stream_openai: false });
-    const preset = JSON.parse(await readFile(path.join(root, 'default/content/presets/openai/Default.json'), 'utf8'));
+    const preset = pickPromptPreset(JSON.parse(await readFile(path.join(root, 'default/content/presets/openai/Default.json'), 'utf8')));
     preset.prompts.push({ identifier: 'voice-qa', name: 'Narrative voice', role: 'system', content: 'QA narrative voice.', system_prompt: false, marker: false, injection_position: 0, injection_depth: 4, injection_order: 100, injection_trigger: [] });
     preset.prompt_order.find(entry => entry.character_id === 100001).order.unshift({ identifier: 'voice-qa', enabled: true });
     Object.assign(settings.oai_settings, { prompts: structuredClone(preset.prompts), prompt_order: structuredClone(preset.prompt_order) });
-    preset.temperature = 0.03;
-    preset.openai_max_context = 2048;
-    preset.openai_max_tokens = 20;
-    preset.stream_openai = true;
     preset.chat_completion_source = 'claude';
     preset.custom_url = 'https://do-not-contact.invalid';
     await writeFile(path.join(user, 'settings.json'), JSON.stringify(settings));
@@ -97,7 +94,7 @@ test('preset cards open inside the existing drawer at its native width without a
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-collection.png') });
 });
 
-test('card and dropdown selections use native prompts without replacing shared generation settings', async ({ page }) => {
+test('prompt-only card and dropdown selections keep unspecified parameters and the active connection', async ({ page }) => {
     const before = await shared(page);
     await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-open').click();
     await expect(page.locator('#openai-tab-content-prompts')).toHaveClass(/active/);
@@ -149,7 +146,7 @@ test('native prompt edit form stays within the drawer and saves roles, content a
     await response;
     const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Sola QA.json'), 'utf8'));
     expect(stored.prompts.find(prompt => prompt.identifier === 'voice-qa')).toMatchObject({ content: 'Native editor instructions.' });
-    expect(stored).not.toHaveProperty('temperature');
+    expect(stored.temperature).toBe((await shared(page)).temperature);
 });
 
 test('disabling the existing tab layout restores the original native editor and controls', async ({ page }) => {
@@ -184,10 +181,51 @@ test('collection, parameters and native prompt form fit a 390px phone viewport',
 test('native import and export remain available and the collection follows the native preset options', async ({ page }) => {
     const preset = JSON.parse(await readFile(path.join(root, 'default/content/presets/openai/Default.json'), 'utf8'));
     const before = await shared(page);
-    await page.locator('#openai_preset_import_file').setInputFiles({ name: 'Native import QA.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ prompts: preset.prompts, prompt_order: preset.prompt_order, temperature: 0.01 })) });
+    const parameters = { temperature: 0.85, frequency_penalty: 0.2, presence_penalty: 0, top_p: 0.95, top_k: 64, openai_max_context: 64000, openai_max_tokens: 16384, stream_openai: true, function_calling: false };
+    await page.locator('#openai_preset_import_file').setInputFiles({ name: 'Native import QA.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ prompts: preset.prompts, prompt_order: preset.prompt_order, ...parameters })) });
     const card = page.locator('.chlo-preset-card').filter({ hasText: 'Native import QA' });
     await expect(card.locator('.chlo-preset-open')).toHaveAttribute('aria-pressed', 'true');
-    expect(await shared(page)).toEqual(before);
+    const applied = { ...before, temperature: 0.85, topP: 0.95, context: 64000, reply: 16384, stream: true };
+    expect(await shared(page)).toEqual(applied);
+    await page.locator('#openai-tab-btn-parameters').click();
+    await expect(page.locator('#temp_counter_openai')).toHaveValue('0.85');
+    await expect(page.locator('#top_p_openai')).toHaveValue('0.95');
+    await expect(page.locator('#top_k_openai')).toHaveValue('64');
+    await expect(page.locator('#freq_pen_openai')).toHaveValue('0.2');
+    await expect(page.locator('#pres_pen_openai')).toHaveValue('0');
+    await expect(page.locator('#stream_toggle')).toBeChecked();
+    await expect(page.locator('#openai_function_calling')).not.toBeChecked();
+    await page.locator('#temp_counter_openai').fill('0.72');
+    await page.locator('#temp_counter_openai').press('Tab');
+    await page.locator('#openai-tab-btn-prompts').click();
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Native import QA.json'), 'utf8'));
+    expect(stored).toMatchObject({ ...parameters, temperature: 0.72 });
+    for (const key of ['custom_url', 'custom_model', 'chat_completion_source']) expect(stored).not.toHaveProperty(key);
+    await page.locator('#openai-tab-btn-parameters').click();
+    await page.locator('#temp_counter_openai').fill('1');
+    await page.locator('#temp_counter_openai').press('Tab');
+    await page.locator('#openai-tab-btn-presets').click();
+    await card.locator('.chlo-preset-use').click();
+    await expect.poll(async () => (await shared(page)).temperature).toBe(0.72);
+    // Both the native selector and the collection must apply saved parameters.
+    await page.evaluate(async () => {
+        const { openai_setting_names, getPresetApplicationPromise } = await import('/scripts/openai.js');
+        $('#settings_preset_openai').val(openai_setting_names['Banana QA']).trigger('change');
+        await getPresetApplicationPromise();
+    });
+    await page.locator('#openai-tab-btn-parameters').click();
+    await page.locator('#temp_counter_openai').fill('1');
+    await page.locator('#temp_counter_openai').press('Tab');
+    await page.evaluate(async () => {
+        const { openai_setting_names, getPresetApplicationPromise } = await import('/scripts/openai.js');
+        $('#settings_preset_openai').val(openai_setting_names['Native import QA']).trigger('change');
+        await getPresetApplicationPromise();
+    });
+    expect(await shared(page)).toEqual({ ...applied, temperature: 0.72 });
+    await page.locator('#openai-tab-btn-presets').click();
     await page.locator('#export_oai_preset').click();
     await expect(page.locator('dialog[open]')).toContainText('export connection data');
     const downloaded = page.waitForEvent('download');
@@ -196,6 +234,7 @@ test('native import and export remain available and the collection follows the n
     expect(file.suggestedFilename()).toBe('Native import QA.json');
     const exported = JSON.parse(await readFile(await file.path(), 'utf8'));
     expect(exported.prompts).toEqual(preset.prompts);
+    expect(exported).toMatchObject({ ...parameters, temperature: 0.72 });
 });
 
 test('the duplicate toolbar is replaced by native actions in their respective pages', async ({ page }) => {

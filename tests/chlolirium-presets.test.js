@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals';
 import { readFile } from 'node:fs/promises';
-import { pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
+import { pickChatCompletionPreset, pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
 import { convertLoomPreset, preparePresetImport } from '../public/scripts/chlolirium/presets/import.js';
 import { presetCover, promptSection, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
 import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
@@ -11,8 +11,8 @@ const loom = JSON.parse(await readFile(new URL('./fixtures/chlolirium/loom-examp
 const legacy = JSON.parse(await readFile(new URL('./fixtures/chlolirium/legacy-example.json', import.meta.url), 'utf8'));
 const stateful = JSON.parse(await readFile(new URL('./fixtures/chlolirium/loom-stateful.loom', import.meta.url), 'utf8'));
 
-describe('Shared generation parameters', () => {
-    test('prompt presets exclude generation and connection values, including legacy files', () => {
+describe('Chat completion preset fields', () => {
+    test('prompt-only example extraction excludes generation and connection values', () => {
         const result = pickPromptPreset({ ...defaults, temperature: 0.2, temp_openai: 0.2, custom_url: 'https://example.invalid', proxy_password: 'private', reasoning_effort: 'high', stream_openai: false, n: 8 });
         for (const key of ['temperature', 'temp_openai', 'openai_max_context', 'openai_max_tokens', 'custom_url', 'proxy_password', 'reasoning_effort', 'stream_openai', 'n']) expect(result).not.toHaveProperty(key);
         expect(result.prompts).toEqual(defaults.prompts);
@@ -26,6 +26,21 @@ describe('Shared generation parameters', () => {
         expect(result.chlo_preset).toEqual(source.chlo_preset);
         result.prompts[0].content = 'Changed';
         expect(source.prompts[0].content).not.toBe('Changed');
+    });
+
+    test('native saves normalize live aliases, retain falsy values and exclude connections and unknown fields', () => {
+        const definitions = {
+            temperature: ['', 'temp_openai', false, false], top_k: ['', 'top_k_openai', false, false],
+            stream_openai: ['', 'stream_openai', true, false], prompts: ['', 'prompts', false, false],
+            custom_url: ['', 'custom_url', false, true], proxy_password: ['', 'proxy_password', false, true],
+        };
+        const live = { temp_openai: 0.85, top_k_openai: 0, stream_openai: false, prompts: [{ content: 'Original' }], custom_url: 'https://example.invalid', proxy_password: 'private', unknown: 'ignored' };
+        const saved = pickChatCompletionPreset(live, definitions);
+        expect(saved).toEqual({ temperature: 0.85, top_k: 0, stream_openai: false, prompts: [{ content: 'Original' }] });
+        expect(pickChatCompletionPreset(saved, definitions)).toEqual(saved);
+        expect(pickChatCompletionPreset({ prompts: [] }, definitions)).toEqual({ prompts: [] });
+        saved.prompts[0].content = 'Changed';
+        expect(live.prompts[0].content).toBe('Original');
     });
 });
 
@@ -120,7 +135,8 @@ describe('Supported Loom and legacy conversion', () => {
     });
 
     test('legacy text fields become real native prompts, not a second prompt engine', () => {
-        const result = preparePresetImport(legacy, defaults);
+        const result = preparePresetImport({ ...legacy, temperature: 0.85, stream_openai: false }, defaults);
+        expect(result).toMatchObject({ temperature: 0.85, stream_openai: false });
         expect(result.prompts.find(prompt => prompt.identifier === 'main').content).toBe(legacy.main_prompt);
         expect(result.prompts.find(prompt => prompt.identifier === 'jailbreak').content).toBe(legacy.jailbreak_prompt);
         expect(result.prompt_order).toEqual(defaults.prompt_order);

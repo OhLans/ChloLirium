@@ -53,7 +53,7 @@ export function initPresetPanel() {
             if (!event.target.closest('.chlo-preset-open, .chlo-preset-edit, .chlo-preset-use')) return;
             const openEditor = !event.target.closest('.chlo-preset-use');
             const request = ++selection;
-            if (oai_settings.preset_settings_openai !== card.dataset.name) {
+            if (!openEditor || oai_settings.preset_settings_openai !== card.dataset.name) {
                 $(select).val(card.dataset.value).trigger('change');
                 await getPresetApplicationPromise();
             }

@@ -83,7 +83,7 @@ import { ToolManager } from './tool-calling.js';
 import { accountStorage } from './util/AccountStorage.js';
 import { COMETAPI_IGNORE_PATTERNS, IGNORE_SYMBOL, MEDIA_DISPLAY, MEDIA_TYPE } from './constants.js';
 import { syncNanoGptProvidersForModel, syncOpenRouterProvidersForModel, updateNanoGptProvidersWarning, updateOpenRouterProvidersWarning } from './textgen-models.js';
-import { pickPromptPreset, promptPresetKeys } from './chlolirium/presets/model.js';
+import { pickChatCompletionPreset } from './chlolirium/presets/model.js';
 import { preparePresetImport } from './chlolirium/presets/import.js';
 import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
 
@@ -4590,7 +4590,7 @@ async function getStatusOpen() {
  * @returns {Object} The preset body object
  */
 export function getChatCompletionPreset(settings = oai_settings) {
-    return pickPromptPreset(settings);
+    return pickChatCompletionPreset(settings, settingsToUpdate);
 }
 
 /**
@@ -4605,7 +4605,7 @@ async function saveOpenAIPreset(name, settings, triggerUi = true) {
     await saveChatCompletionPromptPreset(name, settings, { select: true, apply: triggerUi });
 }
 
-/** Save a library draft without selecting it or changing shared parameters. */
+/** Save a preset without selecting it unless explicitly requested. */
 export async function saveChatCompletionPromptPreset(name, settings, { select = false, apply = false } = {}) {
     const presetBody = getChatCompletionPreset(settings);
     const savePresetSettings = await fetch('/api/presets/save', {
@@ -5058,10 +5058,9 @@ function onSettingsPresetChange() {
         presetNameBefore: presetNameBefore,
     }).finally(async () => {
         for (const [key, [selector, setting, isCheckbox, isConnection]] of Object.entries(settingsToUpdate)) {
-            // Connection and generation parameters belong to the current session.
-            // This applies to every selection path: library, quick selector,
-            // slash commands, character bindings and imported legacy presets.
-            if (isConnection || !promptPresetKeys.has(key)) continue;
+            // Apply fields actually supplied by the preset. The API, model and
+            // endpoint continue to belong to the active connection profile.
+            if (isConnection) continue;
 
             // Extensions don't need UI updates and shouldn't fallback to current settings
             if (key === 'extensions') {
@@ -5083,6 +5082,7 @@ function onSettingsPresetChange() {
             }
         }
 
+        biasCache = undefined;
         saveSettingsDebounced();
         await eventSource.emit(event_types.OAI_PRESET_CHANGED_AFTER);
         await eventSource.emit(event_types.PRESET_CHANGED, { apiId: 'openai', name: presetName });
