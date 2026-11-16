@@ -5,39 +5,11 @@ import { convertLoomPreset, preparePresetImport } from '../public/scripts/chloli
 import { presetCover, promptSection, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
 import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
 import { convertLoomRegex, replaceLoomRegex } from '../public/scripts/chlolirium/presets/loom-regex.js';
-import { insertPromptAt } from '../public/scripts/chlolirium/presets/workspace-insert.js';
 
 const defaults = JSON.parse(await readFile(new URL('../default/content/presets/openai/Default.json', import.meta.url), 'utf8'));
 const loom = JSON.parse(await readFile(new URL('./fixtures/chlolirium/loom-example.loom', import.meta.url), 'utf8'));
 const legacy = JSON.parse(await readFile(new URL('./fixtures/chlolirium/legacy-example.json', import.meta.url), 'utf8'));
 const stateful = JSON.parse(await readFile(new URL('./fixtures/chlolirium/loom-stateful.loom', import.meta.url), 'utf8'));
-
-describe('In-place native prompt insertion', () => {
-    const fixture = () => {
-        const order = [{ identifier: 'a', enabled: false }, { identifier: 'b', enabled: true, custom: 'keep' }];
-        const prompts = [{ identifier: 'a', chlo_category: 'Existing section' }, { identifier: 'b' }, { identifier: 'new' }];
-        return { order, prompts, getPromptOrderForCharacter: () => order, getPromptById: id => prompts.find(prompt => prompt.identifier === id) };
-    };
-    test('inserts at the exact slot, inherits its section, and preserves all other flags', () => {
-        const manager = fixture();
-        const before = structuredClone(manager.order);
-        expect(insertPromptAt(manager, 'new', 'a')).toBe(true);
-        expect(manager.order).toEqual([before[0], { identifier: 'new', enabled: true }, before[1]]);
-        expect(manager.prompts[2].chlo_category).toBe('Existing section');
-        expect(insertPromptAt(manager, 'new', 'b')).toBe(false);
-        expect(manager.order).toHaveLength(3);
-    });
-    test('supports the beginning and refuses stale targets without changing native data', () => {
-        const manager = fixture();
-        const before = structuredClone({ order: manager.order, prompts: manager.prompts });
-        expect(() => insertPromptAt(manager, 'new', 'missing')).toThrow('insertion point');
-        expect(() => insertPromptAt(manager, 'missing', null)).toThrow('no longer available');
-        expect(manager.order).toEqual(before.order);
-        expect(manager.prompts).toEqual(before.prompts);
-        insertPromptAt(manager, 'new', null);
-        expect(manager.order[0]).toEqual({ identifier: 'new', enabled: true });
-    });
-});
 
 describe('Chat completion preset fields', () => {
     test('prompt-only example extraction excludes generation and connection values', () => {

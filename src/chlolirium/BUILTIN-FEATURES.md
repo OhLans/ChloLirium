@@ -42,39 +42,20 @@ settings current; missing fields never require manual reconfiguration.
 
 Import, Export and Delete are on the collection page, with the active preset
 named beneath them. Save, Rename and Save as are beside the open preset's name
-in the expanded editor. The duplicate native toolbar is replaced while this layout
+on the Prompts page. The duplicate native toolbar is replaced while this layout
 is active. These are the actual native control nodes, moved with their IDs and
 handlers intact; disabling the layout restores their original positions.
 
 Import, export, save, save-as, rename, delete, prompt creation, prompt toggles,
 drag ordering, token counts and editing all use their original ST controls and
-handlers. Edit, the preset title and the Prompts tab open a large modal workspace
-with a searchable outline on the left and the original edit/inspect form on the
-right. On phones the outline sits above the editor. The collection and quick
-parameters remain in the native left drawer. Closing the workspace returns to
-the collection and preserves the same chat's scroll position and geometry.
-The real control nodes are moved using return anchors; closing, disabling the
-layout or changing API restores them. No second prompt data model is introduced.
-The editor keeps native roles, depth, triggers, override controls, token counts,
-assembled-prompt inspection and macro autocomplete. Select2 menus and native
-autocomplete remain inside the modal's focus scope.
+handlers. The real edit/inspect form is mounted in the Prompts page while the
+layout is active, then restored to its original location when the layout is
+disabled or the API changes. The editor keeps native roles, depth, triggers,
+override controls and macro autocomplete.
 
-Search matches block names and raw contents. Sections collapse without changing
-native order or enabled flags; searching temporarily reveals matching sections
-and disables dragging until cleared. The + between blocks opens a searchable
-picker for unused prompts or creates a new prompt directly at that position.
-Newly inserted blocks are enabled. Native library import/export/delete tools
-remain available in a collapsed section below the outline.
-Native list refreshes wait until a grabbed block is released before replacing
-its DOM, so token-count updates cannot interrupt a drag.
-
-Save block keeps the selected block, outline scroll, textarea scroll and text
-selection. Save preset also commits changes in the open block before taking the
-native preset snapshot. Switching away from a changed block offers Save block,
-Discard changes or Keep editing. Closing and reopening the same preset retains
-the open form buffer; it does not create a separate persistent draft store.
-The standard prompt editor also restores its previous list position after Save
-when the themed panel layout is disabled.
+The separate workspace, additional Navigator button, chat reflow, favorites,
+recent filters, previews and draft system remain removed. All of this fits the
+native left drawer; it does not change the drawer or chat geometry.
 
 Prompt section headings label consecutive runs of native blocks as Core
 instructions, Character & persona, World & memory and Conversation. An explicit

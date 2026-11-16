@@ -4,7 +4,6 @@ import { escapeHtml } from '../../utils.js';
 import { initPresetActions, updatePresetActions } from './actions.js';
 import { editPresetCover } from './covers.js';
 import { presetBlockCount, presetCover } from './presentation.js';
-import { openPresetWorkspace } from './workspace.js';
 
 let initialized = false;
 
@@ -58,7 +57,7 @@ export function initPresetPanel() {
                 $(select).val(card.dataset.value).trigger('change');
                 await getPresetApplicationPromise();
             }
-            if (openEditor && request === selection && oai_settings.preset_settings_openai === card.dataset.name) await openPresetWorkspace();
+            if (openEditor && request === selection && oai_settings.preset_settings_openai === card.dataset.name) document.getElementById('openai-tab-btn-prompts')?.click();
         } catch (error) {
             console.error('Could not open or update preset', error);
             toastr.error('Could not update the preset. Please try again.');
