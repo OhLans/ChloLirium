@@ -436,6 +436,14 @@ class PromptManager {
         this.tokenHandler = this.tokenHandler || new TokenHandler(() => { throw new Error('Token handler not set'); });
         this.serviceSettings = serviceSettings;
         this.containerElement = document.getElementById(this.configuration.containerIdentifier);
+        // Keep an asynchronous token refresh from replacing a grabbed row.
+        this.containerElement.addEventListener('pointerdown', event => {
+            if (event.target.closest(`.${this.configuration.prefix}prompt_manager_prompt_draggable`)) this.promptPointerActive = true;
+        });
+        const releasePrompt = () => { this.promptPointerActive = false; };
+        document.addEventListener('pointerup', releasePrompt);
+        document.addEventListener('pointercancel', releasePrompt);
+        window.addEventListener('blur', releasePrompt);
 
         if ('global' === this.configuration.promptOrder.strategy) this.activeCharacter = { id: this.configuration.promptOrder.dummyId };
 
@@ -488,15 +496,19 @@ class PromptManager {
             const prompt = this.getPromptById(promptID);
 
             this.detachPrompt(prompt, this.activeCharacter);
-            this.hidePopup();
-            this.clearEditForm();
+            const detached = new CustomEvent('prompt-manager-detached', { cancelable: true, detail: { identifier: promptID } });
+            this.containerElement.dispatchEvent(detached);
+            if (!detached.defaultPrevented) {
+                this.hidePopup();
+                this.clearEditForm();
+            }
             this.render();
             this.saveServiceSettings();
         };
 
         // Save prompt edit form to settings and close form.
         this.handleSavePrompt = (event) => {
-            const promptId = event.target.dataset.pmPrompt;
+            const promptId = (event.currentTarget ?? event.target.closest('[data-pm-prompt]')).dataset.pmPrompt;
             const prompt = this.getPromptById(promptId);
 
             if (null === prompt) {
@@ -513,9 +525,13 @@ class PromptManager {
 
             this.log('Saved prompt: ' + promptId);
 
-            this.hidePopup();
-            this.clearEditForm();
-            this.render();
+            const saved = new CustomEvent('prompt-manager-save', { cancelable: true, detail: { identifier: promptId, created: prompt === null } });
+            this.containerElement.dispatchEvent(saved);
+            if (!saved.defaultPrevented) {
+                this.hidePopup();
+                this.clearEditForm();
+            }
+            this.render(true, saved.defaultPrevented ? undefined : this.editScrollPosition);
             this.saveServiceSettings();
         };
 
@@ -828,8 +844,12 @@ class PromptManager {
             const jailbreakPrompt = this.getPromptById('jailbreak');
             this.updateQuickEdit('jailbreak', jailbreakPrompt);
 
-            this.hidePopup();
-            this.clearEditForm();
+            const reset = new CustomEvent('prompt-manager-before-reset', { cancelable: true });
+            this.containerElement.dispatchEvent(reset);
+            if (!reset.defaultPrevented) {
+                this.hidePopup();
+                this.clearEditForm();
+            }
             this.renderDebounced();
         });
 
@@ -861,38 +881,36 @@ class PromptManager {
      *
      * @param afterTryGenerate - Whether a dry run should be attempted before rendering
      */
-    render(afterTryGenerate = true) {
+    render(afterTryGenerate = true, savedScrollPosition) {
         if (main_api !== 'openai') return;
 
         if ('character' === this.configuration.promptOrder.strategy && null === this.activeCharacter) return;
         this.error = null;
 
-        waitUntilCondition(() => !is_send_press && !is_group_generating, 1024 * 1024, 100).then(async () => {
+        const revision = this.renderRevision = (this.renderRevision ?? 0) + 1;
+        return waitUntilCondition(() => !is_send_press && !is_group_generating, 1024 * 1024, 100).then(async () => {
             if (true === afterTryGenerate) {
-                // Executed during dry-run for determining context composition
                 this.profileStart('filling context');
-                this.tryGenerate().finally(async () => {
-                    this.profileEnd('filling context');
-                    this.profileStart('render');
-                    const scrollPosition = this.#getScrollPosition();
-                    await this.renderPromptManager();
-                    await this.renderPromptManagerListItems();
-                    this.makeDraggable();
-                    this.#setScrollPosition(scrollPosition);
-                    this.profileEnd('render');
-                });
-            } else {
-                // Executed during live communication
+                try { await this.tryGenerate(); } catch (error) { this.log(`Could not refresh token counts: ${error}`); } finally { this.profileEnd('filling context'); }
+            }
+            // Serialize DOM updates: overlapping token-count refreshes must not
+            // append stale controls or reset the user's current editor position.
+            const draw = async () => {
+                await waitUntilCondition(() => !this.promptPointerActive, 1024 * 1024, 50);
+                if (revision !== this.renderRevision) return;
                 this.profileStart('render');
-                const scrollPosition = this.#getScrollPosition();
+                const scrollPosition = savedScrollPosition ?? this.#getScrollPosition();
                 await this.renderPromptManager();
                 await this.renderPromptManagerListItems();
                 this.makeDraggable();
+                this.containerElement.dispatchEvent(new CustomEvent('prompt-manager-rendered'));
                 this.#setScrollPosition(scrollPosition);
                 this.profileEnd('render');
-            }
-        }).catch(() => {
-            console.log('Timeout while waiting for send press to be false');
+            };
+            this.renderQueue = (this.renderQueue ?? Promise.resolve()).catch(() => {}).then(draw);
+            await this.renderQueue;
+        }).catch(error => {
+            console.error('Could not render prompt manager', error);
         });
     }
 
@@ -1357,6 +1375,7 @@ class PromptManager {
      * @param {Partial<Prompt>} prompt - Prompt object with properties 'name', 'role', 'content', and 'system_prompt'
      */
     loadPromptIntoEditForm(prompt) {
+        this.editScrollPosition = this.#getScrollPosition();
         const nameField = /** @type {HTMLInputElement} */(document.getElementById(this.configuration.prefix + 'prompt_manager_popup_entry_form_name'));
         const roleField = /** @type {HTMLSelectElement} */(document.getElementById(this.configuration.prefix + 'prompt_manager_popup_entry_form_role'));
         const promptField = /** @type {HTMLTextAreaElement} */(document.getElementById(this.configuration.prefix + 'prompt_manager_popup_entry_form_prompt'));
@@ -1946,7 +1965,7 @@ class PromptManager {
 
                 this.saveServiceSettings();
                 // Refresh headings after a native drag without changing order.
-                if (document.getElementById('left-nav-panel')?.classList.contains('chlo-preset-panel')) this.render(false);
+                if (document.getElementById('left-nav-panel')?.classList.contains('chlo-preset-panel') || this.containerElement.closest('[data-prompt-workspace]')) this.render(false);
             },
         });
     }
@@ -1959,9 +1978,10 @@ class PromptManager {
         const areaElement = document.getElementById(this.configuration.prefix + 'prompt_manager_popup_' + area);
         areaElement.style.display = 'flex';
 
-        $('#' + this.configuration.prefix + 'prompt_manager_popup').first()
-            .slideDown(200, 'swing')
-            .addClass('openDrawer');
+        const popup = $('#' + this.configuration.prefix + 'prompt_manager_popup').first();
+        if (popup.closest('[data-prompt-workspace]').length) popup.stop(true, true).show().addClass('openDrawer');
+        else popup.slideDown(200, 'swing').addClass('openDrawer');
+        this.containerElement.dispatchEvent(new CustomEvent('prompt-manager-opened', { detail: { area } }));
     }
 
     /**
