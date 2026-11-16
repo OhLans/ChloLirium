@@ -97,7 +97,7 @@ test('preset cards open inside the existing drawer at its native width without a
 test('prompt-only card and dropdown selections keep unspecified parameters and the active connection', async ({ page }) => {
     const before = await shared(page);
     await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-open').click();
-    await expect(page.locator('#chlo-preset-workspace')).toBeVisible();
+    await expect(page.locator('#openai-tab-content-prompts')).toHaveClass(/active/);
     expect(await shared(page)).toEqual(before);
     await page.evaluate(async () => {
         const { openai_setting_names, getPresetApplicationPromise } = await import('/scripts/openai.js');
@@ -120,14 +120,14 @@ test('parameters reuse the same native input and preserve its event handler thro
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-parameters.png') });
 });
 
-test('expanded prompt edit form keeps native roles, content, depth and saves', async ({ page }) => {
+test('native prompt edit form stays within the drawer and saves roles, content and depth normally', async ({ page }) => {
     await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-open').click();
     const block = page.locator('[data-pm-identifier="voice-qa"]');
-    await block.locator('.completion_prompt_manager_prompt_name').click();
-    const popup = page.locator('#chlo-preset-workspace #completion_prompt_manager_popup');
+    await block.locator('.prompt-manager-edit-action').click();
+    const popup = page.locator('#left-nav-panel #completion_prompt_manager_popup');
     await expect(popup).toBeVisible();
-    await expect(page.locator('#completion_prompt_manager')).toBeVisible();
-    const panel = await page.locator('#chlo-preset-workspace').boundingBox();
+    await expect(page.locator('#completion_prompt_manager')).toBeHidden();
+    const panel = await page.locator('#left-nav-panel').boundingBox();
     const editor = await popup.boundingBox();
     expect(editor.x).toBeGreaterThanOrEqual(panel.x);
     expect(editor.x + editor.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
@@ -138,7 +138,7 @@ test('expanded prompt edit form keeps native roles, content, depth and saves', a
     await page.locator('#completion_prompt_manager_popup_entry_form_injection_position').selectOption('1');
     await page.locator('#completion_prompt_manager_popup_entry_form_injection_depth').fill('7');
     await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
-    await expect(popup).toBeVisible();
+    await expect(popup).toBeHidden();
     const prompt = await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.prompts.find(prompt => prompt.identifier === 'voice-qa'));
     expect(prompt).toMatchObject({ role: 'assistant', content: 'Native editor instructions.', injection_position: 1, injection_depth: 7 });
     const response = page.waitForResponse('**/api/presets/save');
@@ -171,8 +171,8 @@ test('collection, parameters and native prompt form fit a 390px phone viewport',
         expect(overflow.right).toBeLessThanOrEqual(391);
     }
     await expect(page.locator('#completion_prompt_manager_list .completion_prompt_manager_prompt').first()).toBeVisible();
-    await page.locator('[data-pm-identifier="voice-qa"] .completion_prompt_manager_prompt_name').click();
-    await expect(page.locator('#chlo-preset-workspace #completion_prompt_manager_popup')).toBeVisible();
+    await page.locator('[data-pm-identifier="voice-qa"] .prompt-manager-edit-action').click();
+    await expect(page.locator('#left-nav-panel #completion_prompt_manager_popup')).toBeVisible();
     const editor = await page.locator('#completion_prompt_manager_popup').boundingBox();
     expect(editor.x + editor.width).toBeLessThanOrEqual(391);
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-phone.png') });
@@ -204,7 +204,6 @@ test('native import and export remain available and the collection follows the n
     const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Native import QA.json'), 'utf8'));
     expect(stored).toMatchObject({ ...parameters, temperature: 0.72 });
     for (const key of ['custom_url', 'custom_model', 'chat_completion_source']) expect(stored).not.toHaveProperty(key);
-    await page.locator('.chlo-workspace-close').click();
     await page.locator('#openai-tab-btn-parameters').click();
     await page.locator('#temp_counter_openai').fill('1');
     await page.locator('#temp_counter_openai').press('Tab');
@@ -249,7 +248,6 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
     }
     await page.locator('#openai-tab-btn-prompts').click();
     for (const selector of ['#update_oai_preset', '[data-preset-manager-rename="openai"]', '#new_oai_preset']) await expect(page.locator(`#chlo-preset-editor-actions ${selector}`)).toBeVisible();
-    await page.locator('.chlo-workspace-close').click();
     await page.locator('#openai-tab-btn-parameters').click();
     await page.locator('#chlo-preset-layout-setting summary').click();
     await page.locator('#ChatCompletionTabs-enabled').uncheck();
@@ -277,7 +275,7 @@ test('both examples are seeded and show real grouped native blocks without repla
         })).toBe(true);
         expect(await shared(page)).toEqual(before);
         await page.screenshot({ path: path.join(root, `../chlo-grouped-${type.toLowerCase()}.png`) });
-        await page.locator('.chlo-workspace-close').click();
+        await page.locator('#openai-tab-btn-presets').click();
     }
 });
 
@@ -287,7 +285,6 @@ test('group headings stay out of native drag order and native toggles and saves 
     await expect(row).toHaveClass(/prompt_disabled/);
     await row.locator('.prompt-manager-toggle-action').click();
     await expect(row).not.toHaveClass(/prompt_disabled/);
-    await page.evaluate(async () => (await import('/scripts/openai.js')).promptManager.render(false));
     const start = await row.locator('.drag-handle').boundingBox();
     const end = await page.locator('[data-pm-identifier="voice"]').boundingBox();
     await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -317,7 +314,6 @@ test('Loom import uses the same Import control and rejects unsupported macros be
     await card.locator('.chlo-preset-open').click();
     await expect(page.locator('.chlo-prompt-section').filter({ hasText: 'Reply guidance' })).toBeVisible();
     const selected = await page.locator('#chlo-preset-editor-title').textContent();
-    await page.locator('.chlo-workspace-close').click();
     loom.blocks[1].content = '{{loom::unsupported}}';
     await page.locator('#openai_preset_import_file').setInputFiles({ name: 'Unsupported QA.loom', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(loom)) });
     await expect(page.locator('.toast-error')).toContainText('Nothing was imported');
@@ -351,15 +347,14 @@ test('cover upload saves an inactive preset without switching it and survives re
     expect(await shared(page)).toEqual(before);
     await card.locator('.chlo-preset-open').click();
     await page.locator('#new_oai_preset').click();
-    await page.locator('dialog[open]:not(#chlo-preset-workspace) textarea').fill('Cover copy QA');
+    await page.locator('dialog[open] textarea').fill('Cover copy QA');
     await page.locator('dialog[open] .popup-button-ok').click();
     await expect(page.locator('#chlo-preset-editor-title')).toHaveText('Cover copy QA');
     await page.locator('[data-preset-manager-rename="openai"]').click();
-    await page.locator('dialog[open]:not(#chlo-preset-workspace) textarea').fill('Cover renamed QA');
+    await page.locator('dialog[open] textarea').fill('Cover renamed QA');
     await page.locator('dialog[open] .popup-button-ok').click();
     await expect(page.locator('#chlo-preset-editor-title')).toHaveText('Cover renamed QA');
     await expect.poll(async () => JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Cover renamed QA.json'), 'utf8')).chlo_preset.cover).toBe(cover);
-    await page.locator('.chlo-workspace-close').click();
     await page.locator('#openai-tab-btn-presets').click();
     await expect(page.locator('.chlo-preset-card').filter({ hasText: 'Cover renamed QA' }).locator('img')).toHaveAttribute('src', cover);
     await page.locator('#export_oai_preset').click();

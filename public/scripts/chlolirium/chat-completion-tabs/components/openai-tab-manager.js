@@ -1,6 +1,6 @@
 /**
- * Keep selection and parameters in the Chat Completion drawer and open its
- * native prompt editor in the expanded workspace.
+ * Keep preset selection, parameters and the native prompt editor in the
+ * existing Chat Completion drawer.
  */
 
 // Import required functions
@@ -8,7 +8,6 @@ import { main_api } from '../../../../script.js';
 import { oai_settings } from './../../../openai.js';
 import { TabManager } from './tab-manager.js';
 import { mountPresetActions } from '../../presets/actions.js';
-import { closePresetWorkspace, isPresetWorkspaceOpen, openPresetWorkspace } from '../../presets/workspace.js';
 
 export class OpenAITabManager {
     constructor() {
@@ -33,10 +32,7 @@ export class OpenAITabManager {
             tabPrefix: 'openai-tab',
             defaultTab: 'presets',
             className: 'openai-tab',
-            onTabSwitch: view => {
-                this.panel.dataset.presetView = view;
-                if (view === 'prompts') openPresetWorkspace();
-            },
+            onTabSwitch: view => this.panel.dataset.presetView = view,
             tabs: {
                 presets: {
                     label: 'Presets',
@@ -80,14 +76,12 @@ export class OpenAITabManager {
     }
 
     setEnabled(enabled) {
-        if (!enabled) closePresetWorkspace();
         this.enabled = enabled;
         this.tabManager.setEnabled(enabled);
         this.syncLayout();
     }
 
     refreshTabs() {
-        if (main_api !== 'openai') closePresetWorkspace();
         this.tabManager.refreshTabs();
         this.syncLayout();
     }
@@ -95,10 +89,6 @@ export class OpenAITabManager {
     syncLayout() {
         const active = this.enabled && main_api === 'openai' && this.isTabsCreated;
         this.panel.classList.toggle('chlo-preset-panel', active);
-        if (isPresetWorkspaceOpen()) {
-            if (active) return;
-            closePresetWorkspace();
-        }
         mountPresetActions(active);
         if (active) {
             const container = document.getElementById('openai-tab-content-prompts');
