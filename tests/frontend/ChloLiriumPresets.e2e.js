@@ -75,30 +75,66 @@ const shared = async page => page.evaluate(async () => {
     return { temperature: s.temp_openai, topP: s.top_p_openai, context: s.openai_max_context, reply: s.openai_max_tokens, stream: s.stream_openai, source: s.chat_completion_source, model: s.custom_model, endpoint: s.custom_url };
 });
 
-test('configuration opens the library in a resizable workspace beside the chat', async ({ page }) => {
+const dragHandle = async (page, handle, point) => {
+    const start = await handle.boundingBox();
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+    await page.mouse.down();
+    // jQuery UI deliberately waits before initiating a drag.
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await page.waitForTimeout(150);
+    await page.mouse.move(point.x, point.y, { steps: 18 });
+    await page.mouse.up();
+};
+
+test('configuration fills the page with a vertical preset library and movable internal divider', async ({ page }) => {
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
     await expect(page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' })).toBeVisible();
     await expect(page.locator('#chlo-preset-workspace, #chlo-preset-library-button, [data-rn-key="presets"]')).toHaveCount(0);
-    const panel = await page.locator('#left-nav-panel').boundingBox();
-    const chat = await page.locator('#sheld').boundingBox();
-    expect(panel.width).toBeGreaterThan(700);
-    expect(chat.x).toBeGreaterThanOrEqual(panel.x + panel.width);
+    for (const width of [1440, 1920]) {
+        await page.setViewportSize({ width, height: 1080 });
+        const panel = await page.locator('#left-nav-panel').boundingBox();
+        expect(panel.x).toBe(0);
+        expect(panel.width).toBe(width);
+        await expect(page.locator('#sheld')).toBeHidden();
+        const rows = await page.locator('.chlo-preset-card').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().toJSON()));
+        for (let i = 1; i < rows.length; i++) {
+            expect(rows[i].x).toBe(rows[0].x);
+            expect(rows[i].y).toBeGreaterThanOrEqual(rows[i - 1].bottom);
+        }
+    }
+    const before = await shared(page);
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-open').click();
+    await expect(page.locator('#chlo-preset-preview h3')).toHaveText('Sola QA');
+    expect(await shared(page)).toEqual(before);
     await page.getByRole('searchbox', { name: 'Search presets' }).fill('Sola');
     await expect(page.locator('.chlo-preset-card:visible')).toHaveCount(1);
     await page.getByRole('searchbox', { name: 'Search presets' }).clear();
-    await page.getByRole('slider', { name: 'Configuration width' }).fill('1000');
-    await expect.poll(async () => (await page.locator('#left-nav-panel').boundingBox()).width).toBe(1000);
-    await page.getByRole('slider', { name: 'Configuration width' }).fill('860');
+    await expect(page.getByRole('slider', { name: 'Configuration width' })).toHaveCount(0);
+    const divider = page.getByRole('separator', { name: 'Resize preset list' });
+    const previous = Number(await divider.getAttribute('aria-valuenow'));
+    await divider.focus();
+    await divider.press('ArrowRight');
+    await expect(divider).toHaveAttribute('aria-valuenow', String(previous + 20));
+    const bounds = await divider.boundingBox();
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + bounds.width / 2 + 80, bounds.y + bounds.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await expect(divider).toHaveAttribute('aria-valuenow', String(previous + 100));
+    const title = await page.locator('#chlo-preset-library-header h3').boundingBox();
+    const tabs = await page.locator('.openai-tab-buttons').boundingBox();
+    expect(title.y).toBeGreaterThanOrEqual(tabs.y + tabs.height);
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-collection.png') });
     await page.getByRole('button', { name: 'Close configuration' }).click();
     await expect(page.locator('body')).not.toHaveClass(/chlo-config-open/);
+    await expect(page.locator('#sheld')).toBeVisible();
     await page.locator('[data-rn-key="aiconfig"]').click();
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
 });
 
 test('prompt-only card and dropdown selections keep unspecified parameters and the active connection', async ({ page }) => {
     const before = await shared(page);
-    await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-open').click();
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-edit').click();
     await expect(page.locator('#openai-tab-content-prompts')).toHaveClass(/active/);
     expect(await shared(page)).toEqual(before);
     await page.evaluate(async () => {
@@ -123,7 +159,7 @@ test('parameters reuse the same native input and preserve its event handler thro
 });
 
 test('native prompt edit form stays within the drawer and saves roles, content and depth normally', async ({ page }) => {
-    await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-open').click();
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-edit').click();
     const block = page.locator('[data-pm-identifier="voice-qa"]');
     await block.locator('.prompt-manager-edit-action').click();
     const popup = page.locator('#left-nav-panel #completion_prompt_manager_popup');
@@ -133,6 +169,8 @@ test('native prompt edit form stays within the drawer and saves roles, content a
     const editor = await popup.boundingBox();
     expect(editor.x).toBeGreaterThanOrEqual(panel.x);
     expect(editor.x + editor.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
+    const field = await page.locator('#completion_prompt_manager_popup_entry_form_prompt').boundingBox();
+    expect(field.width).toBeGreaterThanOrEqual(Math.min(700, editor.width - 80));
     await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Native editor instructions.');
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-editor.png') });
     await page.locator('.chlo-inline-prompt-options > summary').click();
@@ -169,7 +207,7 @@ test('disabling the existing tab layout restores the original native editor and 
 for (const width of [1440, 390]) {
     test(`prompt Save and Close retain middle/end list positions at ${width}px`, async ({ page }) => {
         await page.setViewportSize({ width, height: 1000 });
-        await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-open').click();
+        await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
         await page.evaluate(async () => {
             const { promptManager, oai_settings } = await import('/scripts/openai.js');
             const extra = Array.from({ length: 120 }, (_, i) => ({ identifier: `scroll-qa-${i}`, name: `Scroll block ${i + 1}`, content: `Neutral instructions for block ${i + 1}.`, role: 'system', system_prompt: false, marker: false, injection_position: 0, injection_depth: 4, injection_order: 100, injection_trigger: [] }));
@@ -312,7 +350,7 @@ test('both examples are seeded and show real grouped native blocks without repla
     for (const type of ['Legacy', 'Loom']) {
         const card = page.locator('.chlo-preset-card').filter({ hasText: `Chlo - ${type} example` });
         await expect(card).toBeVisible();
-        await card.locator('.chlo-preset-open').click();
+        await card.locator('.chlo-preset-edit').click();
         await expect(page.locator('#chlo-preset-editor-title')).toHaveText(`Chlo - ${type} example`);
         await expect(page.locator('.chlo-prompt-section')).toHaveCount(2);
         await expect(page.locator('[data-pm-group="instructions"]')).toContainText('Instructions');
@@ -331,7 +369,7 @@ test('both examples are seeded and show real grouped native blocks without repla
 });
 
 test('Prompt order enables native dragging, and toggles and saves preserve the resulting order', async ({ page }) => {
-    await page.locator('.chlo-preset-card').filter({ hasText: 'Chlo - Loom example' }).locator('.chlo-preset-open').click();
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Chlo - Loom example' }).locator('.chlo-preset-edit').click();
     const row = page.locator('[data-pm-identifier="pacing"]');
     await expect(row).toHaveClass(/prompt_disabled/);
     await row.locator('.prompt-manager-toggle-action').click();
@@ -358,7 +396,7 @@ test('Prompt order enables native dragging, and toggles and saves preserve the r
 });
 
 test('grouping wrappers and late instructions preserves saved order and the actual generated request', async ({ page }) => {
-    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-open').click();
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
     const before = await shared(page);
     const original = await page.evaluate(async () => {
         const ctx = SillyTavern.getContext();
@@ -382,9 +420,9 @@ test('grouping wrappers and late instructions preserves saved order and the actu
     });
     const list = page.locator('#completion_prompt_manager_list');
     await expect(list).toHaveAttribute('data-editor-view', 'grouped');
-    await expect(page.locator('[data-pm-identifier="editor-reader"] .chlo-prompt-placement')).toContainText('Position 4');
+    await expect(page.locator('[data-pm-identifier="editor-reader"] .chlo-prompt-placement')).toContainText('Send order 4');
     await expect(page.locator('[data-pm-identifier="editor-check"] .chlo-prompt-placement')).toContainText('In chat · depth 0');
-    expect(await list.evaluate(node => $(node).sortable('option', 'disabled'))).toBe(true);
+    expect(await list.evaluate(node => $(node).sortable('option', 'disabled'))).toBe(false);
     const groupedIds = await list.locator('[data-pm-identifier]').evaluateAll(rows => rows.map(row => row.dataset.pmIdentifier));
     expect(groupedIds.indexOf('editor-reader')).toBeLessThan(groupedIds.indexOf('editor-open'));
     expect(groupedIds.indexOf('editor-check')).toBeLessThan(groupedIds.indexOf('editor-open'));
@@ -416,7 +454,7 @@ test('grouping wrappers and late instructions preserves saved order and the actu
     expect(requests[2].messages).toEqual(requests[0].messages);
     expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Editor voice: Calm.');
     expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Check the current library scene.');
-    await page.getByRole('checkbox', { name: 'Organize editor groups' }).check();
+    await page.getByRole('checkbox', { name: 'Show group controls' }).check();
     const reader = page.locator('[data-pm-identifier="editor-reader"]');
     await reader.getByRole('combobox', { name: 'Editor group for editor-reader' }).selectOption('context');
     await reader.getByRole('button', { name: 'Move up in editor' }).click();
@@ -437,12 +475,12 @@ test('grouping wrappers and late instructions preserves saved order and the actu
 });
 
 test('editor organization persists separately, search opens collapsed matches, and new blocks save in place', async ({ page }) => {
-    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-open').click();
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
     const original = await page.evaluate(async () => {
         const { oai_settings: s } = await import('/scripts/openai.js');
         return structuredClone({ prompts: s.prompts, order: s.prompt_order });
     });
-    await page.getByRole('checkbox', { name: 'Organize editor groups' }).check();
+    await page.getByRole('checkbox', { name: 'Show group controls' }).check();
     const row = page.locator('[data-pm-identifier="voice-qa"]');
     await row.getByRole('combobox', { name: 'Editor group for Narrative voice' }).selectOption('context');
     await expect(row).toHaveAttribute('data-editor-group', 'context');
@@ -490,7 +528,7 @@ test('Loom import uses the same Import control and rejects unsupported macros be
     const card = page.locator('.chlo-preset-card').filter({ hasText: 'Loom import QA' });
     await expect(card.locator('.chlo-preset-open')).toHaveAttribute('aria-pressed', 'true');
     expect(await shared(page)).toEqual(before);
-    await card.locator('.chlo-preset-open').click();
+    await card.locator('.chlo-preset-edit').click();
     await expect(page.locator('[data-pm-identifier="continuity"] .chlo-prompt-placement')).toContainText('Reply guidance');
     const selected = await page.locator('#chlo-preset-editor-title').textContent();
     loom.blocks[1].content = '{{loom::unsupported}}';
@@ -524,7 +562,7 @@ test('cover upload saves an inactive preset without switching it and survives re
     expect(cover).toMatch(/^data:image\/jpeg;base64,/);
     expect(await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.preset_settings_openai)).toBe(active);
     expect(await shared(page)).toEqual(before);
-    await card.locator('.chlo-preset-open').click();
+    await card.locator('.chlo-preset-edit').click();
     await page.locator('#new_oai_preset').click();
     await page.locator('dialog[open] textarea').fill('Cover copy QA');
     await page.locator('dialog[open] .popup-button-ok').click();
@@ -588,7 +626,7 @@ test('stateful Loom import generates through native controls with either macro e
     await page.locator('dialog[open] .popup-button-ok').click();
     const card = page.locator('.chlo-preset-card').filter({ hasText: 'loom-stateful' });
     await expect(card.locator('.chlo-preset-open')).toHaveAttribute('aria-pressed', 'true');
-    await card.locator('.chlo-preset-open').click();
+    await card.locator('.chlo-preset-edit').click();
     await expect(page.locator('[data-pm-identifier="state"]')).toBeVisible();
     expect(await shared(page)).toEqual(before);
     const requests = [];
@@ -671,4 +709,66 @@ test('stateful Loom import generates through native controls with either macro e
         return { count: getScriptsByType(SCRIPT_TYPES.PRESET).length, text: getRegexedString('((OOC hi))', regex_placement.AI_OUTPUT, { isMarkdown: true }) };
     });
     expect(ordinary).toEqual({ count: 0, text: '((OOC hi))' });
+});
+
+test('visible grouped handles reorder and regroup blocks without modifying native sending order', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1800 });
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Chlo - Loom example' }).locator('.chlo-preset-edit').click();
+    const original = await page.evaluate(async () => {
+        const { oai_settings: s } = await import('/scripts/openai.js');
+        return structuredClone({ prompts: s.prompts, order: s.prompt_order });
+    });
+    const row = page.locator('[data-pm-identifier="continuity"]');
+    await expect(row.locator('.drag-handle')).toBeVisible();
+    const widget = await page.locator('#completion_prompt_manager_list').evaluate(node => $(node).data('ui-sortable').uuid);
+    const first = await page.locator('[data-pm-identifier][data-editor-group="instructions"]').first().boundingBox();
+    await dragHandle(page, row.locator('.drag-handle'), { x: first.x + 25, y: first.y + 2 });
+    await expect(page.locator('#completion_prompt_manager_list [data-pm-identifier]').first()).toHaveAttribute('data-pm-identifier', 'continuity');
+    await expect.poll(() => page.locator('#completion_prompt_manager_list').evaluate(node => $(node).data('ui-sortable')?.uuid)).not.toBe(widget);
+    const context = await page.locator('[data-pm-identifier="charDescription"]').boundingBox();
+    await dragHandle(page, row.locator('.drag-handle'), { x: context.x + 25, y: context.y + context.height - 3 });
+    await expect(row).toHaveAttribute('data-editor-group', 'context');
+    const current = await page.evaluate(async () => {
+        const { oai_settings: s } = await import('/scripts/openai.js');
+        return { prompts: s.prompts, order: s.prompt_order, layout: s.chlo_preset.editor_layout };
+    });
+    expect(current.prompts).toEqual(original.prompts);
+    expect(current.order).toEqual(original.order);
+    expect(current.layout.assignments.continuity).toBe('context');
+    await page.getByRole('searchbox', { name: 'Find a block' }).fill('No matching text');
+    expect(await page.locator('#completion_prompt_manager_list').evaluate(node => $(node).sortable('option', 'disabled'))).toBe(true);
+    await page.getByRole('searchbox', { name: 'Find a block' }).clear();
+    expect(await page.locator('#completion_prompt_manager_list').evaluate(node => $(node).sortable('option', 'disabled'))).toBe(false);
+    const divider = page.getByRole('separator', { name: 'Resize block list' });
+    const before = Number(await divider.getAttribute('aria-valuenow'));
+    await divider.focus();
+    await divider.press('ArrowRight');
+    await expect(divider).toHaveAttribute('aria-valuenow', String(before + 20));
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Chlo - Loom example.json'), 'utf8'));
+    expect(stored.prompts).toEqual(original.prompts);
+    expect(stored.prompt_order).toEqual(original.order);
+    expect(stored.chlo_preset.editor_layout.assignments.continuity).toBe('context');
+});
+
+test('preset rows can be reordered and retain their library order after a reload', async ({ page }) => {
+    const cards = page.locator('#chlo-preset-cards .chlo-preset-card');
+    const firstName = await cards.first().getAttribute('data-name');
+    const before = await shared(page);
+    await cards.first().locator('.chlo-preset-drag').focus();
+    await cards.first().locator('.chlo-preset-drag').press('ArrowDown');
+    await expect(cards.nth(1)).toHaveAttribute('data-name', firstName);
+    const second = await cards.nth(1).boundingBox();
+    await dragHandle(page, cards.first().locator('.chlo-preset-drag'), { x: second.x + 12, y: second.y + second.height - 3 });
+    await expect(cards.first()).toHaveAttribute('data-name', firstName);
+    const expected = await cards.evaluateAll(nodes => nodes.map(node => node.dataset.name));
+    expect(await shared(page)).toEqual(before);
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('preloader'));
+    await page.waitForFunction(async () => (await import('/scripts/events.js')).eventSource.autoFireLastArgs.has('app_ready'));
+    await page.evaluate(() => document.querySelectorAll('dialog[open] .popup-button-ok').forEach(button => button.click()));
+    await page.locator('[data-rn-key="aiconfig"]').click();
+    expect(await cards.evaluateAll(nodes => nodes.map(node => node.dataset.name))).toEqual(expected);
 });

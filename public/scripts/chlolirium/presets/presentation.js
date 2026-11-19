@@ -47,12 +47,31 @@ export function organizePrompt(prompts, layout, identifier, { group, direction }
     return next;
 }
 
+/** A grouped drag changes only editor metadata, including cross-group drops. */
+export function editorLayoutFromSequence(prompts, layout, sequence) {
+    const next = structuredClone(layout ?? {});
+    const identifiers = new Set(prompts.map(prompt => prompt.identifier));
+    const groups = new Set(['instructions', 'context', ...promptEditorGroups(prompts, next).map(group => group.id)]);
+    const seen = new Set();
+    const assignments = { ...next.assignments };
+    next.order = [];
+    for (const entry of sequence) {
+        if (!identifiers.has(entry.identifier) || seen.has(entry.identifier)) continue;
+        seen.add(entry.identifier);
+        next.order.push(entry.identifier);
+        if (groups.has(entry.group)) Object.defineProperty(assignments, entry.identifier, { value: entry.group, enumerable: true, writable: true, configurable: true });
+    }
+    next.order.push(...prompts.filter(prompt => !seen.has(prompt.identifier)).map(prompt => prompt.identifier));
+    next.assignments = assignments;
+    return next;
+}
+
 export function promptEditorPlacement(prompt, index) {
     if (prompt.injection_position === 1) {
         const depth = prompt.injection_depth ?? 4;
         return { label: `In chat · depth ${depth}`, title: `In-chat placement: depth ${depth}, role ${prompt.role ?? 'system'}, order ${prompt.injection_order ?? 100}. List position does not control this injection.` };
     }
-    return { label: `Position ${index + 1}`, title: 'Position in the preset order. Context markers expand when the request is built.' };
+    return { label: `Send order ${index + 1}`, title: 'Position in the preset sent to the model. Context markers expand when the request is built.' };
 }
 
 export function presetBlockCount(preset) {

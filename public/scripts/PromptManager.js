@@ -12,7 +12,7 @@ import { renderTemplateAsync } from './templates.js';
 import { Popup } from './popup.js';
 import { t } from './i18n.js';
 import { isMobile } from './RossAscends-mods.js';
-import { promptEditorGroups, promptEditorPlacement } from './chlolirium/presets/presentation.js';
+import { editorLayoutFromSequence, promptEditorGroups, promptEditorPlacement } from './chlolirium/presets/presentation.js';
 import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
 import { confirmPromptSwitch, inPromptWorkspace, mountPromptWorkspace, promptEditorLoaded } from './chlolirium/presets/workspace.js';
 
@@ -1667,9 +1667,9 @@ class PromptManager {
             const controls = document.createElement('div');
             controls.className = 'chlo-prompt-view';
             controls.innerHTML = `<div class="chlo-prompt-view-buttons" role="group" aria-label="Prompt list view">
-                <button type="button" class="menu_button" data-pm-view="grouped" aria-pressed="${view === 'grouped'}">Grouped</button>
-                <button type="button" class="menu_button" data-pm-view="order" aria-pressed="${view === 'order'}">Prompt order</button>
-            </div><small class="chlo-prompt-view-help">${view === 'grouped' ? 'Grouped for editing. Sending order is unchanged.' : 'Drag to change preset order. In-chat blocks use their depth.'}</small>`;
+                <button type="button" class="menu_button" data-pm-view="grouped" aria-pressed="${view === 'grouped'}">Editor layout</button>
+                <button type="button" class="menu_button" data-pm-view="order" aria-pressed="${view === 'order'}">Sending order</button>
+            </div><small class="chlo-prompt-view-help">${view === 'grouped' ? 'Drag a block by its ⠿ handle to arrange this editor. Sending order is unchanged.' : 'Drag to change the actual sending order. In-chat blocks use their depth.'}</small>`;
             controls.addEventListener('click', event => {
                 const button = event.target.closest('[data-pm-view]');
                 if (!button || button.dataset.pmView === (this.promptEditorView ?? 'grouped')) return;
@@ -1813,7 +1813,7 @@ class PromptManager {
 
             listItemHtml += `
                 <li class="${prefix}prompt_manager_prompt ${draggableClass} ${enabledClass} ${markerClass} ${importantClass}" data-pm-identifier="${escapeHtml(prompt.identifier)}">
-                    <span class="drag-handle">☰</span>
+                    <span class="drag-handle" title="${grouped ? 'Drag to arrange the editor' : 'Drag to change sending order'}">⠿</span>
                     <span class="${prefix}prompt_manager_prompt_name" data-pm-name="${encodedName}">
                         ${isMarkerPrompt ? '<span class="fa-fw fa-solid fa-thumb-tack" title="Marker"></span>' : ''}
                         ${isSystemPrompt ? '<span class="fa-fw fa-solid fa-square-poll-horizontal" title="Global Prompt"></span>' : ''}
@@ -1994,13 +1994,24 @@ class PromptManager {
      */
     makeDraggable() {
         $(`#${this.configuration.prefix}prompt_manager_list`).sortable({
-            // Grouped DOM order is for editing, never a replacement prompt_order.
-            disabled: this.listElement.dataset.editorView === 'grouped',
+            disabled: Boolean(this.workspaceSearch?.trim()) && inPromptWorkspace(this),
             delay: this.configuration.sortableDelay,
-            handle: isMobile() ? '.drag-handle' : null,
+            handle: inPromptWorkspace(this) || isMobile() ? '.drag-handle' : null,
             items: `.${this.configuration.prefix}prompt_manager_prompt_draggable`,
             update: (event, ui) => {
-                if (this.listElement.dataset.editorView === 'grouped') return;
+                if (this.listElement.dataset.editorView === 'grouped') {
+                    const sequence = [];
+                    let group = 'instructions';
+                    for (const row of this.listElement.children) {
+                        if (row.dataset.pmGroup) group = row.dataset.pmGroup;
+                        if (row.dataset.pmIdentifier) sequence.push({ identifier: row.dataset.pmIdentifier, group });
+                    }
+                    const layout = editorLayoutFromSequence(this.getPromptsForCharacter(this.activeCharacter), this.serviceSettings.chlo_preset?.editor_layout, sequence);
+                    this.serviceSettings.chlo_preset = { ...this.serviceSettings.chlo_preset, editor_layout: layout };
+                    this.saveServiceSettings();
+                    this.render(false);
+                    return;
+                }
                 const promptOrder = this.getPromptOrderForCharacter(this.activeCharacter);
                 const promptListElement = $(`#${this.configuration.prefix}prompt_manager_list`).sortable('toArray', { attribute: 'data-pm-identifier' });
                 const idToObjectMap = new Map(promptOrder.map(prompt => [prompt.identifier, prompt]));

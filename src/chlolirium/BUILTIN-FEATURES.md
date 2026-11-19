@@ -29,16 +29,21 @@ styles. Theme styles remain switchable with the appearance setting.
 
 ## Native preset panel and generation settings
 
-With the tab layout enabled, the existing AI Configuration drawer becomes a
-resizable workspace. A width slider and keyboard/pointer resize handle share
-a browser-local width preference. Wide screens place the chat beside it when
-there is enough room; narrow screens use the available width. Closing the
-configuration or disabling the layout restores native chat geometry. Theme
+With the tab layout enabled, AI Configuration fills the available page and
+hides the chat while it is open. The library and editor each have a visible
+internal column divider with pointer dragging and Left/Right keyboard controls;
+their widths are remembered independently in this browser. Closing the
+configuration or disabling the layout restores the chat. Theme
 colors, pin controls, API profiles and all native parameter nodes are retained.
-The opening page is a searchable preset library with cover cards.
+The opening page is a searchable vertical preset list with cover cards and a
+preview alongside it. Selecting a title previews the preset without applying
+it; Edit opens its blocks. On phones the title also opens the editor, since the
+preview column is hidden. Visible preset handles reorder the library using
+pointer dragging or Up/Down keys. This browser-local library order survives
+reloads without changing native select indices, preset contents or activation.
 Use applies a card through that select's normal change handler while staying in
 the collection, so Export/Delete can target it there. Use also reloads an active
-preset's saved values. Edit or the title opens Prompts and preserves unsaved
+preset's saved values. Edit opens Prompts and preserves unsaved
 edits when that preset is already active.
 Parameters is another page in the workspace. Loading a preset applies
 the generation settings it actually contains. Prompt-only presets leave those
@@ -61,7 +66,7 @@ block (or at the end). The original prompt pool, insert, import/export and
 reset controls remain under Available blocks & tools. Native roles, depth,
 triggers, override controls, macro autocomplete and inspection are retained.
 
-The default Grouped editor collects Instructions first and Context & structure
+The default Editor layout view collects Instructions first and Context & structure
 afterward. Native context markers, tag-only wrappers (including `{{trim}}`),
 and standalone context macros belong to the second group. Planeswalker Identity,
 character/protagonist wrappers and summary labels are recognized for display.
@@ -70,10 +75,14 @@ text-bearing instructions retain their relative order in the first. Existing
 `chlo_category` labels remain visible in row metadata. Each row shows its native
 preset position or in-chat depth; the groups never change stored `prompt_order`,
 macro evaluation, roles, injections or prompt assembly.
-Dragging is disabled in Grouped view. Prompt order shows the native sequence
-and enables the original drag handler. Disabling the tab layout also restores
-the native sequence and dragging. Organize editor groups enables per-block
-group selection and up/down display ordering. These edits are isolated in
+Visible block handles drag within and between editor groups; Up/Down keys on
+a handle move it within its group. Show group controls exposes per-block group
+selectors and up/down buttons. Search and layout controls stay visible at the
+top of the scrolling list. Dragging is disabled while a search is active so a
+filtered list cannot accidentally change positions; clearing search restores it.
+Sending order is the separate native sequence view, whose drag handler updates
+the actual prompt_order. Disabling the tab layout restores native ordering and
+dragging. Editor layout changes are isolated in
 `chlo_preset.editor_layout` and travel with native Save preset, save-as, import
 and export. They never modify native prompt_order or add prompt text.
 
