@@ -19,6 +19,10 @@ export function initPresetPanel() {
     const cards = document.createElement('div');
     cards.id = 'chlo-preset-cards';
     collection.append(cards);
+    const preview = document.createElement('aside');
+    preview.id = 'chlo-preset-preview';
+    preview.className = 'chlo-preset-preview';
+    collection.append(preview);
     document.getElementById('openai_api-presets').append(collection);
     initPresetActions(collection);
     const search = document.createElement('input');
@@ -27,20 +31,56 @@ export function initPresetPanel() {
     search.placeholder = 'Search presets…';
     search.setAttribute('aria-label', 'Search presets');
     cards.before(search);
+    const hint = document.createElement('small');
+    hint.className = 'chlo-catalog-help';
+    hint.textContent = 'Drag ⠿ to reorder presets. Select a title to preview it; Edit opens its blocks.';
+    cards.before(hint);
+    let previewName;
+    let catalogOrder = [];
+    try {
+        const saved = JSON.parse(localStorage.getItem('chlo-preset-library-order') ?? '[]');
+        if (Array.isArray(saved)) catalogOrder = saved.filter(name => typeof name === 'string');
+    } catch { /* Keep the native order if storage is unavailable. */ }
+    const saveCatalogOrder = () => {
+        catalogOrder = [...cards.children].map(card => card.dataset.name);
+        try { localStorage.setItem('chlo-preset-library-order', JSON.stringify(catalogOrder)); } catch { /* Session ordering remains usable. */ }
+    };
     const filter = () => {
         const query = search.value.toLocaleLowerCase().trim();
         for (const card of cards.children) card.hidden = !card.dataset.name.toLocaleLowerCase().includes(query);
+        if ($(cards).data('ui-sortable')) $(cards).sortable('option', 'disabled', Boolean(query));
     };
     search.addEventListener('input', filter);
 
+    const renderPreview = name => {
+        const option = [...select.options].find(option => option.text === name);
+        if (!option) { preview.textContent = 'Select a preset to preview it.'; return; }
+        previewName = name;
+        preview.dataset.name = name;
+        preview.dataset.value = option.value;
+        const preset = openai_settings[option.value] ?? {};
+        const cover = presetCover(preset);
+        const description = typeof preset.chlo_preset?.description === 'string' ? preset.chlo_preset.description : '';
+        preview.innerHTML = `<button type="button" class="chlo-preview-cover" aria-label="Change preview image">${cover ? `<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer">` : '<i class="fa-solid fa-book-open" aria-hidden="true"></i>'}</button>
+            <h3>${escapeHtml(name)}</h3><p>${presetBlockCount(preset)} blocks${name === oai_settings.preset_settings_openai ? ' · Active preset' : ''}</p>
+            ${description ? `<p class="chlo-preview-description">${escapeHtml(description)}</p>` : ''}
+            <div class="chlo-preset-actions"><button type="button" class="menu_button chlo-preset-use">Use in chat</button><button type="button" class="menu_button chlo-preset-edit">Edit blocks</button></div>
+            <p class="chlo-preview-note">Edit opens the block editor. The divider beside this preview adjusts the column widths.</p>`;
+        preview.querySelector('img')?.addEventListener('error', event => event.target.hidden = true);
+        for (const card of cards.children) card.classList.toggle('chlo-preview-selected', card.dataset.name === name);
+    };
+
     const render = () => {
         const options = [...select.options].filter(option => option.value !== 'gui');
+        const positions = new Map(catalogOrder.map((name, index) => [name, index]));
+        options.sort((a, b) => (positions.get(a.text) ?? Infinity) - (positions.get(b.text) ?? Infinity));
         cards.innerHTML = options.map(option => {
             const selected = option.text === oai_settings.preset_settings_openai;
             const preset = openai_settings[option.value] ?? {};
             const cover = presetCover(preset);
             const format = preset.chlo_preset?.format === 'Loom' ? ' · Loom blocks' : preset.chlo_preset?.format === 'Legacy' ? ' · Legacy' : '';
             return `<article class="chlo-preset-card${selected ? ' selected' : ''}" data-value="${escapeHtml(option.value)}" data-name="${escapeHtml(option.text)}" aria-label="${escapeHtml(option.text)}">
+                <span class="chlo-preset-drag" role="button" tabindex="0" aria-label="Reorder ${escapeHtml(option.text)}; use Up or Down arrow keys" title="Drag to reorder presets">⠿</span>
                 <button type="button" class="chlo-preset-cover" aria-label="Change image for ${escapeHtml(option.text)}" title="Change preset image">
                     <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                     ${cover ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
@@ -55,17 +95,33 @@ export function initPresetPanel() {
         }).join('');
         for (const image of cards.querySelectorAll('img')) image.addEventListener('error', () => image.hidden = true);
         filter();
+        $(cards).sortable({ items: '.chlo-preset-card', handle: '.chlo-preset-drag', axis: 'y', disabled: Boolean(search.value.trim()), update: saveCatalogOrder });
+        for (const handle of cards.querySelectorAll('.chlo-preset-drag')) handle.addEventListener('keydown', event => {
+            if (search.value.trim() || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const card = handle.closest('.chlo-preset-card');
+            const sibling = event.key === 'ArrowUp' ? card.previousElementSibling : card.nextElementSibling;
+            if (!sibling) return;
+            if (event.key === 'ArrowUp') sibling.before(card);
+            else sibling.after(card);
+            saveCatalogOrder();
+            handle.focus();
+        });
+        renderPreview(options.find(option => option.text === previewName)?.text ?? oai_settings.preset_settings_openai ?? options[0]?.text);
         updatePresetActions();
     };
 
     let selection = 0;
     collection.addEventListener('click', async event => {
-        const card = event.target.closest('.chlo-preset-card');
+        const card = event.target.closest('.chlo-preset-card, .chlo-preset-preview');
         if (!card) return;
         try {
-            if (event.target.closest('.chlo-preset-cover')) { await editPresetCover(card.dataset.name); return; }
+            if (event.target.closest('.chlo-preset-cover, .chlo-preview-cover')) { await editPresetCover(card.dataset.name); return; }
             if (!event.target.closest('.chlo-preset-open, .chlo-preset-edit, .chlo-preset-use')) return;
+            if (event.target.closest('.chlo-preset-open') && innerWidth > 700) { renderPreview(card.dataset.name); return; }
             if (!await confirmPromptSwitch(promptManager)) return;
+            previewName = card.dataset.name;
             const openEditor = !event.target.closest('.chlo-preset-use');
             const request = ++selection;
             if (!openEditor || oai_settings.preset_settings_openai !== card.dataset.name) {

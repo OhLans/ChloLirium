@@ -2,7 +2,7 @@ import { describe, test, expect } from '@jest/globals';
 import { readFile } from 'node:fs/promises';
 import { pickChatCompletionPreset, pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
 import { convertLoomPreset, preparePresetImport } from '../public/scripts/chlolirium/presets/import.js';
-import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, organizePrompt, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
+import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, organizePrompt, editorLayoutFromSequence, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
 import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
 import { convertLoomRegex, replaceLoomRegex } from '../public/scripts/chlolirium/presets/loom-regex.js';
 
@@ -73,7 +73,7 @@ describe('Native preset presentation', () => {
     });
 
     test('placement labels distinguish preset order from in-chat depth and role ordering', () => {
-        expect(promptEditorPlacement({}, 8).label).toBe('Position 9');
+        expect(promptEditorPlacement({}, 8).label).toBe('Send order 9');
         const placement = promptEditorPlacement({ injection_position: 1, injection_depth: 0, injection_order: 20, role: 'assistant' }, 8);
         expect(placement.label).toBe('In chat · depth 0');
         expect(placement.title).toContain('role assistant, order 20');
@@ -89,6 +89,16 @@ describe('Native preset presentation', () => {
         expect(organizePrompt(prompts, layout, 'missing', { direction: 'down' }).order).toEqual(layout.order);
         layout = organizePrompt(prompts, layout, 'first', { group: 'context' });
         expect(promptEditorGroups(prompts, layout).find(group => group.id === 'context').prompts.map(prompt => prompt.identifier)).toEqual(['first']);
+    });
+
+    test('a grouped drag keeps native objects intact and rejects duplicate or unknown row references', () => {
+        const prompts = [{ identifier: 'one', content: 'First.' }, { identifier: 'two', content: 'Second.' }, { identifier: 'chatHistory', marker: true }];
+        const source = structuredClone(prompts);
+        const layout = editorLayoutFromSequence(prompts, {}, [{ identifier: 'two', group: 'instructions' }, { identifier: 'one', group: 'context' }, { identifier: 'two', group: 'context' }, { identifier: 'missing', group: 'context' }]);
+        expect(layout.order).toEqual(['two', 'one', 'chatHistory']);
+        expect(layout.assignments).toEqual({ two: 'instructions', one: 'context' });
+        expect(promptEditorGroups(prompts, layout).map(group => group.prompts.map(prompt => prompt.identifier))).toEqual([['two'], ['one', 'chatHistory']]);
+        expect(prompts).toEqual(source);
     });
 
     test('covers accept existing raster data and HTTP images, rejecting active schemes and SVG uploads', () => {
