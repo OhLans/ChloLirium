@@ -1,7 +1,7 @@
 import { Popup } from '../../popup.js';
 import { escapeHtml } from '../../utils.js';
-import { applyPromptSections, organizePrompt, promptEditorGroups, promptSectionDefinitions } from './presentation.js';
-import { editPromptSections } from './sections.js';
+import { applyPromptSections, insertPromptSection, organizePrompt, promptEditorGroups, promptSectionDefinitions } from './presentation.js';
+import { chooseSectionForSplit, editPromptSections } from './sections.js';
 
 export const inPromptWorkspace = manager => Boolean(manager.containerElement?.closest('#left-nav-panel.chlo-preset-panel'));
 
@@ -134,6 +134,25 @@ export function mountPromptWorkspace(manager) {
     const groupForPrompt = new Map(groups.flatMap(group => group.prompts.map(prompt => [prompt.identifier, group.id])));
     const sections = promptSectionDefinitions(layout);
     list.classList.toggle('chlo-organizing', Boolean(manager.workspaceOrganize));
+    const insertAbove = async identifier => {
+        const preset = manager.serviceSettings.preset_settings_openai;
+        const group = groups.find(item => item.id === groupForPrompt.get(identifier));
+        const index = group?.prompts.findIndex(prompt => prompt.identifier === identifier) ?? -1;
+        if (index < 0) return;
+        const emptySections = sections.filter(item => item.removable && !groups.find(group => group.id === item.id)?.prompts.length);
+        const choice = await chooseSectionForSplit({
+            anchor: group.prompts[index].name || 'This block',
+            source: group.label,
+            count: group.prompts.length - index,
+            sections,
+            emptySections,
+        });
+        if (!choice || preset !== manager.serviceSettings.preset_settings_openai || !inPromptWorkspace(manager)) return;
+        const next = insertPromptSection(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), manager.serviceSettings.chlo_preset?.editor_layout, identifier, choice);
+        if (!next) return;
+        manager.workspaceCollapsed = manager.workspaceCollapsed?.filter(id => id !== choice.id) ?? [];
+        commitLayout(next);
+    };
     for (const row of list.querySelectorAll('[data-pm-identifier]')) {
         const identifier = row.dataset.pmIdentifier;
         row.dataset.editorGroup = groupForPrompt.get(identifier) ?? 'instructions';
@@ -153,9 +172,12 @@ export function mountPromptWorkspace(manager) {
         }
         const controls = document.createElement('div');
         controls.className = 'chlo-block-organization';
-        controls.innerHTML = `<label>Editor group<select aria-label="Editor group for ${escapeHtml(name)}">${sections.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === row.dataset.editorGroup ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}</select></label><div><button type="button" class="menu_button" data-editor-move="up" aria-label="Move up in editor">↑</button><button type="button" class="menu_button" data-editor-move="down" aria-label="Move down in editor">↓</button></div>`;
+        controls.innerHTML = `<label>Editor group<select aria-label="Editor group for ${escapeHtml(name)}">${sections.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === row.dataset.editorGroup ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}</select></label><div><button type="button" class="menu_button" data-editor-move="up" aria-label="Move up in editor">↑</button><button type="button" class="menu_button" data-editor-move="down" aria-label="Move down in editor">↓</button><button type="button" class="menu_button chlo-insert-section" title="Insert section above this block" aria-label="Insert section above this block">+ Section above</button></div>`;
         controls.querySelector('select').addEventListener('change', event => commitLayout(organizePrompt(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), manager.serviceSettings.chlo_preset?.editor_layout, identifier, { group: event.target.value })));
         controls.querySelectorAll('[data-editor-move]').forEach(button => button.addEventListener('click', () => commitLayout(organizePrompt(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), manager.serviceSettings.chlo_preset?.editor_layout, identifier, { direction: button.dataset.editorMove }))));
+        const insert = controls.querySelector('.chlo-insert-section');
+        insert.addEventListener('click', () => insertAbove(identifier));
+        insert.addEventListener('keydown', event => { if (event.key === 'Enter') event.stopPropagation(); });
         row.append(controls);
     }
     for (const heading of list.querySelectorAll('[data-pm-group]')) {

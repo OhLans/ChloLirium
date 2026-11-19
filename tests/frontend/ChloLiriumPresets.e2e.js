@@ -668,6 +668,61 @@ test('custom prompt sections can be arranged, filled and removed without changin
     expect(await getNativePrompts()).toEqual(original);
 });
 
+test('a separator can be inserted at a specific prompt without moving either neighboring block', async ({ page }) => {
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
+    await openPromptTools(page);
+    await page.getByRole('button', { name: 'Manage sections' }).click();
+    const manage = page.locator('dialog[open]');
+    await manage.getByRole('button', { name: 'Add section' }).click();
+    await manage.getByRole('textbox', { name: 'Section name' }).last().fill('Optional modules');
+    await manage.getByRole('button', { name: 'Apply sections' }).click();
+    const list = page.locator('#completion_prompt_manager_list');
+    await expect(list.locator('[data-pm-group] button').last()).toHaveText(/Optional modules\s*0/);
+    const ids = () => list.locator('[data-pm-identifier]').evaluateAll(rows => rows.map(row => row.dataset.pmIdentifier));
+    const before = await ids();
+    const original = await page.evaluate(async () => {
+        const { oai_settings: s } = await import('/scripts/openai.js');
+        return { prompts: s.prompts, order: s.prompt_order };
+    });
+    const anchor = list.locator('[data-pm-identifier="main"]');
+    const insertAbove = anchor.getByRole('button', { name: 'Insert section above this block' });
+    await expect(insertAbove).toBeHidden();
+    await openPromptTools(page);
+    await page.getByRole('checkbox', { name: 'Show group controls' }).check();
+    await insertAbove.press('Enter');
+    const dialog = page.locator('dialog[open]').filter({ hasText: 'Insert section above this block' });
+    await expect(dialog).toContainText('“Main Prompt” and the next');
+    await dialog.getByRole('combobox', { name: 'Section to insert' }).selectOption({ label: 'Optional modules' });
+    await dialog.getByRole('button', { name: 'Insert section', exact: true }).click();
+    const above = row => row.evaluate(el => ({ heading: el.previousElementSibling?.textContent, previous: el.previousElementSibling?.previousElementSibling?.dataset.pmIdentifier }));
+    await expect.poll(() => above(anchor)).toMatchObject({ heading: expect.stringContaining('Optional modules'), previous: 'voice-qa' });
+    expect(await ids()).toEqual(before);
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    const search = page.getByRole('searchbox', { name: 'Find a block' });
+    await search.fill('Enhance Definitions');
+    const nestedAnchor = list.locator('[data-pm-identifier="enhanceDefinitions"]');
+    await nestedAnchor.getByRole('button', { name: 'Insert section above this block' }).click();
+    await expect(dialog.getByRole('combobox', { name: 'Section to insert' })).toBeHidden();
+    await dialog.getByRole('textbox', { name: 'Section name' }).fill('Style notes');
+    await dialog.getByRole('button', { name: 'Insert section', exact: true }).click();
+    await search.clear();
+    await expect.poll(() => above(nestedAnchor)).toMatchObject({ heading: expect.stringContaining('Style notes'), previous: 'main' });
+    expect(await ids()).toEqual(before);
+    await openPromptTools(page);
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Banana QA.json'), 'utf8'));
+    expect(stored.prompts).toEqual(original.prompts);
+    expect(stored.prompt_order).toEqual(original.order);
+    const layout = stored.chlo_preset.editor_layout;
+    const sectionNames = new Map(layout.groups.map(group => [group.id, group.label]));
+    expect(layout.group_order.map(id => sectionNames.get(id))).toEqual(['Instructions', 'Optional modules', 'Style notes', 'Context & structure']);
+    expect(sectionNames.get(layout.assignments.main)).toBe('Optional modules');
+    expect(sectionNames.get(layout.assignments.enhanceDefinitions)).toBe('Style notes');
+});
+
 test('Loom import uses the same Import control and rejects unsupported macros before saving', async ({ page }) => {
     const before = await shared(page);
     const loom = JSON.parse(await readFile(path.join(root, 'tests/fixtures/chlolirium/loom-example.loom'), 'utf8'));

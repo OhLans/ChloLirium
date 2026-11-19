@@ -99,11 +99,12 @@
 #left-nav-panel.chlo-preset-panel .chlo-prompt-section [aria-expanded="false"] > span:first-child { transform: rotate(-90deg); }
 #left-nav-panel.chlo-preset-panel .chlo-select-prompt { display: inline; max-width: 100%; border: 0; padding: 0; text-align: start; font: inherit; color: inherit; background: none; cursor: pointer; overflow-wrap: anywhere; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_list .chlo-block-selected { border-color: var(--chlo-preset-accent); background: color-mix(in srgb, var(--chlo-preset-accent) 15%, transparent); }
-#left-nav-panel.chlo-preset-panel #completion_prompt_manager_list.chlo-organizing[data-editor-view="grouped"] .chlo-block-organization { display: flex; grid-column: 1 / -1; gap: 8px; align-items: end; padding-top: 10px; border-top: 1px solid var(--chlo-preset-line); }
-.chlo-block-organization label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager_list.chlo-organizing[data-editor-view="grouped"] .chlo-block-organization { display: flex; flex-wrap: wrap; grid-column: 1 / -1; gap: 8px; align-items: end; padding-top: 10px; border-top: 1px solid var(--chlo-preset-line); }
+.chlo-block-organization label { flex: 1; min-width: 100px; display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
 .chlo-block-organization select { width: 100%; }
 .chlo-block-organization > div { display: flex; gap: 4px; }
 .chlo-block-organization button { min-width: 32px; margin: 0; }
+.chlo-block-organization .chlo-insert-section { padding-inline: 8px; font-size: 12px; white-space: nowrap; }
 #left-nav-panel.chlo-preset-panel [hidden] { display: none !important; }
 
 .chlo-section-editor h3 { margin: 0; }
@@ -114,3 +115,6 @@
 .chlo-section-editor li button { min-height: 34px; margin: 0; padding: 0; font-size: 16px; }
 .chlo-section-editor li button:disabled { opacity: .35; cursor: default; }
 .chlo-section-editor small { display: block; margin-top: 8px; opacity: .8; }
+.chlo-section-split { overflow-wrap: anywhere; }
+.chlo-section-split label:not([hidden]) { display: grid; gap: 4px; margin-block: 10px; }
+.chlo-section-split :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; }

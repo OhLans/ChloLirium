@@ -46,6 +46,25 @@ export function promptEditorGroups(prompts, layout = {}) {
     return [...groups.values()].filter(group => group.prompts.length || group.removable).map(({ id, label, prompts }) => ({ id, label, prompts }));
 }
 
+/** Split one editor group without changing the order in which its blocks appear. */
+export function insertPromptSection(prompts, layout, identifier, section) {
+    const groups = promptEditorGroups(prompts, layout);
+    const source = groups.find(group => group.prompts.some(prompt => prompt.identifier === identifier));
+    if (!source) return;
+    const sections = promptSectionDefinitions(layout);
+    const existing = sections.find(item => item.id === section.id);
+    if (existing && (!existing.removable || groups.find(group => group.id === section.id)?.prompts.length)) return;
+    const reordered = sections.filter(item => item.id !== section.id);
+    reordered.splice(reordered.findIndex(item => item.id === source.id) + 1, 0, existing ?? section);
+    const next = applyPromptSections(layout, reordered);
+    const start = source.prompts.findIndex(prompt => prompt.identifier === identifier);
+    next.assignments = {
+        ...next.assignments,
+        ...Object.fromEntries(source.prompts.slice(start).map(prompt => [prompt.identifier, section.id])),
+    };
+    return next;
+}
+
 /** Editor metadata is isolated from native prompt_order and prompt contents. */
 export function organizePrompt(prompts, layout, identifier, { group, direction } = {}) {
     const next = structuredClone(layout ?? {});
