@@ -1714,13 +1714,16 @@ class PromptManager {
         const grouped = promptManagerList.closest('#left-nav-panel.chlo-preset-panel') && (this.promptEditorView ?? 'grouped') === 'grouped';
         promptManagerList.dataset.editorView = grouped ? 'grouped' : 'order';
         const groups = grouped ? promptEditorGroups(prompts, this.serviceSettings.chlo_preset?.editor_layout) : [{ prompts }];
-        const headings = new Map(groups.filter(group => group.label && group.prompts.length).map(group => [group.prompts[0].identifier, group]));
         let listItemHtml = await renderTemplateAsync('promptManagerListHeader', { prefix });
 
-        groups.flatMap(group => group.prompts).forEach(prompt => {
-            const group = headings.get(prompt.identifier);
-            if (group) {
-                listItemHtml += `<li class="chlo-prompt-section" data-pm-group="${escapeHtml(group.id)}"><span>${escapeHtml(group.label)}</span><small>${group.prompts.length}</small></li>`;
+        const entries = groups.flatMap(group => [
+            ...(group.label ? [{ section: group }] : []),
+            ...group.prompts.map(prompt => ({ prompt })),
+        ]);
+        entries.forEach(({ section, prompt }) => {
+            if (section) {
+                listItemHtml += `<li class="chlo-prompt-section" data-pm-group="${escapeHtml(section.id)}"><span>${escapeHtml(section.label)}</span><small>${section.prompts.length}</small></li>`;
+                return;
             }
 
             const listEntry = this.getPromptOrderEntry(this.activeCharacter, prompt.identifier);
@@ -1988,7 +1991,7 @@ class PromptManager {
             update: (event, ui) => {
                 if (this.listElement.dataset.editorView === 'grouped') {
                     const sequence = [];
-                    let group = 'instructions';
+                    let group = this.listElement.querySelector('[data-pm-group]')?.dataset.pmGroup ?? 'instructions';
                     for (const row of this.listElement.children) {
                         if (row.dataset.pmGroup) group = row.dataset.pmGroup;
                         if (row.dataset.pmIdentifier) sequence.push({ identifier: row.dataset.pmIdentifier, group });

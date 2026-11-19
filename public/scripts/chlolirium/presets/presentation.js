@@ -13,24 +13,37 @@ export function promptEditorGroup(prompt) {
     return 'instructions';
 }
 
+const defaultSections = new Map([['instructions', 'Instructions'], ['context', 'Context & structure']]);
+
+/** Section titles and order belong to the editor, not the outgoing request. */
+export function promptSectionDefinitions(layout) {
+    const groups = new Map([...defaultSections].map(([id, label]) => [id, { id, label }]));
+    for (const group of Array.isArray(layout?.groups) ? layout.groups : []) {
+        if (typeof group?.id === 'string' && typeof group.label === 'string' && group.label.trim()) groups.set(group.id, { id: group.id, label: group.label.trim().slice(0, 80) });
+    }
+    const orderedIds = new Set(Array.isArray(layout?.group_order) ? layout.group_order : []);
+    for (const id of groups.keys()) orderedIds.add(id);
+    return [...orderedIds].filter(id => groups.has(id)).map(id => ({ ...groups.get(id), removable: !defaultSections.has(id) }));
+}
+
+export function applyPromptSections(layout, sections) {
+    const groups = sections.map(({ id, label }) => ({ id, label: label.trim().slice(0, 80) }));
+    const allowed = new Set([...defaultSections.keys(), ...groups.map(group => group.id)]);
+    const assignments = Object.fromEntries(Object.entries(layout?.assignments ?? {}).filter(([, id]) => allowed.has(id)));
+    return { ...layout, groups, group_order: groups.map(group => group.id), assignments };
+}
+
 /** Stable editor groups holding the original objects; execution uses its own order. */
 export function promptEditorGroups(prompts, layout = {}) {
     layout = layout && typeof layout === 'object' ? layout : {};
-    const defaults = [
-        { id: 'instructions', label: 'Instructions' },
-        { id: 'context', label: 'Context & structure' },
-    ];
-    const groups = new Map(defaults.map(group => [group.id, group]));
-    for (const group of Array.isArray(layout.groups) ? layout.groups : []) {
-        if (typeof group?.id === 'string' && typeof group.label === 'string' && group.label.trim()) groups.set(group.id, { id: group.id, label: group.label.trim().slice(0, 80) });
-    }
+    const groups = new Map(promptSectionDefinitions(layout).map(({ id, label, removable }) => [id, { id, label, removable, prompts: [] }]));
     const positions = new Map((Array.isArray(layout.order) ? layout.order : []).map((id, index) => [id, index]));
     const sorted = [...prompts].sort((a, b) => (positions.get(a.identifier) ?? Infinity) - (positions.get(b.identifier) ?? Infinity));
-    const result = [...groups.values()].map(group => ({ ...group, prompts: sorted.filter(prompt => {
+    for (const prompt of sorted) {
         const assigned = Object.hasOwn(layout.assignments ?? {}, prompt.identifier) ? layout.assignments[prompt.identifier] : null;
-        return (groups.has(assigned) ? assigned : promptEditorGroup(prompt)) === group.id;
-    }) }));
-    return result.filter(group => group.prompts.length || !defaults.some(item => item.id === group.id));
+        groups.get(groups.has(assigned) ? assigned : promptEditorGroup(prompt)).prompts.push(prompt);
+    }
+    return [...groups.values()].filter(group => group.prompts.length || group.removable).map(({ id, label, prompts }) => ({ id, label, prompts }));
 }
 
 /** Editor metadata is isolated from native prompt_order and prompt contents. */
