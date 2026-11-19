@@ -22,7 +22,6 @@ export function initPresetPanel() {
     const preview = document.createElement('aside');
     preview.id = 'chlo-preset-preview';
     preview.className = 'chlo-preset-preview';
-    collection.append(preview);
     document.getElementById('openai_api-presets').append(collection);
     initPresetActions(collection);
     const search = document.createElement('input');
@@ -54,20 +53,25 @@ export function initPresetPanel() {
 
     const renderPreview = name => {
         const option = [...select.options].find(option => option.text === name);
-        if (!option) { preview.textContent = 'Select a preset to preview it.'; return; }
-        previewName = name;
+        const row = [...cards.children].find(card => card.dataset.name === name);
+        preview.remove();
+        previewName = row && option ? name : undefined;
+        for (const card of cards.children) {
+            const button = card.querySelector('.chlo-preset-open');
+            button.setAttribute('aria-expanded', String(card === row));
+            if (card === row) button.setAttribute('aria-controls', preview.id);
+            else button.removeAttribute('aria-controls');
+        }
+        if (!row || !option) return;
         preview.dataset.name = name;
-        preview.dataset.value = option.value;
         const preset = openai_settings[option.value] ?? {};
         const cover = presetCover(preset);
         const description = typeof preset.chlo_preset?.description === 'string' ? preset.chlo_preset.description : '';
-        preview.innerHTML = `<button type="button" class="chlo-preview-cover" aria-label="Change preview image">${cover ? `<img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer">` : '<i class="fa-solid fa-book-open" aria-hidden="true"></i>'}</button>
+        preview.innerHTML = `${cover ? `<button type="button" class="chlo-preview-cover" aria-label="Change preview image"><img src="${escapeHtml(cover)}" alt="" referrerpolicy="no-referrer"></button>` : ''}
             <h3>${escapeHtml(name)}</h3><p>${presetBlockCount(preset)} blocks${name === oai_settings.preset_settings_openai ? ' · Active preset' : ''}</p>
-            ${description ? `<p class="chlo-preview-description">${escapeHtml(description)}</p>` : ''}
-            <div class="chlo-preset-actions"><button type="button" class="menu_button chlo-preset-use">Use in chat</button><button type="button" class="menu_button chlo-preset-edit">Edit blocks</button></div>
-            <p class="chlo-preview-note">Edit opens the block editor. The divider beside this preview adjusts the column widths.</p>`;
+            ${description ? `<p class="chlo-preview-description">${escapeHtml(description)}</p>` : ''}`;
+        row.append(preview);
         preview.querySelector('img')?.addEventListener('error', event => event.target.hidden = true);
-        for (const card of cards.children) card.classList.toggle('chlo-preview-selected', card.dataset.name === name);
     };
 
     const render = () => {
@@ -86,7 +90,7 @@ export function initPresetPanel() {
                     ${cover ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
                     <span class="chlo-preset-cover-edit fa-solid fa-camera" aria-hidden="true"></span>
                 </button>
-                <button type="button" class="chlo-preset-open" aria-pressed="${selected}">
+                <button type="button" class="chlo-preset-open" aria-expanded="false">
                     <span class="chlo-preset-name">${escapeHtml(option.text)}</span>
                     <small>${presetBlockCount(preset)} blocks${format}</small>
                 </button>
@@ -108,7 +112,7 @@ export function initPresetPanel() {
             saveCatalogOrder();
             handle.focus();
         });
-        renderPreview(options.find(option => option.text === previewName)?.text ?? oai_settings.preset_settings_openai ?? options[0]?.text);
+        renderPreview(previewName);
         updatePresetActions();
     };
 
@@ -119,9 +123,8 @@ export function initPresetPanel() {
         try {
             if (event.target.closest('.chlo-preset-cover, .chlo-preview-cover')) { await editPresetCover(card.dataset.name); return; }
             if (!event.target.closest('.chlo-preset-open, .chlo-preset-edit, .chlo-preset-use')) return;
-            if (event.target.closest('.chlo-preset-open') && innerWidth > 700) { renderPreview(card.dataset.name); return; }
+            if (event.target.closest('.chlo-preset-open')) { renderPreview(previewName === card.dataset.name ? undefined : card.dataset.name); return; }
             if (!await confirmPromptSwitch(promptManager)) return;
-            previewName = card.dataset.name;
             const openEditor = !event.target.closest('.chlo-preset-use');
             const request = ++selection;
             if (!openEditor || oai_settings.preset_settings_openai !== card.dataset.name) {
