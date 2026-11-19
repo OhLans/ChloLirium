@@ -1,9 +1,11 @@
 import { eventSource, event_types } from '../../../script.js';
-import { getPresetApplicationPromise, oai_settings, openai_settings } from '../../openai.js';
+import { getPresetApplicationPromise, oai_settings, openai_settings, promptManager } from '../../openai.js';
 import { escapeHtml } from '../../utils.js';
 import { initPresetActions, updatePresetActions } from './actions.js';
 import { editPresetCover } from './covers.js';
 import { presetBlockCount, presetCover } from './presentation.js';
+import { initConfigurationWorkspace } from './shell.js';
+import { confirmPromptSwitch } from './workspace.js';
 
 let initialized = false;
 
@@ -19,6 +21,17 @@ export function initPresetPanel() {
     collection.append(cards);
     document.getElementById('openai_api-presets').append(collection);
     initPresetActions(collection);
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'text_pole chlo-preset-search';
+    search.placeholder = 'Search presets…';
+    search.setAttribute('aria-label', 'Search presets');
+    cards.before(search);
+    const filter = () => {
+        const query = search.value.toLocaleLowerCase().trim();
+        for (const card of cards.children) card.hidden = !card.dataset.name.toLocaleLowerCase().includes(query);
+    };
+    search.addEventListener('input', filter);
 
     const render = () => {
         const options = [...select.options].filter(option => option.value !== 'gui');
@@ -41,6 +54,7 @@ export function initPresetPanel() {
             </article>`;
         }).join('');
         for (const image of cards.querySelectorAll('img')) image.addEventListener('error', () => image.hidden = true);
+        filter();
         updatePresetActions();
     };
 
@@ -51,6 +65,7 @@ export function initPresetPanel() {
         try {
             if (event.target.closest('.chlo-preset-cover')) { await editPresetCover(card.dataset.name); return; }
             if (!event.target.closest('.chlo-preset-open, .chlo-preset-edit, .chlo-preset-use')) return;
+            if (!await confirmPromptSwitch(promptManager)) return;
             const openEditor = !event.target.closest('.chlo-preset-use');
             const request = ++selection;
             if (!openEditor || oai_settings.preset_settings_openai !== card.dataset.name) {
@@ -68,5 +83,6 @@ export function initPresetPanel() {
     // Native imports and renames also change the select's option list.
     new MutationObserver(render).observe(select, { childList: true, subtree: true, characterData: true });
     render();
+    initConfigurationWorkspace();
     initialized = true;
 }

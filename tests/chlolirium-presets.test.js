@@ -2,7 +2,7 @@ import { describe, test, expect } from '@jest/globals';
 import { readFile } from 'node:fs/promises';
 import { pickChatCompletionPreset, pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
 import { convertLoomPreset, preparePresetImport } from '../public/scripts/chlolirium/presets/import.js';
-import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
+import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, organizePrompt, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
 import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
 import { convertLoomRegex, replaceLoomRegex } from '../public/scripts/chlolirium/presets/loom-regex.js';
 
@@ -51,6 +51,9 @@ describe('Native preset presentation', () => {
             { marker: true }, { content: '{{trim}}\n<roleplay_context>\n<characters>' },
             { content: '</characters>\n{{trim}}' }, { content: '{{summary}}' },
             { content: '<last_message>', injection_position: 1, injection_depth: 1 },
+            { name: '| Identity', content: '{{getvar::identity}}' },
+            { name: '┌ <characters>', content: '{{setvar::characters}}<characters>' },
+            { name: '┌ <protagonist>', content: '{{setvar::protagonist}}<protagonist>' },
         ]) expect(promptEditorGroup(prompt)).toBe('context');
         for (const prompt of [
             { identifier: 'main', content: '' }, { content: 'Write' }, { content: '<style>Use a calm voice.</style>' },
@@ -74,6 +77,18 @@ describe('Native preset presentation', () => {
         const placement = promptEditorPlacement({ injection_position: 1, injection_depth: 0, injection_order: 20, role: 'assistant' }, 8);
         expect(placement.label).toBe('In chat · depth 0');
         expect(placement.title).toContain('role assistant, order 20');
+    });
+
+    test('manual editor assignment and ordering survive serialization without altering execution or source prompts', () => {
+        const prompts = [{ identifier: 'first', content: 'First instruction.' }, { identifier: 'identity', name: 'Identity', content: '{{getvar::identity}}' }, { identifier: 'second', content: 'Second instruction.' }];
+        const before = structuredClone(prompts);
+        let layout = organizePrompt(prompts, {}, 'identity', { group: 'instructions' });
+        layout = organizePrompt(prompts, layout, 'second', { direction: 'up' });
+        expect(promptEditorGroups(prompts, JSON.parse(JSON.stringify(layout)))).toMatchObject([{ id: 'instructions', prompts: [{ identifier: 'first' }, { identifier: 'second' }, { identifier: 'identity' }] }]);
+        expect(prompts).toEqual(before);
+        expect(organizePrompt(prompts, layout, 'missing', { direction: 'down' }).order).toEqual(layout.order);
+        layout = organizePrompt(prompts, layout, 'first', { group: 'context' });
+        expect(promptEditorGroups(prompts, layout).find(group => group.id === 'context').prompts.map(prompt => prompt.identifier)).toEqual(['first']);
     });
 
     test('covers accept existing raster data and HTTP images, rejecting active schemes and SVG uploads', () => {

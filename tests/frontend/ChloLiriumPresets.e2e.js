@@ -75,23 +75,25 @@ const shared = async page => page.evaluate(async () => {
     return { temperature: s.temp_openai, topP: s.top_p_openai, context: s.openai_max_context, reply: s.openai_max_tokens, stream: s.stream_openai, source: s.chat_completion_source, model: s.custom_model, endpoint: s.custom_url };
 });
 
-test('preset cards open inside the existing drawer at its native width without a separate workspace', async ({ page }) => {
+test('configuration opens the library in a resizable workspace beside the chat', async ({ page }) => {
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
     await expect(page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' })).toBeVisible();
     await expect(page.locator('#chlo-preset-workspace, #chlo-preset-library-button, [data-rn-key="presets"]')).toHaveCount(0);
-    const geometry = await page.evaluate(() => {
-        const panel = document.getElementById('left-nav-panel');
-        const before = panel.getBoundingClientRect().toJSON();
-        const chatBefore = document.getElementById('sheld').getBoundingClientRect().toJSON();
-        panel.classList.remove('chlo-preset-panel');
-        const native = panel.getBoundingClientRect().toJSON();
-        const chatNative = document.getElementById('sheld').getBoundingClientRect().toJSON();
-        panel.classList.add('chlo-preset-panel');
-        return { before, native, chatBefore, chatNative };
-    });
-    expect(geometry.before).toEqual(geometry.native);
-    expect(geometry.chatBefore).toEqual(geometry.chatNative);
+    const panel = await page.locator('#left-nav-panel').boundingBox();
+    const chat = await page.locator('#sheld').boundingBox();
+    expect(panel.width).toBeGreaterThan(700);
+    expect(chat.x).toBeGreaterThanOrEqual(panel.x + panel.width);
+    await page.getByRole('searchbox', { name: 'Search presets' }).fill('Sola');
+    await expect(page.locator('.chlo-preset-card:visible')).toHaveCount(1);
+    await page.getByRole('searchbox', { name: 'Search presets' }).clear();
+    await page.getByRole('slider', { name: 'Configuration width' }).fill('1000');
+    await expect.poll(async () => (await page.locator('#left-nav-panel').boundingBox()).width).toBe(1000);
+    await page.getByRole('slider', { name: 'Configuration width' }).fill('860');
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-collection.png') });
+    await page.getByRole('button', { name: 'Close configuration' }).click();
+    await expect(page.locator('body')).not.toHaveClass(/chlo-config-open/);
+    await page.locator('[data-rn-key="aiconfig"]').click();
+    await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
 });
 
 test('prompt-only card and dropdown selections keep unspecified parameters and the active connection', async ({ page }) => {
@@ -126,7 +128,7 @@ test('native prompt edit form stays within the drawer and saves roles, content a
     await block.locator('.prompt-manager-edit-action').click();
     const popup = page.locator('#left-nav-panel #completion_prompt_manager_popup');
     await expect(popup).toBeVisible();
-    await expect(page.locator('#completion_prompt_manager')).toBeHidden();
+    await expect(page.locator('#completion_prompt_manager')).toBeVisible();
     const panel = await page.locator('#left-nav-panel').boundingBox();
     const editor = await popup.boundingBox();
     expect(editor.x).toBeGreaterThanOrEqual(panel.x);
@@ -138,7 +140,7 @@ test('native prompt edit form stays within the drawer and saves roles, content a
     await page.locator('#completion_prompt_manager_popup_entry_form_injection_position').selectOption('1');
     await page.locator('#completion_prompt_manager_popup_entry_form_injection_depth').fill('7');
     await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
-    await expect(popup).toBeHidden();
+    await expect(popup).toBeVisible();
     const prompt = await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.prompts.find(prompt => prompt.identifier === 'voice-qa'));
     expect(prompt).toMatchObject({ role: 'assistant', content: 'Native editor instructions.', injection_position: 1, injection_depth: 7 });
     const response = page.waitForResponse('**/api/presets/save');
@@ -184,12 +186,15 @@ for (const width of [1440, 390]) {
             // Pointer actions retry if a pending native token refresh replaces the row.
             await row.hover();
             const before = await position();
-            expect(before).toBeGreaterThan(1000);
+            const metrics = await page.locator('#completion_prompt_manager').evaluate(node => ({ classes: node.className, height: node.clientHeight, content: node.scrollHeight, overflow: getComputedStyle(node).overflowY, pageHeight: getComputedStyle(node.closest('.openai-tab-content')).height }));
+            expect(before, JSON.stringify(metrics)).toBeGreaterThan(1000);
             await row.locator('.prompt-manager-edit-action').click();
             await expect(popup).toBeVisible();
             await page.locator('#completion_prompt_manager_popup_entry_form_name').fill(`Scroll block ${index + 1} saved`);
             await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill(`Edited block ${index + 1}.`);
             await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
+            await expect(popup).toBeVisible();
+            await page.locator('#completion_prompt_manager_popup_entry_form_close').click();
             await expect(popup).toBeHidden();
             await expect(row.locator('.completion_prompt_manager_prompt_name')).toContainText('saved');
             await expect.poll(position).toBeCloseTo(before, 0);
@@ -198,6 +203,7 @@ for (const width of [1440, 390]) {
             await row.locator('.prompt-manager-edit-action').click();
             await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Discard this unsaved edit.');
             await page.locator('#completion_prompt_manager_popup_entry_form_close').click();
+            await page.locator('dialog[open] .popup-button-ok').click();
             await expect(popup).toBeHidden();
             await expect.poll(position).toBeCloseTo(savedPosition, 0);
             expect(await page.evaluate(async id => (await import('/scripts/openai.js')).promptManager.getPromptById(id).content, `scroll-qa-${index}`)).toBe(`Edited block ${index + 1}.`);
@@ -410,6 +416,17 @@ test('grouping wrappers and late instructions preserves saved order and the actu
     expect(requests[2].messages).toEqual(requests[0].messages);
     expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Editor voice: Calm.');
     expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Check the current library scene.');
+    await page.getByRole('checkbox', { name: 'Organize editor groups' }).check();
+    const reader = page.locator('[data-pm-identifier="editor-reader"]');
+    await reader.getByRole('combobox', { name: 'Editor group for editor-reader' }).selectOption('context');
+    await reader.getByRole('button', { name: 'Move up in editor' }).click();
+    await page.evaluate(async () => {
+        const script = await import('/script.js');
+        script.setOnlineStatus('Connected');
+        await script.generateQuietPrompt({ quietPrompt: 'Describe the library briefly.' });
+    });
+    expect(requests).toHaveLength(4);
+    expect(requests[3].messages).toEqual(requests[0].messages);
     const saved = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await saved;
@@ -417,6 +434,53 @@ test('grouping wrappers and late instructions preserves saved order and the actu
     expect(stored.prompts).toEqual(original.prompts);
     expect(stored.prompt_order).toEqual(original.prompt_order);
     expect(await shared(page)).toEqual(before);
+});
+
+test('editor organization persists separately, search opens collapsed matches, and new blocks save in place', async ({ page }) => {
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-open').click();
+    const original = await page.evaluate(async () => {
+        const { oai_settings: s } = await import('/scripts/openai.js');
+        return structuredClone({ prompts: s.prompts, order: s.prompt_order });
+    });
+    await page.getByRole('checkbox', { name: 'Organize editor groups' }).check();
+    const row = page.locator('[data-pm-identifier="voice-qa"]');
+    await row.getByRole('combobox', { name: 'Editor group for Narrative voice' }).selectOption('context');
+    await expect(row).toHaveAttribute('data-editor-group', 'context');
+    await row.getByRole('button', { name: 'Move down in editor' }).click();
+    await expect.poll(() => page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.chlo_preset.editor_layout.order)).not.toEqual(original.order[0].order.map(entry => entry.identifier));
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Banana QA.json'), 'utf8'));
+    expect(stored.prompts).toEqual(original.prompts);
+    expect(stored.prompt_order).toEqual(original.order);
+    expect(stored.chlo_preset.editor_layout.assignments['voice-qa']).toBe('context');
+    await page.locator('[data-pm-group="context"] button').click();
+    await expect(row).toBeHidden();
+    await page.getByRole('searchbox', { name: 'Find a block' }).fill('Narrative voice');
+    await expect(row).toBeVisible();
+    await expect(page.locator('#completion_prompt_manager_list [data-pm-identifier]:visible')).toHaveCount(1);
+    await row.locator('.chlo-select-prompt').click();
+    await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Unsaved editor text.');
+    await page.locator('.chlo-add-block').click();
+    await expect(page.locator('dialog[open]')).toContainText('Discard unsaved block changes?');
+    await page.locator('dialog[open] .popup-button-cancel').click();
+    await expect(page.locator('#completion_prompt_manager_popup_entry_form_prompt')).toHaveValue('Unsaved editor text.');
+    await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
+    await page.locator('.chlo-add-block').click();
+    await page.locator('#completion_prompt_manager_popup_entry_form_name').fill('New workspace block');
+    await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Neutral workspace instructions.');
+    await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
+    await expect(page.locator('#completion_prompt_manager_popup')).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Find a block' })).toHaveValue('');
+    await expect(page.getByRole('button', { name: 'New workspace block', exact: true })).toBeVisible();
+    const created = await page.evaluate(async () => {
+        const { oai_settings: s, promptManager: pm } = await import('/scripts/openai.js');
+        const prompt = s.prompts.find(item => item.name === 'New workspace block');
+        return { prompt, entry: pm.getPromptOrderForCharacter(pm.activeCharacter).find(item => item.identifier === prompt.identifier) };
+    });
+    expect(created.prompt.content).toBe('Neutral workspace instructions.');
+    expect(created.entry.enabled).toBe(true);
 });
 
 test('Loom import uses the same Import control and rejects unsupported macros before saving', async ({ page }) => {

@@ -6,11 +6,12 @@ let controls = [];
 export function initPresetActions(collection) {
     const header = document.createElement('header');
     header.id = 'chlo-preset-library-header';
-    header.innerHTML = '<h3>Presets</h3><div id="chlo-preset-library-actions" class="chlo-preset-actions"></div><small id="chlo-preset-current"></small>';
+    header.innerHTML = '<h3>Preset library</h3><div id="chlo-preset-library-actions" class="chlo-preset-actions"></div><small id="chlo-preset-current"></small>';
     collection.prepend(header);
     const editor = document.createElement('header');
     editor.id = 'chlo-preset-editor-header';
-    editor.innerHTML = '<h3 id="chlo-preset-editor-title"></h3><div id="chlo-preset-editor-actions" class="chlo-preset-actions"></div>';
+    editor.innerHTML = '<button type="button" class="chlo-back-library">← Library</button><h3 id="chlo-preset-editor-title"></h3><div id="chlo-preset-editor-actions" class="chlo-preset-actions"></div>';
+    editor.querySelector('button').addEventListener('click', () => document.getElementById('openai-tab-btn-presets')?.click());
     document.getElementById('openai_api-presets').append(editor);
     const layout = document.createElement('details');
     layout.id = 'chlo-preset-layout-setting';
@@ -20,7 +21,7 @@ export function initPresetActions(collection) {
         ['#import_oai_preset', 'Import', 'chlo-preset-library-actions'],
         ['#export_oai_preset', 'Export', 'chlo-preset-library-actions'],
         ['#delete_oai_preset', 'Delete', 'chlo-preset-library-actions'],
-        ['#update_oai_preset', 'Save', 'chlo-preset-editor-actions'],
+        ['#update_oai_preset', 'Save preset', 'chlo-preset-editor-actions'],
         ['[data-preset-manager-rename="openai"]', 'Rename', 'chlo-preset-editor-actions'],
         ['#new_oai_preset', 'Save as', 'chlo-preset-editor-actions'],
         ['label:has(> #ChatCompletionTabs-enabled)', null, 'chlo-preset-layout-setting'],
