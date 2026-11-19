@@ -58,7 +58,7 @@ export async function editPromptSections(layout) {
     const content = document.createElement('div');
     content.className = 'chlo-section-editor';
     content.innerHTML = `<h3>Manage sections</h3>
-        <p>Drag sections or use the arrows to reorder them. To split a section at a specific block, use <b>Show group controls → + Section above</b> in the prompt list.</p>
+        <p>Drag rows or use the arrows here to reorder whole sections. To change where a section starts, drag its heading in the prompt list.</p>
         <ol aria-label="Prompt sections"></ol>
         <button type="button" class="menu_button chlo-add-section">Add section</button>
         <small>Removing a custom section returns its blocks to the default sections. Use <b>Save preset</b> to keep your layout.</small>

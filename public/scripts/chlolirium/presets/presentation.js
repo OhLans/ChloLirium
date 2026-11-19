@@ -14,12 +14,13 @@ export function promptEditorGroup(prompt) {
 }
 
 const defaultSections = new Map([['instructions', 'Instructions'], ['context', 'Context & structure']]);
+export const ungroupedPromptSection = 'ungrouped';
 
 /** Section titles and order belong to the editor, not the outgoing request. */
 export function promptSectionDefinitions(layout) {
     const groups = new Map([...defaultSections].map(([id, label]) => [id, { id, label }]));
     for (const group of Array.isArray(layout?.groups) ? layout.groups : []) {
-        if (typeof group?.id === 'string' && typeof group.label === 'string' && group.label.trim()) groups.set(group.id, { id: group.id, label: group.label.trim().slice(0, 80) });
+        if (typeof group?.id === 'string' && group.id !== ungroupedPromptSection && typeof group.label === 'string' && group.label.trim()) groups.set(group.id, { id: group.id, label: group.label.trim().slice(0, 80) });
     }
     const orderedIds = new Set(Array.isArray(layout?.group_order) ? layout.group_order : []);
     for (const id of groups.keys()) orderedIds.add(id);
@@ -28,7 +29,7 @@ export function promptSectionDefinitions(layout) {
 
 export function applyPromptSections(layout, sections) {
     const groups = sections.map(({ id, label }) => ({ id, label: label.trim().slice(0, 80) }));
-    const allowed = new Set([...defaultSections.keys(), ...groups.map(group => group.id)]);
+    const allowed = new Set([ungroupedPromptSection, ...defaultSections.keys(), ...groups.map(group => group.id)]);
     const assignments = Object.fromEntries(Object.entries(layout?.assignments ?? {}).filter(([, id]) => allowed.has(id)));
     return { ...layout, groups, group_order: groups.map(group => group.id), assignments };
 }
@@ -36,14 +37,16 @@ export function applyPromptSections(layout, sections) {
 /** Stable editor groups holding the original objects; execution uses its own order. */
 export function promptEditorGroups(prompts, layout = {}) {
     layout = layout && typeof layout === 'object' ? layout : {};
-    const groups = new Map(promptSectionDefinitions(layout).map(({ id, label, removable }) => [id, { id, label, removable, prompts: [] }]));
+    const groups = new Map([[ungroupedPromptSection, { id: ungroupedPromptSection, label: '', removable: false, prompts: [] }]]);
+    for (const { id, label, removable } of promptSectionDefinitions(layout)) groups.set(id, { id, label, removable, prompts: [] });
     const positions = new Map((Array.isArray(layout.order) ? layout.order : []).map((id, index) => [id, index]));
     const sorted = [...prompts].sort((a, b) => (positions.get(a.identifier) ?? Infinity) - (positions.get(b.identifier) ?? Infinity));
     for (const prompt of sorted) {
         const assigned = Object.hasOwn(layout.assignments ?? {}, prompt.identifier) ? layout.assignments[prompt.identifier] : null;
         groups.get(groups.has(assigned) ? assigned : promptEditorGroup(prompt)).prompts.push(prompt);
     }
-    return [...groups.values()].filter(group => group.prompts.length || group.removable).map(({ id, label, prompts }) => ({ id, label, prompts }));
+    const visibleDefaults = new Set(Array.isArray(layout.visible_default_groups) ? layout.visible_default_groups : []);
+    return [...groups.values()].filter(group => group.prompts.length || group.removable || (defaultSections.has(group.id) && visibleDefaults.has(group.id))).map(({ id, label, prompts }) => ({ id, label, prompts }));
 }
 
 /** Split one editor group without changing the order in which its blocks appear. */
@@ -80,10 +83,18 @@ export function organizePrompt(prompts, layout, identifier, { group, direction }
 }
 
 /** A grouped drag changes only editor metadata, including cross-group drops. */
-export function editorLayoutFromSequence(prompts, layout, sequence) {
+export function editorLayoutFromSequence(prompts, layout, sequence, sectionOrder) {
     const next = structuredClone(layout ?? {});
     const identifiers = new Set(prompts.map(prompt => prompt.identifier));
-    const groups = new Set(['instructions', 'context', ...promptEditorGroups(prompts, next).map(group => group.id)]);
+    const sectionIds = promptSectionDefinitions(next).map(section => section.id);
+    const groups = new Set([ungroupedPromptSection, ...sectionIds]);
+    if (sectionOrder) {
+        const visible = new Set(sectionOrder.filter(id => groups.has(id) && id !== ungroupedPromptSection));
+        const reordered = visible.values();
+        // Leave the slots of currently hidden empty sections alone.
+        next.group_order = sectionIds.map(id => visible.has(id) ? reordered.next().value : id);
+        next.visible_default_groups = [...visible].filter(id => defaultSections.has(id));
+    }
     const seen = new Set();
     const assignments = { ...next.assignments };
     next.order = [];
