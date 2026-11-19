@@ -519,16 +519,19 @@ test('editor organization persists separately, search opens collapsed matches, a
     await expect(page.locator('#completion_prompt_manager_list [data-pm-identifier]:visible')).toHaveCount(1);
     await row.locator('.chlo-select-prompt').click();
     await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Unsaved editor text.');
-    await page.locator('.chlo-add-block').click();
+    const closeEditor = page.locator('#completion_prompt_manager_popup_entry_form_close');
+    await closeEditor.click();
     await expect(page.locator('dialog[open]')).toContainText('Discard unsaved block changes?');
     await page.locator('dialog[open] .popup-button-cancel').click();
     await expect(page.locator('#completion_prompt_manager_popup_entry_form_prompt')).toHaveValue('Unsaved editor text.');
     await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
+    await closeEditor.click();
     await page.locator('.chlo-add-block').click();
     await page.locator('#completion_prompt_manager_popup_entry_form_name').fill('New workspace block');
     await page.locator('#completion_prompt_manager_popup_entry_form_prompt').fill('Neutral workspace instructions.');
     await page.locator('#completion_prompt_manager_popup_entry_form_save').click();
     await expect(page.locator('#completion_prompt_manager_popup')).toBeVisible();
+    await closeEditor.click();
     await expect(page.getByRole('searchbox', { name: 'Find a block' })).toHaveValue('');
     await expect(page.getByRole('button', { name: 'New workspace block', exact: true })).toBeVisible();
     const created = await page.evaluate(async () => {
