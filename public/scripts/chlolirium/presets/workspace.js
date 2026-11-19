@@ -45,7 +45,7 @@ export function filterPromptWorkspace(manager) {
     const collapsed = new Set(manager.workspaceCollapsed ?? []);
     const list = manager.listElement;
     if ($(list).data('ui-sortable')) $(list).sortable('option', 'disabled', Boolean(query));
-    const help = manager.containerElement.querySelector('.chlo-prompt-view-help');
+    const help = document.querySelector('#chlo-preset-editor-header .chlo-prompt-view-help');
     if (help) help.textContent = query ? 'Clear the search to drag blocks.' : list.dataset.editorView === 'grouped' ? 'Drag a block by its ⠿ handle to arrange this editor. Sending order is unchanged.' : 'Drag to change the actual sending order. In-chat blocks use their depth.';
     let shown = 0;
     for (const row of list.querySelectorAll('[data-pm-identifier]')) {
@@ -66,30 +66,48 @@ export function filterPromptWorkspace(manager) {
 export function mountPromptWorkspace(manager) {
     if (!inPromptWorkspace(manager)) return;
     const list = manager.listElement;
+    const header = document.getElementById('chlo-preset-editor-header');
+    const search = header.querySelector('.chlo-block-search');
+    const toolsButton = header.querySelector('.chlo-prompt-tools-button');
+    const tools = header.querySelector('.chlo-prompt-list-tools');
+    const closeTools = () => { if (toolsButton.getAttribute('aria-expanded') === 'true') toolsButton.click(); };
+    if (search.value !== (manager.workspaceSearch ?? '')) search.value = manager.workspaceSearch ?? '';
+    search.oninput = () => { manager.workspaceSearch = search.value; filterPromptWorkspace(manager); };
+    header.querySelector('.chlo-add-block').onclick = event => { closeTools(); manager.handleNewPrompt(event); };
+
+    const view = list.dataset.editorView;
+    header.querySelector('.chlo-prompt-active-view').hidden = view !== 'order';
+    tools.innerHTML = `<div class="chlo-prompt-view-buttons" role="group" aria-label="Prompt list view">
+            <button type="button" class="menu_button" data-pm-view="grouped" aria-pressed="${view === 'grouped'}">Editor layout</button>
+            <button type="button" class="menu_button" data-pm-view="order" aria-pressed="${view === 'order'}">Sending order</button>
+        </div>
+        <small class="chlo-prompt-view-help"></small>
+        <label class="chlo-organize-toggle" ${view === 'grouped' ? '' : 'hidden'}><input type="checkbox" ${manager.workspaceOrganize ? 'checked' : ''}> Show group controls</label>`;
+    tools.querySelectorAll('[data-pm-view]').forEach(button => button.addEventListener('click', () => {
+        closeTools();
+        toolsButton.focus({ preventScroll: true });
+        if (button.dataset.pmView === view) return;
+        manager.promptEditorView = button.dataset.pmView;
+        manager.render(false);
+    }));
+    tools.querySelector('input[type="checkbox"]').addEventListener('change', event => {
+        manager.workspaceOrganize = event.target.checked;
+        list.classList.toggle('chlo-organizing', manager.workspaceOrganize);
+        closeTools();
+        toolsButton.focus({ preventScroll: true });
+    });
+
+    const stats = manager.containerElement.querySelector('.completion_prompt_manager_header');
+    if (stats) tools.prepend(stats);
     const footer = manager.containerElement.querySelector('.completion_prompt_manager_footer');
-    if (footer && !footer.closest('.chlo-available-blocks')) {
+    if (footer) {
         const available = document.createElement('details');
         available.className = 'chlo-available-blocks';
         available.innerHTML = '<summary>Available blocks & tools</summary>';
-        footer.before(available);
         available.append(footer);
+        tools.append(available);
     }
     const groups = promptEditorGroups(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), manager.serviceSettings.chlo_preset?.editor_layout);
-    const toolbar = document.createElement('div');
-    toolbar.className = 'chlo-block-tools';
-    toolbar.innerHTML = `<div class="chlo-block-search"><input type="search" class="text_pole" aria-label="Find a block" placeholder="Find a block…" value="${escapeHtml(manager.workspaceSearch ?? '')}"><button type="button" class="menu_button chlo-add-block">＋ Add block</button></div>
-        <label class="chlo-organize-toggle"><input type="checkbox" ${manager.workspaceOrganize ? 'checked' : ''}> Show group controls</label>`;
-    const view = list.parentElement.querySelector('.chlo-prompt-view');
-    const navigation = document.createElement('div');
-    navigation.className = 'chlo-block-navigation';
-    // Keep the toolbar above the rows in the drawer's normal reading order.
-    const frame = list.parentElement;
-    navigation.append(...[...frame.children].filter(child => child !== list && child !== view), toolbar, view);
-    frame.prepend(navigation);
-    toolbar.querySelector('input[type="search"]').addEventListener('input', event => { manager.workspaceSearch = event.target.value; filterPromptWorkspace(manager); });
-    toolbar.querySelector('.chlo-add-block').addEventListener('click', manager.handleNewPrompt);
-    toolbar.querySelector('[type="checkbox"]').addEventListener('change', event => { manager.workspaceOrganize = event.target.checked; list.classList.toggle('chlo-organizing', manager.workspaceOrganize); });
-    toolbar.querySelector('.chlo-organize-toggle').hidden = list.dataset.editorView !== 'grouped';
     list.classList.toggle('chlo-organizing', Boolean(manager.workspaceOrganize));
     const commitLayout = layout => {
         manager.serviceSettings.chlo_preset = { ...manager.serviceSettings.chlo_preset, editor_layout: layout };
