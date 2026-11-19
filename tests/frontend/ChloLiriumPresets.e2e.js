@@ -156,9 +156,12 @@ test('disabling the existing tab layout restores the original native editor and 
     await expect(page.locator('#chlo-preset-collection')).toBeHidden();
     await expect(page.locator('#left-nav-panel #completion_prompt_manager_popup')).toHaveCount(0);
     await expect(page.locator('#completion_prompt_manager_popup')).toHaveCount(1);
+    await expect(page.locator('#completion_prompt_manager_list')).toHaveAttribute('data-editor-view', 'order');
+    expect(await page.locator('#completion_prompt_manager_list').evaluate(node => $(node).sortable('option', 'disabled'))).toBe(false);
     expect(await page.locator('#temp_openai').evaluate((node, original) => node === original, input)).toBe(true);
     await page.evaluate(() => window.ChatCompletionTabs.openAITabManager.setEnabled(true));
     await expect(page.locator('#left-nav-panel #completion_prompt_manager_popup')).toHaveCount(1);
+    await expect(page.locator('#completion_prompt_manager_list')).toHaveAttribute('data-editor-view', 'grouped');
 });
 
 for (const width of [1440, 390]) {
@@ -178,7 +181,8 @@ for (const width of [1440, 390]) {
         const popup = page.locator('#completion_prompt_manager_popup');
         for (const index of [55, 119]) {
             const row = page.locator(`[data-pm-identifier="scroll-qa-${index}"]`);
-            await row.scrollIntoViewIfNeeded();
+            // Pointer actions retry if a pending native token refresh replaces the row.
+            await row.hover();
             const before = await position();
             expect(before).toBeGreaterThan(1000);
             await row.locator('.prompt-manager-edit-action').click();
@@ -304,14 +308,15 @@ test('both examples are seeded and show real grouped native blocks without repla
         await expect(card).toBeVisible();
         await card.locator('.chlo-preset-open').click();
         await expect(page.locator('#chlo-preset-editor-title')).toHaveText(`Chlo - ${type} example`);
-        await expect(page.locator('.chlo-prompt-section').filter({ hasText: 'Core instructions' }).first()).toBeVisible();
-        await expect(page.locator('.chlo-prompt-section').filter({ hasText: 'Conversation' })).toBeVisible();
-        await expect(page.locator('.chlo-prompt-section').filter({ hasText: 'Character & persona' }).first()).toBeVisible();
+        await expect(page.locator('.chlo-prompt-section')).toHaveCount(2);
+        await expect(page.locator('[data-pm-group="instructions"]')).toContainText('Instructions');
+        await expect(page.locator('[data-pm-group="context"]')).toContainText('Context & structure');
         await expect.poll(() => page.evaluate(async () => {
-            const { oai_settings: s } = await import('/scripts/openai.js');
-            const stored = s.prompt_order.find(entry => entry.character_id === 100001).order.map(entry => entry.identifier);
+            const { promptManager } = await import('/scripts/openai.js');
+            const { promptEditorGroups } = await import('/scripts/chlolirium/presets/presentation.js');
+            const grouped = promptEditorGroups(promptManager.getPromptsForCharacter(promptManager.activeCharacter)).flatMap(group => group.prompts.map(prompt => prompt.identifier));
             const rendered = [...document.querySelectorAll('#completion_prompt_manager_list [data-pm-identifier]')].map(row => row.dataset.pmIdentifier);
-            return JSON.stringify(stored) === JSON.stringify(rendered);
+            return JSON.stringify(grouped) === JSON.stringify(rendered);
         })).toBe(true);
         expect(await shared(page)).toEqual(before);
         await page.screenshot({ path: path.join(root, `../chlo-grouped-${type.toLowerCase()}.png`) });
@@ -319,12 +324,14 @@ test('both examples are seeded and show real grouped native blocks without repla
     }
 });
 
-test('group headings stay out of native drag order and native toggles and saves persist', async ({ page }) => {
+test('Prompt order enables native dragging, and toggles and saves preserve the resulting order', async ({ page }) => {
     await page.locator('.chlo-preset-card').filter({ hasText: 'Chlo - Loom example' }).locator('.chlo-preset-open').click();
     const row = page.locator('[data-pm-identifier="pacing"]');
     await expect(row).toHaveClass(/prompt_disabled/);
     await row.locator('.prompt-manager-toggle-action').click();
     await expect(row).not.toHaveClass(/prompt_disabled/);
+    await page.locator('[data-pm-view="order"]').click();
+    await expect(page.locator('#completion_prompt_manager_list')).toHaveAttribute('data-editor-view', 'order');
     const start = await row.locator('.drag-handle').boundingBox();
     const end = await page.locator('[data-pm-identifier="voice"]').boundingBox();
     await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -344,6 +351,74 @@ test('group headings stay out of native drag order and native toggles and saves 
     expect(stored.prompts.find(prompt => prompt.identifier === 'pacing').chlo_category).toBe('Core instructions');
 });
 
+test('grouping wrappers and late instructions preserves saved order and the actual generated request', async ({ page }) => {
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-open').click();
+    const before = await shared(page);
+    const original = await page.evaluate(async () => {
+        const ctx = SillyTavern.getContext();
+        const form = new FormData();
+        form.set('ch_name', 'Editor QA Archivist');
+        form.set('description', 'An archivist in a quiet library.');
+        form.set('first_mes', 'The reading room is open.');
+        const response = await fetch('/api/characters/create', { method: 'POST', headers: ctx.getRequestHeaders({ omitContentType: true }), body: form });
+        if (!response.ok) throw new Error('Could not create editor QA character');
+        await ctx.getCharacters();
+        await ctx.selectCharacterById(ctx.characters.findIndex(c => c.name === 'Editor QA Archivist'));
+        const { promptManager, oai_settings } = await import('/scripts/openai.js');
+        const make = (identifier, content, extra = {}) => ({ identifier, name: identifier, content, role: 'system', system_prompt: false, marker: false, injection_position: 0, injection_depth: 4, injection_order: 100, injection_trigger: [], ...extra });
+        const extra = [make('editor-state', '{{setvar::editor_voice::Calm}}'), make('editor-open', '{{trim}}<library_context>'), make('editor-close', '</library_context>{{trim}}'), make('editor-reader', 'Editor voice: {{getvar::editor_voice}}.'), make('editor-check', 'Check the current library scene.', { injection_position: 1, injection_depth: 0, injection_order: 20 })];
+        oai_settings.prompts.push(...extra);
+        const order = promptManager.getPromptOrderForCharacter(promptManager.activeCharacter);
+        order.unshift(...extra.slice(0, 4).map(prompt => ({ identifier: prompt.identifier, enabled: true })));
+        order.push({ identifier: 'editor-check', enabled: true });
+        promptManager.render(false);
+        return structuredClone({ prompts: oai_settings.prompts, prompt_order: oai_settings.prompt_order });
+    });
+    const list = page.locator('#completion_prompt_manager_list');
+    await expect(list).toHaveAttribute('data-editor-view', 'grouped');
+    await expect(page.locator('[data-pm-identifier="editor-reader"] .chlo-prompt-placement')).toContainText('Position 4');
+    await expect(page.locator('[data-pm-identifier="editor-check"] .chlo-prompt-placement')).toContainText('In chat · depth 0');
+    expect(await list.evaluate(node => $(node).sortable('option', 'disabled'))).toBe(true);
+    const groupedIds = await list.locator('[data-pm-identifier]').evaluateAll(rows => rows.map(row => row.dataset.pmIdentifier));
+    expect(groupedIds.indexOf('editor-reader')).toBeLessThan(groupedIds.indexOf('editor-open'));
+    expect(groupedIds.indexOf('editor-check')).toBeLessThan(groupedIds.indexOf('editor-open'));
+    await page.screenshot({ path: path.join(root, '../chlo-prompt-editor-grouped.png') });
+
+    const requests = [];
+    await page.route('**/api/backends/chat-completions/generate', async route => {
+        requests.push(route.request().postDataJSON());
+        await route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'The archivist checks the catalogue.' }, finish_reason: 'stop' }] } });
+    });
+    for (const [view, earlier, later] of [['grouped', 'editor-reader', 'editor-open'], ['order', 'editor-open', 'editor-reader'], ['grouped', 'editor-reader', 'editor-open']]) {
+        await page.locator(`[data-pm-view="${view}"]`).click();
+        await expect(list).toHaveAttribute('data-editor-view', view);
+        const ids = await list.locator('[data-pm-identifier]').evaluateAll(rows => rows.map(row => row.dataset.pmIdentifier));
+        expect(ids.indexOf(earlier)).toBeLessThan(ids.indexOf(later));
+        await page.evaluate(async () => {
+            const script = await import('/script.js');
+            script.setOnlineStatus('Connected');
+            await script.generateQuietPrompt({ quietPrompt: 'Describe the library briefly.' });
+        });
+        const current = await page.evaluate(async () => {
+            const { oai_settings: s } = await import('/scripts/openai.js');
+            return { prompts: s.prompts, prompt_order: s.prompt_order };
+        });
+        expect(current).toEqual(original);
+    }
+    expect(requests).toHaveLength(3);
+    expect(requests[1].messages).toEqual(requests[0].messages);
+    expect(requests[2].messages).toEqual(requests[0].messages);
+    expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Editor voice: Calm.');
+    expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Check the current library scene.');
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Banana QA.json'), 'utf8'));
+    expect(stored.prompts).toEqual(original.prompts);
+    expect(stored.prompt_order).toEqual(original.prompt_order);
+    expect(await shared(page)).toEqual(before);
+});
+
 test('Loom import uses the same Import control and rejects unsupported macros before saving', async ({ page }) => {
     const before = await shared(page);
     const loom = JSON.parse(await readFile(path.join(root, 'tests/fixtures/chlolirium/loom-example.loom'), 'utf8'));
@@ -352,7 +427,7 @@ test('Loom import uses the same Import control and rejects unsupported macros be
     await expect(card.locator('.chlo-preset-open')).toHaveAttribute('aria-pressed', 'true');
     expect(await shared(page)).toEqual(before);
     await card.locator('.chlo-preset-open').click();
-    await expect(page.locator('.chlo-prompt-section').filter({ hasText: 'Reply guidance' })).toBeVisible();
+    await expect(page.locator('[data-pm-identifier="continuity"] .chlo-prompt-placement')).toContainText('Reply guidance');
     const selected = await page.locator('#chlo-preset-editor-title').textContent();
     loom.blocks[1].content = '{{loom::unsupported}}';
     await page.locator('#openai_preset_import_file').setInputFiles({ name: 'Unsupported QA.loom', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(loom)) });
