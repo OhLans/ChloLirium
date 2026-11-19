@@ -29,18 +29,15 @@ styles. Theme styles remain switchable with the appearance setting.
 
 ## Native preset panel and generation settings
 
-With the tab layout enabled, AI Configuration fills the available page and
-hides the chat while it is open. The library and editor each have a visible
-internal column divider with pointer dragging and Left/Right keyboard controls;
-their widths are remembered independently in this browser. Closing the
-configuration or disabling the layout restores the chat. Theme
-colors, pin controls, API profiles and all native parameter nodes are retained.
-On desktop, the title, tabs, pin and close button share one header. Preset
-actions share a row with the preset title, above the aligned editing columns.
-The opening page is a searchable vertical preset list with cover cards and a
-preview alongside it. Selecting a title previews the preset without applying
-it; Edit opens its blocks. On phones the title also opens the editor, since the
-preview column is hidden. Visible preset handles reorder the library using
+With the tab layout enabled, AI Configuration stays in the native SillyTavern
+drawer. Its position, width and height follow the native layout, and opening
+it does not resize or hide the chat. The title, pin and close button sit above
+the tabs. Library, Parameters and Prompts each use a single column and the
+same drawer scroll area. Theme colors, API profiles and all native parameter
+nodes are retained.
+The opening page is a searchable vertical preset list with cover cards.
+Selecting a title expands its preview inside the card without applying it;
+Edit opens its blocks. Visible preset handles reorder the library using
 pointer dragging or Up/Down keys. This browser-local library order survives
 reloads without changing native select indices, preset contents or activation.
 Use applies a card through that select's normal change handler while staying in
@@ -52,15 +49,14 @@ the generation settings it actually contains. Prompt-only presets leave those
 settings current; missing fields never require manual reconfiguration.
 
 Import, Export and Delete are on the collection page, with the active preset
-named beneath them. Save, Rename and Save as are beside the open preset's name
+named beneath them. Save, Rename and Save as are below the open preset's name
 on the Prompts page. The duplicate native toolbar is replaced while this layout
 is active. These are the actual native control nodes, moved with their IDs and
 handlers intact; disabling the layout restores their original positions.
 
-The Prompts page has an independently scrolling block list beside the real
-native edit/inspect form. Selecting a block opens its editor; Save block keeps
-it open and preserves the list position. On phones the form occupies the page
-and Close editor returns to the previous list position. Switching away from
+The Prompts tab shows the block list. Selecting a block opens the real native
+edit/inspect form in the same column. Save block keeps it open and Close editor
+returns to the previous list position. Switching away from
 an unsaved block asks before discarding its form text. Find a block searches
 names and contents, including collapsed groups. Add block opens the native
 form and, on Save, inserts the enabled block after the previously selected
@@ -79,9 +75,9 @@ preset position or in-chat depth; the groups never change stored `prompt_order`,
 macro evaluation, roles, injections or prompt assembly.
 Visible block handles drag within and between editor groups; Up/Down keys on
 a handle move it within its group. Show group controls exposes per-block group
-selectors and up/down buttons. On desktop, search and layout controls occupy
-their own full-width strip above the independently scrolling rows. On phones
-they flow with the page. Dragging is disabled while a search is active so a
+selectors and up/down buttons. Search and layout controls occupy their own
+full-width strip above the rows and scroll with the drawer content.
+Dragging is disabled while a search is active so a
 filtered list cannot accidentally change positions; clearing search restores it.
 Sending order is the separate native sequence view, whose drag handler updates
 the actual prompt_order. Disabling the tab layout restores native ordering and

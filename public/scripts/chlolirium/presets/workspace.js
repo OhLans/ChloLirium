@@ -82,14 +82,10 @@ export function mountPromptWorkspace(manager) {
     const view = list.parentElement.querySelector('.chlo-prompt-view');
     const navigation = document.createElement('div');
     navigation.className = 'chlo-block-navigation';
-    const scroller = document.createElement('div');
-    scroller.className = 'chlo-block-scroller';
-    // Keep the native header, tools and view controls outside the row scrollport.
+    // Keep the toolbar above the rows in the drawer's normal reading order.
     const frame = list.parentElement;
     navigation.append(...[...frame.children].filter(child => child !== list && child !== view), toolbar, view);
     frame.prepend(navigation);
-    list.before(scroller);
-    scroller.append(list);
     toolbar.querySelector('input[type="search"]').addEventListener('input', event => { manager.workspaceSearch = event.target.value; filterPromptWorkspace(manager); });
     toolbar.querySelector('.chlo-add-block').addEventListener('click', manager.handleNewPrompt);
     toolbar.querySelector('[type="checkbox"]').addEventListener('change', event => { manager.workspaceOrganize = event.target.checked; list.classList.toggle('chlo-organizing', manager.workspaceOrganize); });

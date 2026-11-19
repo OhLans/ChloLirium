@@ -862,7 +862,7 @@ class PromptManager {
             this.workspaceSearch = '';
             this.workspaceSelectedId = undefined;
             this.workspaceCollapsed = [];
-            if (inPromptWorkspace(this) && window.matchMedia('(min-width: 701px)').matches) this.#setScrollPosition(0);
+            if (inPromptWorkspace(this)) this.#setScrollPosition(0);
             this.hidePopup();
             this.clearEditForm();
             this.renderDebounced();
@@ -883,9 +883,6 @@ class PromptManager {
     }
 
     #getScrollContainer() {
-        if (inPromptWorkspace(this) && window.matchMedia('(min-width: 701px)').matches) {
-            return this.containerElement.querySelector('.chlo-block-scroller');
-        }
         return this.containerElement?.closest('.scrollableInner');
     }
 
@@ -2046,8 +2043,10 @@ class PromptManager {
 
         const popup = $('#' + this.configuration.prefix + 'prompt_manager_popup').first();
         if (inPromptWorkspace(this)) {
-            if (!popup.hasClass('openDrawer')) this.popupScrollPosition = this.#getScrollPosition();
+            const opening = !popup.hasClass('openDrawer');
+            if (opening) this.popupScrollPosition = this.#getScrollPosition();
             popup.stop(true, true).show().addClass('openDrawer');
+            if (opening) this.#setScrollPosition(0);
             return;
         }
         this.popupScrollRevision = (this.popupScrollRevision ?? 0) + 1;
