@@ -12,7 +12,7 @@ import { renderTemplateAsync } from './templates.js';
 import { Popup } from './popup.js';
 import { t } from './i18n.js';
 import { isMobile } from './RossAscends-mods.js';
-import { promptSection } from './chlolirium/presets/presentation.js';
+import { promptEditorGroups, promptEditorPlacement } from './chlolirium/presets/presentation.js';
 import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
 
 function debouncePromise(func, delay) {
@@ -1627,6 +1627,23 @@ class PromptManager {
 
         this.listElement = promptManagerDiv.querySelector(`#${this.configuration.prefix}prompt_manager_list`);
 
+        if (promptManagerDiv.closest('#left-nav-panel.chlo-preset-panel')) {
+            const view = this.promptEditorView ?? 'grouped';
+            const controls = document.createElement('div');
+            controls.className = 'chlo-prompt-view';
+            controls.innerHTML = `<div class="chlo-prompt-view-buttons" role="group" aria-label="Prompt list view">
+                <button type="button" class="menu_button" data-pm-view="grouped" aria-pressed="${view === 'grouped'}">Grouped</button>
+                <button type="button" class="menu_button" data-pm-view="order" aria-pressed="${view === 'order'}">Prompt order</button>
+            </div><small class="chlo-prompt-view-help">${view === 'grouped' ? 'Grouped for editing. Sending order is unchanged.' : 'Drag to change preset order. In-chat blocks use their depth.'}</small>`;
+            controls.addEventListener('click', event => {
+                const button = event.target.closest('[data-pm-view]');
+                if (!button || button.dataset.pmView === (this.promptEditorView ?? 'grouped')) return;
+                this.promptEditorView = button.dataset.pmView;
+                this.render(false);
+            });
+            this.listElement.before(controls);
+        }
+
         if (null !== this.activeCharacter) {
             const prompts = [...this.serviceSettings.prompts]
                 .filter(prompt => prompt && !prompt?.system_prompt)
@@ -1670,16 +1687,18 @@ class PromptManager {
 
         const { prefix } = this.configuration;
 
+        const prompts = this.getPromptsForCharacter(this.activeCharacter).filter(Boolean);
+        const positions = new Map(prompts.map((prompt, index) => [prompt.identifier, index]));
+        const grouped = promptManagerList.closest('#left-nav-panel.chlo-preset-panel') && (this.promptEditorView ?? 'grouped') === 'grouped';
+        promptManagerList.dataset.editorView = grouped ? 'grouped' : 'order';
+        const groups = grouped ? promptEditorGroups(prompts) : [{ prompts }];
+        const headings = new Map(groups.filter(group => group.label).map(group => [group.prompts[0].identifier, group]));
         let listItemHtml = await renderTemplateAsync('promptManagerListHeader', { prefix });
-        let previousSection;
 
-        this.getPromptsForCharacter(this.activeCharacter).forEach(prompt => {
-            if (!prompt) return;
-
-            const section = promptSection(prompt);
-            if (section !== previousSection) {
-                listItemHtml += `<li class="chlo-prompt-section">${escapeHtml(section)}</li>`;
-                previousSection = section;
+        groups.flatMap(group => group.prompts).forEach(prompt => {
+            const group = headings.get(prompt.identifier);
+            if (group) {
+                listItemHtml += `<li class="chlo-prompt-section" data-pm-group="${group.id}"><span>${escapeHtml(group.label)}</span><small>${group.prompts.length}</small></li>`;
             }
 
             const listEntry = this.getPromptOrderEntry(this.activeCharacter, prompt.identifier);
@@ -1737,6 +1756,8 @@ class PromptManager {
             }
 
             const encodedName = escapeHtml(prompt.name);
+            const placement = promptEditorPlacement(prompt, positions.get(prompt.identifier));
+            const category = typeof prompt.chlo_category === 'string' ? prompt.chlo_category.trim() : '';
             const isMarkerPrompt = prompt.marker && prompt.injection_position !== INJECTION_POSITION.ABSOLUTE;
             const isSystemPrompt = !prompt.marker && prompt.system_prompt && prompt.injection_position !== INJECTION_POSITION.ABSOLUTE && !prompt.forbid_overrides;
             const isImportantPrompt = !prompt.marker && prompt.system_prompt && prompt.injection_position !== INJECTION_POSITION.ABSOLUTE && prompt.forbid_overrides;
@@ -1776,7 +1797,7 @@ class PromptManager {
                             </span>
                     </span>
 
-                    <span class="prompt_manager_prompt_tokens" data-pm-tokens="${calculatedTokens}"><span class="${warningClass}" title="${warningTitle}"> </span>${calculatedTokens}</span>
+                    <span class="prompt_manager_prompt_tokens" data-pm-tokens="${calculatedTokens}"><span class="${warningClass}" title="${warningTitle}"> </span>${calculatedTokens}<span class="chlo-prompt-placement" title="${escapeHtml(placement.title)}"> · ${escapeHtml(placement.label)}${category ? ` · ${escapeHtml(category)}` : ''}</span></span>
                 </li>
             `;
         });
@@ -1935,10 +1956,13 @@ class PromptManager {
      */
     makeDraggable() {
         $(`#${this.configuration.prefix}prompt_manager_list`).sortable({
+            // Grouped DOM order is for editing, never a replacement prompt_order.
+            disabled: this.listElement.dataset.editorView === 'grouped',
             delay: this.configuration.sortableDelay,
             handle: isMobile() ? '.drag-handle' : null,
             items: `.${this.configuration.prefix}prompt_manager_prompt_draggable`,
             update: (event, ui) => {
+                if (this.listElement.dataset.editorView === 'grouped') return;
                 const promptOrder = this.getPromptOrderForCharacter(this.activeCharacter);
                 const promptListElement = $(`#${this.configuration.prefix}prompt_manager_list`).sortable('toArray', { attribute: 'data-pm-identifier' });
                 const idToObjectMap = new Map(promptOrder.map(prompt => [prompt.identifier, prompt]));

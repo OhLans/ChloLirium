@@ -5,7 +5,7 @@
 
 // Import required functions
 import { main_api } from '../../../../script.js';
-import { oai_settings } from './../../../openai.js';
+import { oai_settings, promptManager } from './../../../openai.js';
 import { TabManager } from './tab-manager.js';
 import { mountPresetActions } from '../../presets/actions.js';
 
@@ -88,6 +88,7 @@ export class OpenAITabManager {
 
     syncLayout() {
         const active = this.enabled && main_api === 'openai' && this.isTabsCreated;
+        const changed = this.panel.classList.contains('chlo-preset-panel') !== active;
         this.panel.classList.toggle('chlo-preset-panel', active);
         mountPresetActions(active);
         if (active) {
@@ -107,6 +108,7 @@ export class OpenAITabManager {
             this.popup.classList.add('drawer-content');
             this.popupAnchor.after(this.popup);
         }
+        if (changed) promptManager?.render(false);
     }
 
     // Backward compatibility methods

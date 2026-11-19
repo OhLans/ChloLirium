@@ -62,11 +62,17 @@ The separate workspace, additional Navigator button, chat reflow, favorites,
 recent filters, previews and draft system remain removed. All of this fits the
 native left drawer; it does not change the drawer or chat geometry.
 
-Prompt section headings label consecutive runs of native blocks as Core
-instructions, Character & persona, World & memory and Conversation. An explicit
-`chlo_category` from an earlier saved preset or Loom conversion takes precedence.
-Headings never regroup/reorder blocks, contribute prompt text or appear in the
-sortable data. Editing, disabling, dragging and saving still use PromptManager.
+The default Grouped editor collects Instructions first and Context & structure
+afterward. Native context markers, tag-only wrappers (including `{{trim}}`),
+and standalone context macros belong to the second group. Settings macros and
+text-bearing instructions retain their relative order in the first. Existing
+`chlo_category` labels remain visible in row metadata. Each row shows its native
+preset position or in-chat depth; the groups never change stored `prompt_order`,
+macro evaluation, roles, injections, saved/exported presets or prompt assembly.
+Dragging is disabled in Grouped view. Prompt order shows the native sequence
+and enables the original drag handler. Disabling the tab layout also restores
+the native sequence and dragging. Neither view writes a display preference to
+the preset or adds prompt text. Editing, toggling and saving remain native.
 
 Cards show existing raster/HTTP cover images instead of the book tile. Clicking
 the tile lets the user upload, replace or remove a cover. Uploaded images are

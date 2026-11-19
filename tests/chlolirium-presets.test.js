@@ -2,7 +2,7 @@ import { describe, test, expect } from '@jest/globals';
 import { readFile } from 'node:fs/promises';
 import { pickChatCompletionPreset, pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
 import { convertLoomPreset, preparePresetImport } from '../public/scripts/chlolirium/presets/import.js';
-import { presetCover, promptSection, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
+import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
 import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
 import { convertLoomRegex, replaceLoomRegex } from '../public/scripts/chlolirium/presets/loom-regex.js';
 
@@ -45,12 +45,35 @@ describe('Chat completion preset fields', () => {
 });
 
 describe('Native preset presentation', () => {
-    test('explicit Loom/earlier-workspace categories take precedence over automatic marker sections', () => {
-        expect(promptSection({ identifier: 'chatHistory' })).toBe('Conversation');
-        expect(promptSection({ identifier: 'main' })).toBe('Core instructions');
-        expect(promptSection({ identifier: 'charDescription' })).toBe('Character & persona');
-        expect(promptSection({ identifier: 'worldInfoBefore' })).toBe('World & memory');
-        expect(promptSection({ identifier: 'chatHistory', chlo_category: 'A custom section' })).toBe('A custom section');
+    test('context markers and structural wrappers are separated from real instructions and setting macros', () => {
+        for (const prompt of [
+            { identifier: 'chatHistory', content: '' }, { identifier: 'personaDescription' }, { identifier: 'worldInfoBefore' },
+            { marker: true }, { content: '{{trim}}\n<roleplay_context>\n<characters>' },
+            { content: '</characters>\n{{trim}}' }, { content: '{{summary}}' },
+            { content: '<last_message>', injection_position: 1, injection_depth: 1 },
+        ]) expect(promptEditorGroup(prompt)).toBe('context');
+        for (const prompt of [
+            { identifier: 'main', content: '' }, { content: 'Write' }, { content: '<style>Use a calm voice.</style>' },
+            { content: '{{setvar::mode::co-writer}}{{trim}}' }, { content: '{{getvar::voice}}' },
+            { content: 'Review the current turn.', injection_position: 1, injection_depth: 0 },
+        ]) expect(promptEditorGroup(prompt)).toBe('instructions');
+    });
+
+    test('editor grouping keeps stable order and original references without changing source data or categories', () => {
+        const prompts = [{ identifier: 'a', content: 'First.' }, { identifier: 'chatHistory', chlo_category: 'Custom' }, { identifier: 'b', content: 'Second.', chlo_category: 'Reply guidance' }, { identifier: 'close', content: '</context>' }];
+        const before = structuredClone(prompts);
+        const groups = promptEditorGroups(prompts);
+        expect(groups.map(group => group.prompts.map(prompt => prompt.identifier))).toEqual([['a', 'b'], ['chatHistory', 'close']]);
+        expect(groups[0].prompts[1]).toBe(prompts[2]);
+        expect(prompts).toEqual(before);
+        expect(promptEditorGroups([])).toEqual([]);
+    });
+
+    test('placement labels distinguish preset order from in-chat depth and role ordering', () => {
+        expect(promptEditorPlacement({}, 8).label).toBe('Position 9');
+        const placement = promptEditorPlacement({ injection_position: 1, injection_depth: 0, injection_order: 20, role: 'assistant' }, 8);
+        expect(placement.label).toBe('In chat · depth 0');
+        expect(placement.title).toContain('role assistant, order 20');
     });
 
     test('covers accept existing raster data and HTTP images, rejecting active schemes and SVG uploads', () => {
