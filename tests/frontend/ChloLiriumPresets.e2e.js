@@ -124,6 +124,10 @@ test('configuration fills the page with a vertical preset library and movable in
     const title = await page.locator('#chlo-preset-library-header h3').boundingBox();
     const tabs = await page.locator('.openai-tab-buttons').boundingBox();
     expect(title.y).toBeGreaterThanOrEqual(tabs.y + tabs.height);
+    const header = await page.locator('#chlo-config-header').boundingBox();
+    const close = await page.getByRole('button', { name: 'Close configuration' }).boundingBox();
+    expect(Math.abs(tabs.y + tabs.height / 2 - close.y - close.height / 2)).toBeLessThan(1);
+    expect(close.x + close.width).toBeCloseTo(header.x + header.width, 0);
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-collection.png') });
     await page.getByRole('button', { name: 'Close configuration' }).click();
     await expect(page.locator('body')).not.toHaveClass(/chlo-config-open/);
@@ -217,7 +221,9 @@ for (const width of [1440, 390]) {
             promptManager.render(false);
         });
         await expect(page.locator('[data-pm-identifier="scroll-qa-119"]')).toHaveCount(1);
-        const position = () => page.locator('#completion_prompt_manager').evaluate(node => node.closest('.scrollableInner').scrollTop);
+        const position = () => page.locator('#completion_prompt_manager').evaluate(node => (
+            matchMedia('(min-width: 701px)').matches ? node.querySelector('.chlo-block-scroller') : node.closest('.scrollableInner')
+        ).scrollTop);
         const popup = page.locator('#completion_prompt_manager_popup');
         for (const index of [55, 119]) {
             const row = page.locator(`[data-pm-identifier="scroll-qa-${index}"]`);
@@ -264,6 +270,63 @@ test('collection, parameters and native prompt form fit a 390px phone viewport',
     const editor = await page.locator('#completion_prompt_manager_popup').boundingBox();
     expect(editor.x + editor.width).toBeLessThanOrEqual(391);
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-phone.png') });
+});
+
+test('a widened, scrolled block list stays below its full-width toolbar and lines up with the editor', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 920 });
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
+    await page.evaluate(async () => {
+        const { promptManager, oai_settings } = await import('/scripts/openai.js');
+        oai_settings.preset_settings_openai = 'A long preset title that must wrap cleanly without pushing its actions outside the workspace';
+        const { updatePresetActions } = await import('/scripts/chlolirium/presets/actions.js');
+        updatePresetActions();
+        const extra = Array.from({ length: 95 }, (_, i) => ({ identifier: `alignment-${i}`, name: `Alignment block ${i}`, content: 'A neutral test block.', role: 'system', injection_position: 0 }));
+        oai_settings.prompts.push(...extra);
+        promptManager.getPromptOrderForCharacter(promptManager.activeCharacter).push(...extra.map(prompt => ({ identifier: prompt.identifier, enabled: true })));
+        promptManager.render(false);
+        document.body.style.setProperty('--SmartThemeBlurTintColor', 'rgba(48, 38, 33, 0.45)');
+    });
+    const list = page.locator('#completion_prompt_manager');
+    const scroller = list.locator('.chlo-block-scroller');
+    const toolbar = list.locator('.chlo-block-navigation');
+    const divider = page.getByRole('separator', { name: 'Resize block list' });
+    await expect(list.locator('[data-pm-identifier="alignment-94"]')).toBeAttached();
+    const initial = await divider.boundingBox();
+    const point = { x: initial.x + initial.width / 2, y: initial.y + initial.height / 2 };
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.move(point.x + 220, point.y, { steps: 12 });
+    await page.mouse.up();
+    await expect.poll(async () => (await divider.boundingBox()).x).toBeGreaterThan(initial.x + 200);
+
+    for (const view of ['grouped', 'order']) {
+        await page.locator(`[data-pm-view="${view}"]`).click();
+        await expect(list.locator('#completion_prompt_manager_list')).toHaveAttribute('data-editor-view', view);
+        const before = await toolbar.boundingBox();
+        await scroller.evaluate(node => node.scrollTop = 3800);
+        await expect.poll(() => scroller.evaluate(node => node.scrollTop)).toBeGreaterThan(3000);
+        const nav = await toolbar.boundingBox();
+        const scroll = await scroller.boundingBox();
+        const split = await divider.boundingBox();
+        const edit = await page.locator('#chlo-prompt-editor-empty').boundingBox();
+        expect(nav).toEqual(before);
+        expect(nav.width).toBeGreaterThan(580);
+        expect(nav.x).toBeCloseTo(scroll.x, 0);
+        expect(nav.width).toBeCloseTo(scroll.width, 0);
+        expect(nav.y + nav.height).toBeCloseTo(scroll.y, 0);
+        expect(nav.y).toBeCloseTo(split.y, 0);
+        expect(split.y).toBeCloseTo(edit.y, 0);
+        expect(scroll.y + scroll.height).toBeCloseTo(edit.y + edit.height, 0);
+        const covered = await toolbar.evaluate(node => {
+            const { right, top, height } = node.getBoundingClientRect();
+            return Boolean(document.elementFromPoint(right - 2, top + height / 2)?.closest('[data-pm-identifier]'));
+        });
+        expect(covered).toBe(false);
+    }
+    const title = await page.locator('#chlo-preset-editor-title').boundingBox();
+    const actions = await page.locator('#chlo-preset-editor-actions').boundingBox();
+    expect(title.x + title.width).toBeLessThan(actions.x);
+    expect(Math.abs(title.y + title.height / 2 - actions.y - actions.height / 2)).toBeLessThan(1);
 });
 
 test('native import and export remain available and the collection follows the native preset options', async ({ page }) => {

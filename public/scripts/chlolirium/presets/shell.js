@@ -58,14 +58,21 @@ export function initConfigurationWorkspace() {
     const panel = document.getElementById('left-nav-panel');
     const header = document.createElement('header');
     header.id = 'chlo-config-header';
-    header.innerHTML = '<div><small>ChloLirium</small><h2>Response configuration</h2></div><button type="button" class="menu_button" aria-label="Close configuration">×</button>';
+    header.innerHTML = '<div class="chlo-config-title"><small>ChloLirium</small><h2>Response configuration</h2></div><div class="chlo-config-tabs"></div><div class="chlo-config-actions"><button type="button" class="menu_button" aria-label="Close configuration">×</button></div>';
     panel.prepend(header);
+    const tabsSlot = header.querySelector('.chlo-config-tabs');
+    const actions = header.querySelector('.chlo-config-actions');
+    const pin = document.getElementById('lm_button_panel_pin_div');
+    const pinAnchor = document.createComment('native configuration pin position');
+    pin.before(pinAnchor);
     const sync = () => {
         const active = panel.classList.contains('chlo-preset-panel');
         const open = active && panel.classList.contains('openDrawer');
         document.body.classList.toggle('chlo-config-open', open);
-        const manager = document.getElementById('completion_prompt_manager');
-        manager?.classList.toggle('scrollableInner', active && innerWidth > 700);
+        const tabs = panel.querySelector('.openai-tab-buttons');
+        if (active && tabs && tabs.parentElement !== tabsSlot) tabsSlot.append(tabs);
+        if (active && pin.parentElement !== actions) actions.prepend(pin);
+        if (!active && pin.parentElement === actions) pinAnchor.after(pin);
         const page = document.getElementById('openai-tab-content-prompts');
         if (active && page && !document.getElementById('chlo-prompt-editor-empty')) {
             const empty = document.createElement('aside');
