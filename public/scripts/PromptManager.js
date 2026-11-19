@@ -14,6 +14,7 @@ import { t } from './i18n.js';
 import { isMobile } from './RossAscends-mods.js';
 import { promptEditorGroups, promptEditorPlacement } from './chlolirium/presets/presentation.js';
 import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
+import { confirmPromptSwitch, inPromptWorkspace, mountPromptWorkspace, promptEditorLoaded } from './chlolirium/presets/workspace.js';
 
 function debouncePromise(func, delay) {
     let timeoutId;
@@ -454,7 +455,8 @@ class PromptManager {
         };
 
         // Open edit form and load selected prompt
-        this.handleEdit = (event) => {
+        this.handleEdit = async (event) => {
+            if (!await confirmPromptSwitch(this)) return;
             this.clearEditForm();
             this.clearInspectForm();
 
@@ -467,11 +469,13 @@ class PromptManager {
         };
 
         // Open edit form and load selected prompt
-        this.handleInspect = (event) => {
+        this.handleInspect = async (event) => {
+            if (!await confirmPromptSwitch(this)) return;
             this.clearEditForm();
             this.clearInspectForm();
 
             const promptID = event.target.closest('.' + this.configuration.prefix + 'prompt_manager_prompt').dataset.pmIdentifier;
+            this.workspaceFormSnapshot = undefined;
             if (true === this.messages.hasItemWithIdentifier(promptID)) {
                 const messages = this.messages.getItemByIdentifier(promptID);
 
@@ -496,7 +500,7 @@ class PromptManager {
 
         // Save prompt edit form to settings and close form.
         this.handleSavePrompt = (event) => {
-            const promptId = event.target.dataset.pmPrompt;
+            const promptId = event.currentTarget.dataset.pmPrompt;
             const prompt = this.getPromptById(promptId);
 
             if (null === prompt) {
@@ -510,6 +514,19 @@ class PromptManager {
             if ('main' === promptId) this.updateQuickEdit('main', prompt);
             if ('nsfw' === promptId) this.updateQuickEdit('nsfw', prompt);
             if ('jailbreak' === promptId) this.updateQuickEdit('jailbreak', prompt);
+
+            if (inPromptWorkspace(this)) {
+                const saved = this.getPromptById(promptId);
+                if (prompt === null) {
+                    const order = this.getPromptOrderForCharacter(this.activeCharacter);
+                    const after = order.findIndex(entry => entry.identifier === this.workspaceInsertAfter);
+                    order.splice(after < 0 ? order.length : after + 1, 0, { identifier: promptId, enabled: true });
+                }
+                promptEditorLoaded(this, saved);
+                this.render(true);
+                this.saveServiceSettings();
+                return;
+            }
 
             this.log('Saved prompt: ' + promptId);
 
@@ -619,7 +636,19 @@ class PromptManager {
         };
 
         // Create new prompt, then save it to settings and close form.
-        this.handleNewPrompt = (event) => {
+        this.handleNewPrompt = async (event) => {
+            if (!await confirmPromptSwitch(this)) return;
+            this.workspaceInsertAfter = this.workspaceSelectedId;
+            if (inPromptWorkspace(this)) {
+                this.workspaceCollapsed = [];
+                const search = this.containerElement.querySelector('.chlo-block-search input');
+                if (search) {
+                    search.value = '';
+                    search.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+            this.clearEditForm();
+            this.clearInspectForm();
             const prompt = {
                 identifier: this.getUuidv4(),
                 name: '',
@@ -805,7 +834,8 @@ class PromptManager {
         document.getElementById(this.configuration.prefix + 'prompt_manager_popup_entry_form_save').addEventListener('click', this.handleSavePrompt);
         document.getElementById(this.configuration.prefix + 'prompt_manager_popup_entry_form_reset').addEventListener('click', this.handleResetPrompt);
 
-        const closeAndClearPopup = () => {
+        const closeAndClearPopup = async () => {
+            if (!await confirmPromptSwitch(this)) return;
             this.hidePopup();
             this.clearEditForm();
             this.clearInspectForm();
@@ -829,6 +859,10 @@ class PromptManager {
             this.updateQuickEdit('jailbreak', jailbreakPrompt);
 
             this.popupScrollPosition = undefined;
+            this.workspaceSearch = '';
+            this.workspaceSelectedId = undefined;
+            this.workspaceCollapsed = [];
+            if (this.containerElement) this.containerElement.scrollTop = 0;
             this.hidePopup();
             this.clearEditForm();
             this.renderDebounced();
@@ -1413,6 +1447,7 @@ class PromptManager {
 
         const savePromptButton = document.getElementById(this.configuration.prefix + 'prompt_manager_popup_entry_form_save');
         savePromptButton.dataset.pmPrompt = prompt.identifier;
+        promptEditorLoaded(this, prompt);
     }
 
     handleInjectionPositionChange(event) {
@@ -1691,14 +1726,14 @@ class PromptManager {
         const positions = new Map(prompts.map((prompt, index) => [prompt.identifier, index]));
         const grouped = promptManagerList.closest('#left-nav-panel.chlo-preset-panel') && (this.promptEditorView ?? 'grouped') === 'grouped';
         promptManagerList.dataset.editorView = grouped ? 'grouped' : 'order';
-        const groups = grouped ? promptEditorGroups(prompts) : [{ prompts }];
-        const headings = new Map(groups.filter(group => group.label).map(group => [group.prompts[0].identifier, group]));
+        const groups = grouped ? promptEditorGroups(prompts, this.serviceSettings.chlo_preset?.editor_layout) : [{ prompts }];
+        const headings = new Map(groups.filter(group => group.label && group.prompts.length).map(group => [group.prompts[0].identifier, group]));
         let listItemHtml = await renderTemplateAsync('promptManagerListHeader', { prefix });
 
         groups.flatMap(group => group.prompts).forEach(prompt => {
             const group = headings.get(prompt.identifier);
             if (group) {
-                listItemHtml += `<li class="chlo-prompt-section" data-pm-group="${group.id}"><span>${escapeHtml(group.label)}</span><small>${group.prompts.length}</small></li>`;
+                listItemHtml += `<li class="chlo-prompt-section" data-pm-group="${escapeHtml(group.id)}"><span>${escapeHtml(group.label)}</span><small>${group.prompts.length}</small></li>`;
             }
 
             const listEntry = this.getPromptOrderEntry(this.activeCharacter, prompt.identifier);
@@ -1756,6 +1791,7 @@ class PromptManager {
             }
 
             const encodedName = escapeHtml(prompt.name);
+            const selectForEdit = inPromptWorkspace(this) && this.isPromptEditAllowed(prompt);
             const placement = promptEditorPlacement(prompt, positions.get(prompt.identifier));
             const category = typeof prompt.chlo_category === 'string' ? prompt.chlo_category.trim() : '';
             const isMarkerPrompt = prompt.marker && prompt.injection_position !== INJECTION_POSITION.ABSOLUTE;
@@ -1784,7 +1820,7 @@ class PromptManager {
                         ${isImportantPrompt ? '<span class="fa-fw fa-solid fa-star" title="Important Prompt"></span>' : ''}
                         ${isUserPrompt ? '<span class="fa-fw fa-solid fa-asterisk" title="Preset Prompt"></span>' : ''}
                         ${isInjectionPrompt ? '<span class="fa-fw fa-solid fa-syringe" title="In-Chat Injection"></span>' : ''}
-                        ${this.isPromptInspectionAllowed(prompt) ? `<a title="${encodedName}" class="prompt-manager-inspect-action">${encodedName}</a>` : `<span title="${encodedName}">${encodedName}</span>`}
+                        ${selectForEdit ? `<button type="button" class="chlo-select-prompt" title="Edit ${encodedName}">${encodedName}</button>` : this.isPromptInspectionAllowed(prompt) ? `<a title="${encodedName}" class="prompt-manager-inspect-action">${encodedName}</a>` : `<span title="${encodedName}">${encodedName}</span>`}
                         ${roleIcon ? `<span data-role="${escapeHtml(prompt.role)}" class="fa-xs fa-solid ${roleIcon}" title="${roleTitle}"></span>` : ''}
                         ${isInjectionPrompt ? `<small class="prompt-manager-injection-depth">@ ${escapeHtml(prompt.injection_depth.toString())}</small>` : ''}
                         ${isOverriddenPrompt ? '<small class="fa-solid fa-address-card prompt-manager-overridden" title="Pulled from a character card"></small>' : ''}
@@ -1820,6 +1856,8 @@ class PromptManager {
         Array.from(promptManagerList.querySelectorAll('.prompt-manager-toggle-action')).forEach(el => {
             el.addEventListener('click', this.handleToggle);
         });
+        promptManagerList.querySelectorAll('.chlo-select-prompt').forEach(button => button.addEventListener('click', this.handleEdit));
+        mountPromptWorkspace(this);
     }
 
     /**
@@ -1989,6 +2027,11 @@ class PromptManager {
         areaElement.style.display = 'flex';
 
         const popup = $('#' + this.configuration.prefix + 'prompt_manager_popup').first();
+        if (inPromptWorkspace(this)) {
+            if (!popup.hasClass('openDrawer')) this.popupScrollPosition = this.#getScrollPosition();
+            popup.stop(true, true).show().addClass('openDrawer');
+            return;
+        }
         this.popupScrollRevision = (this.popupScrollRevision ?? 0) + 1;
         if (!popup.hasClass('openDrawer')) {
             // The inline form hides the list and collapses its scroll range.
@@ -2005,6 +2048,14 @@ class PromptManager {
      */
     hidePopup() {
         const popup = $('#' + this.configuration.prefix + 'prompt_manager_popup').first();
+        this.workspaceFormSnapshot = undefined;
+        if (inPromptWorkspace(this)) {
+            const position = this.popupScrollPosition;
+            this.popupScrollPosition = undefined;
+            popup.stop(true, true).hide().removeClass('openDrawer');
+            this.#setScrollPosition(position);
+            return position;
+        }
         const scrollPosition = popup.closest('#left-nav-panel.chlo-preset-panel').length ? this.popupScrollPosition : undefined;
         this.popupScrollPosition = undefined;
         const revision = this.popupScrollRevision = (this.popupScrollRevision ?? 0) + 1;

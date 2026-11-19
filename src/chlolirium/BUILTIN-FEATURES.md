@@ -29,14 +29,18 @@ styles. Theme styles remain switchable with the appearance setting.
 
 ## Native preset panel and generation settings
 
-The existing AI Configuration drawer keeps its native position, width, pin
-behavior and theme settings. With the existing tab layout enabled, its opening
-page shows the native preset select's options as a vertical stack of cards.
+With the tab layout enabled, the existing AI Configuration drawer becomes a
+resizable workspace. A width slider and keyboard/pointer resize handle share
+a browser-local width preference. Wide screens place the chat beside it when
+there is enough room; narrow screens use the available width. Closing the
+configuration or disabling the layout restores native chat geometry. Theme
+colors, pin controls, API profiles and all native parameter nodes are retained.
+The opening page is a searchable preset library with cover cards.
 Use applies a card through that select's normal change handler while staying in
 the collection, so Export/Delete can target it there. Use also reloads an active
 preset's saved values. Edit or the title opens Prompts and preserves unsaved
 edits when that preset is already active.
-Parameters is another page in the same narrow drawer. Loading a preset applies
+Parameters is another page in the workspace. Loading a preset applies
 the generation settings it actually contains. Prompt-only presets leave those
 settings current; missing fields never require manual reconfiguration.
 
@@ -46,33 +50,32 @@ on the Prompts page. The duplicate native toolbar is replaced while this layout
 is active. These are the actual native control nodes, moved with their IDs and
 handlers intact; disabling the layout restores their original positions.
 
-Import, export, save, save-as, rename, delete, prompt creation, prompt toggles,
-drag ordering, token counts and editing all use their original ST controls and
-handlers. The real edit/inspect form is mounted in the Prompts page while the
-layout is active, then restored to its original location when the layout is
-disabled or the API changes. The editor keeps native roles, depth, triggers,
-override controls and macro autocomplete.
-
-The inline edit/inspect page remembers the prompt list's scroll position before
-hiding it. Save and Close restore that position after the form animation, and
-Save retains it through the native list rebuild. Selecting another preset
-clears the previous return position.
-
-The separate workspace, additional Navigator button, chat reflow, favorites,
-recent filters, previews and draft system remain removed. All of this fits the
-native left drawer; it does not change the drawer or chat geometry.
+The Prompts page has an independently scrolling block list beside the real
+native edit/inspect form. Selecting a block opens its editor; Save block keeps
+it open and preserves the list position. On phones the form occupies the page
+and Close editor returns to the previous list position. Switching away from
+an unsaved block asks before discarding its form text. Find a block searches
+names and contents, including collapsed groups. Add block opens the native
+form and, on Save, inserts the enabled block after the previously selected
+block (or at the end). The original prompt pool, insert, import/export and
+reset controls remain under Available blocks & tools. Native roles, depth,
+triggers, override controls, macro autocomplete and inspection are retained.
 
 The default Grouped editor collects Instructions first and Context & structure
 afterward. Native context markers, tag-only wrappers (including `{{trim}}`),
-and standalone context macros belong to the second group. Settings macros and
+and standalone context macros belong to the second group. Planeswalker Identity,
+character/protagonist wrappers and summary labels are recognized for display.
+Settings macros and
 text-bearing instructions retain their relative order in the first. Existing
 `chlo_category` labels remain visible in row metadata. Each row shows its native
 preset position or in-chat depth; the groups never change stored `prompt_order`,
-macro evaluation, roles, injections, saved/exported presets or prompt assembly.
+macro evaluation, roles, injections or prompt assembly.
 Dragging is disabled in Grouped view. Prompt order shows the native sequence
 and enables the original drag handler. Disabling the tab layout also restores
-the native sequence and dragging. Neither view writes a display preference to
-the preset or adds prompt text. Editing, toggling and saving remain native.
+the native sequence and dragging. Organize editor groups enables per-block
+group selection and up/down display ordering. These edits are isolated in
+`chlo_preset.editor_layout` and travel with native Save preset, save-as, import
+and export. They never modify native prompt_order or add prompt text.
 
 Cards show existing raster/HTTP cover images instead of the book tile. Clicking
 the tile lets the user upload, replace or remove a cover. Uploaded images are

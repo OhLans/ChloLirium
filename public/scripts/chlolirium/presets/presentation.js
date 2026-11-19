@@ -8,16 +8,43 @@ export function promptEditorGroup(prompt) {
     const tags = /<\/?[A-Za-z_][\w:.-]*(?:\s+[^<>]*?)?\s*\/?>/g;
     if (content && content.replace(tags, '').trim() === '') return 'context';
     if (/^(?:\{\{(?:summary|persona|description|personality|scenario|mesExamples|wiBefore|wiAfter)\}\}\s*)+$/i.test(content)) return 'context';
+    const name = String(prompt.name ?? '').replace(/^[^\p{L}<]+/u, '').trim();
+    if (/^(?:identity|characters?|protagonist|past events\s*\(summary\))$/i.test(name) || /<\/?(?:characters|protagonist|scenario|lore|roleplay_context|examples|last_message)>/i.test(name)) return 'context';
     return 'instructions';
 }
 
 /** Stable editor groups holding the original objects; execution uses its own order. */
-export function promptEditorGroups(prompts) {
-    return [
+export function promptEditorGroups(prompts, layout = {}) {
+    layout = layout && typeof layout === 'object' ? layout : {};
+    const defaults = [
         { id: 'instructions', label: 'Instructions' },
         { id: 'context', label: 'Context & structure' },
-    ].map(group => ({ ...group, prompts: prompts.filter(prompt => promptEditorGroup(prompt) === group.id) }))
-        .filter(group => group.prompts.length);
+    ];
+    const groups = new Map(defaults.map(group => [group.id, group]));
+    for (const group of Array.isArray(layout.groups) ? layout.groups : []) {
+        if (typeof group?.id === 'string' && typeof group.label === 'string' && group.label.trim()) groups.set(group.id, { id: group.id, label: group.label.trim().slice(0, 80) });
+    }
+    const positions = new Map((Array.isArray(layout.order) ? layout.order : []).map((id, index) => [id, index]));
+    const sorted = [...prompts].sort((a, b) => (positions.get(a.identifier) ?? Infinity) - (positions.get(b.identifier) ?? Infinity));
+    const result = [...groups.values()].map(group => ({ ...group, prompts: sorted.filter(prompt => {
+        const assigned = Object.hasOwn(layout.assignments ?? {}, prompt.identifier) ? layout.assignments[prompt.identifier] : null;
+        return (groups.has(assigned) ? assigned : promptEditorGroup(prompt)) === group.id;
+    }) }));
+    return result.filter(group => group.prompts.length || !defaults.some(item => item.id === group.id));
+}
+
+/** Editor metadata is isolated from native prompt_order and prompt contents. */
+export function organizePrompt(prompts, layout, identifier, { group, direction } = {}) {
+    const next = structuredClone(layout ?? {});
+    if (group) next.assignments = { ...next.assignments, [identifier]: group };
+    const groups = promptEditorGroups(prompts, next);
+    const current = groups.find(item => item.prompts.some(prompt => prompt.identifier === identifier));
+    if (!current) return next;
+    const index = current.prompts.findIndex(prompt => prompt.identifier === identifier);
+    const target = index + (direction === 'up' ? -1 : direction === 'down' ? 1 : 0);
+    if (target >= 0 && target < current.prompts.length) [current.prompts[index], current.prompts[target]] = [current.prompts[target], current.prompts[index]];
+    next.order = groups.flatMap(item => item.prompts.map(prompt => prompt.identifier));
+    return next;
 }
 
 export function promptEditorPlacement(prompt, index) {

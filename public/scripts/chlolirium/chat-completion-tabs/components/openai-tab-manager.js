@@ -8,6 +8,7 @@ import { main_api } from '../../../../script.js';
 import { oai_settings, promptManager } from './../../../openai.js';
 import { TabManager } from './tab-manager.js';
 import { mountPresetActions } from '../../presets/actions.js';
+import { syncConfigurationWorkspace } from '../../presets/shell.js';
 
 export class OpenAITabManager {
     constructor() {
@@ -108,6 +109,7 @@ export class OpenAITabManager {
             this.popup.classList.add('drawer-content');
             this.popupAnchor.after(this.popup);
         }
+        syncConfigurationWorkspace();
         if (changed) promptManager?.render(false);
     }
 
