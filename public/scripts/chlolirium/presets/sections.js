@@ -2,12 +2,63 @@ import { Popup, POPUP_RESULT, POPUP_TYPE } from '../../popup.js';
 import { uuidv4 } from '../../utils.js';
 import { promptSectionDefinitions } from './presentation.js';
 
+const newSectionId = () => `section-${uuidv4()}`;
+const sectionNameKey = value => value.trim().toLocaleLowerCase();
+
+/** Pick a new or empty section for the blocks at and after the selected row. */
+export async function chooseSectionForSplit({ anchor, source, count, sections, emptySections }) {
+    const content = document.createElement('div');
+    content.className = 'chlo-section-editor chlo-section-split';
+    content.innerHTML = `<h3>Insert section above this block</h3>
+        <p class="chlo-section-split-preview"></p>
+        <label class="chlo-section-split-pick">Section <select class="text_pole" aria-label="Section to insert"><option value="">Create a new section</option></select></label>
+        <label class="chlo-section-split-name">Section name <input type="text" class="text_pole" maxlength="80"></label>
+        <p class="text_danger" role="alert" hidden></p>`;
+    content.querySelector('.chlo-section-split-preview').textContent = count === 1
+        ? `“${anchor}” is the last block in “${source}”. It will move into this section.`
+        : `“${anchor}” and the next ${count - 1} ${count === 2 ? 'block' : 'blocks'} in “${source}” will move into this section.`;
+    const picker = content.querySelector('select');
+    const name = content.querySelector('input');
+    const notice = content.querySelector('[role="alert"]');
+    for (const item of emptySections) picker.append(new Option(item.label, item.id));
+    picker.closest('label').hidden = !emptySections.length;
+    const update = () => {
+        name.closest('label').hidden = Boolean(picker.value);
+        notice.hidden = true;
+    };
+    picker.addEventListener('change', update);
+    name.addEventListener('input', update);
+    let choice;
+    const result = await new Popup(content, POPUP_TYPE.CONFIRM, null, {
+        okButton: 'Insert section', cancelButton: 'Cancel', leftAlign: true,
+        onOpen: () => (emptySections.length ? picker : name).focus(),
+        onClosing: popup => {
+            if (popup.result !== POPUP_RESULT.AFFIRMATIVE) return true;
+            if (picker.value) {
+                choice = emptySections.find(section => section.id === picker.value);
+                return Boolean(choice);
+            }
+            const label = name.value.trim();
+            const key = sectionNameKey(label);
+            if (!key || sections.some(section => sectionNameKey(section.label) === key)) {
+                notice.textContent = key ? 'A section with that name already exists. Choose it if it’s empty, or use a different name.' : 'Enter a name for the new section.';
+                notice.hidden = false;
+                name.focus();
+                return false;
+            }
+            choice = { id: newSectionId(), label };
+            return true;
+        },
+    }).show();
+    return result === POPUP_RESULT.AFFIRMATIVE ? choice : undefined;
+}
+
 /** Edit a draft list and return its new order and labels on Apply. */
 export async function editPromptSections(layout) {
     const content = document.createElement('div');
     content.className = 'chlo-section-editor';
     content.innerHTML = `<h3>Manage sections</h3>
-        <p>Drag sections or use the arrows to reorder them. Use <b>Show group controls</b> to move blocks between sections.</p>
+        <p>Drag sections or use the arrows to reorder them. To split a section at a specific block, use <b>Show group controls → + Section above</b> in the prompt list.</p>
         <ol aria-label="Prompt sections"></ol>
         <button type="button" class="menu_button chlo-add-section">Add section</button>
         <small>Removing a custom section returns its blocks to the default sections. Use <b>Save preset</b> to keep your layout.</small>
@@ -38,7 +89,7 @@ export async function editPromptSections(layout) {
     promptSectionDefinitions(layout).forEach(append);
     refresh();
     addSection.addEventListener('click', () => {
-        const input = append({ id: `section-${uuidv4()}`, label: '', removable: true });
+        const input = append({ id: newSectionId(), label: '', removable: true });
         refresh();
         input.focus();
     });
@@ -76,7 +127,7 @@ export async function editPromptSections(layout) {
             for (const row of list.children) {
                 const input = row.querySelector('input');
                 const label = input.value.trim();
-                const key = label.toLocaleLowerCase();
+                const key = sectionNameKey(label);
                 if (!key || names.has(key)) {
                     notice.textContent = key ? 'Give each section a different name.' : 'Enter a name for each section.';
                     notice.hidden = false;

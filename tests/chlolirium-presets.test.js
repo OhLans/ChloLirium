@@ -2,7 +2,7 @@ import { describe, test, expect } from '@jest/globals';
 import { readFile } from 'node:fs/promises';
 import { pickChatCompletionPreset, pickPromptPreset } from '../public/scripts/chlolirium/presets/model.js';
 import { convertLoomPreset, preparePresetImport } from '../public/scripts/chlolirium/presets/import.js';
-import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, organizePrompt, editorLayoutFromSequence, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
+import { presetCover, promptEditorGroup, promptEditorGroups, promptEditorPlacement, insertPromptSection, organizePrompt, editorLayoutFromSequence, presetBlockCount } from '../public/scripts/chlolirium/presets/presentation.js';
 import { createLoomResolver, parseLoomText } from '../public/scripts/chlolirium/presets/loom-macros.js';
 import { convertLoomRegex, replaceLoomRegex } from '../public/scripts/chlolirium/presets/loom-regex.js';
 
@@ -99,6 +99,24 @@ describe('Native preset presentation', () => {
         expect(layout.assignments).toEqual({ two: 'instructions', one: 'context' });
         expect(promptEditorGroups(prompts, layout).map(group => group.prompts.map(prompt => prompt.identifier))).toEqual([['two'], ['one', 'chatHistory']]);
         expect(prompts).toEqual(source);
+    });
+
+    test('inserting a section respects the editor order and moves only the remainder of the chosen group', () => {
+        const prompts = ['one', 'two', 'three', 'chatHistory', 'extra'].map(identifier => ({ identifier }));
+        const layout = {
+            order: ['three', 'one', 'two', 'chatHistory', 'extra'],
+            groups: [{ id: 'optional', label: 'Optional' }, { id: 'other', label: 'Other' }],
+            group_order: ['optional', 'instructions', 'context', 'other'],
+            assignments: { extra: 'other' },
+        };
+        const original = structuredClone(layout);
+        const next = insertPromptSection(prompts, layout, 'one', { id: 'optional', label: 'Optional' });
+        expect(promptEditorGroups(prompts, next).map(group => [group.id, group.prompts.map(prompt => prompt.identifier)])).toEqual([
+            ['instructions', ['three']], ['optional', ['one', 'two']], ['context', ['chatHistory']], ['other', ['extra']],
+        ]);
+        expect(next.order).toEqual(layout.order);
+        expect(layout).toEqual(original);
+        expect(insertPromptSection(prompts, next, 'two', { id: 'other', label: 'Other' })).toBeUndefined();
     });
 
     test('covers accept existing raster data and HTTP images, rejecting active schemes and SVG uploads', () => {
