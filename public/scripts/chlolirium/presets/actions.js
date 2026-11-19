@@ -10,8 +10,41 @@ export function initPresetActions(collection) {
     collection.prepend(header);
     const editor = document.createElement('header');
     editor.id = 'chlo-preset-editor-header';
-    editor.innerHTML = '<button type="button" class="chlo-back-library">← Library</button><h3 id="chlo-preset-editor-title"></h3><div id="chlo-preset-editor-actions" class="chlo-preset-actions"></div>';
-    editor.querySelector('button').addEventListener('click', () => document.getElementById('openai-tab-btn-presets')?.click());
+    editor.innerHTML = `<div class="chlo-prompt-caption"><h3 id="chlo-preset-editor-title"></h3><small class="chlo-prompt-active-view" hidden>Sending order</small></div>
+        <div class="chlo-block-navigation">
+            <input type="search" class="text_pole chlo-block-search" aria-label="Find a block" placeholder="Find a block…">
+            <button type="button" class="menu_button chlo-add-block"><span aria-hidden="true">+</span> Add block</button>
+            <button type="button" class="menu_button chlo-prompt-tools-button" aria-label="Prompt tools" title="Prompt tools" aria-expanded="false" aria-controls="chlo-prompt-tools-panel">⋯</button>
+        </div>
+        <div id="chlo-prompt-tools-panel" hidden>
+            <div class="chlo-prompt-list-tools"></div>
+            <div id="chlo-preset-editor-actions" class="chlo-preset-actions" role="group" aria-label="Preset actions"></div>
+        </div>`;
+    const toolsButton = editor.querySelector('.chlo-prompt-tools-button');
+    const toolsPanel = editor.querySelector('#chlo-prompt-tools-panel');
+    const setToolsOpen = open => {
+        toolsPanel.hidden = !open;
+        toolsButton.setAttribute('aria-expanded', String(open));
+    };
+    toolsButton.addEventListener('click', () => setToolsOpen(toolsPanel.hidden));
+    editor.addEventListener('keydown', event => {
+        // Native buttons already click on Enter. Keep the app's global menu
+        // shortcut from clicking them a second time.
+        if (event.key === 'Enter' && event.target instanceof HTMLButtonElement) event.stopPropagation();
+        if (event.key !== 'Escape' || toolsPanel.hidden) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setToolsOpen(false);
+        toolsButton.focus();
+    });
+    document.addEventListener('click', event => {
+        if (!toolsPanel.hidden && !editor.contains(event.target)) setToolsOpen(false);
+    });
+    editor.querySelector('#chlo-preset-editor-actions').addEventListener('click', () => {
+        setToolsOpen(false);
+        // Native actions can open a dialog; let it take focus if it does.
+        if (toolsPanel.contains(document.activeElement)) toolsButton.focus();
+    });
     document.getElementById('openai_api-presets').append(editor);
     const layout = document.createElement('details');
     layout.id = 'chlo-preset-layout-setting';
@@ -52,13 +85,19 @@ export function mountPresetActions(active) {
     }
     const header = document.getElementById('chlo-preset-editor-header');
     const prompts = document.getElementById('openai-tab-content-prompts');
-    if (active && prompts) prompts.prepend(header);
-    else document.getElementById('openai_api-presets').append(header);
+    if (active && prompts) {
+        if (header.parentElement !== prompts) prompts.prepend(header);
+    } else {
+        header.querySelector('.chlo-prompt-list-tools').replaceChildren();
+        document.getElementById('openai_api-presets').append(header);
+    }
     updatePresetActions();
 }
 
 export function updatePresetActions() {
     const name = oai_settings.preset_settings_openai || 'No preset selected';
-    document.getElementById('chlo-preset-editor-title').textContent = name;
+    const title = document.getElementById('chlo-preset-editor-title');
+    title.textContent = name;
+    title.title = name;
     document.getElementById('chlo-preset-current').textContent = `Active: ${name}`;
 }

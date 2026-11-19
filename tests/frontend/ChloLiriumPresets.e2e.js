@@ -75,6 +75,11 @@ const shared = async page => page.evaluate(async () => {
     return { temperature: s.temp_openai, topP: s.top_p_openai, context: s.openai_max_context, reply: s.openai_max_tokens, stream: s.stream_openai, source: s.chat_completion_source, model: s.custom_model, endpoint: s.custom_url };
 });
 
+const openPromptTools = async page => {
+    const button = page.getByRole('button', { name: 'Prompt tools', exact: true });
+    if (await button.getAttribute('aria-expanded') !== 'true') await button.click();
+};
+
 const dragHandle = async (page, handle, point) => {
     const start = await handle.boundingBox();
     await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -162,6 +167,7 @@ test('native prompt edit form stays within the drawer and saves roles, content a
     const popup = page.locator('#left-nav-panel #completion_prompt_manager_popup');
     await expect(popup).toBeVisible();
     await expect(page.locator('#completion_prompt_manager')).toBeHidden();
+    await expect(page.locator('#chlo-preset-editor-header')).toBeHidden();
     const panel = await page.locator('#left-nav-panel').boundingBox();
     const editor = await popup.boundingBox();
     expect(editor.x).toBeGreaterThanOrEqual(panel.x);
@@ -178,6 +184,8 @@ test('native prompt edit form stays within the drawer and saves roles, content a
     await expect(popup).toBeVisible();
     const prompt = await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.prompts.find(prompt => prompt.identifier === 'voice-qa'));
     expect(prompt).toMatchObject({ role: 'assistant', content: 'Native editor instructions.', injection_position: 1, injection_depth: 7 });
+    await page.locator('#completion_prompt_manager_popup_entry_form_close').click();
+    await openPromptTools(page);
     const response = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await response;
@@ -264,25 +272,40 @@ test('collection, parameters and native prompt form fit a 390px phone viewport',
     await page.screenshot({ path: path.join(root, '../chlo-native-preset-phone.png') });
 });
 
-test('a long preset title and prompt toolbar stay inside the single column in both ordering views', async ({ page }) => {
+test('prompt cards start immediately after the compact toolbar on desktop and phone', async ({ page }) => {
     await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
     const title = page.locator('#chlo-preset-editor-title');
-    await title.evaluate(node => node.textContent = 'A long preset title that must wrap cleanly without pushing its actions outside the workspace');
-    for (const view of ['grouped', 'order']) {
+    await title.evaluate(node => node.textContent = 'A long preset title that should fit on a single line without pushing the toolbar or the prompt cards down');
+    const tools = page.getByRole('button', { name: 'Prompt tools', exact: true });
+    const toolsPanel = page.locator('#chlo-prompt-tools-panel');
+    for (const [width, view] of [[1440, 'grouped'], [390, 'order'], [320, 'grouped']]) {
+        await page.setViewportSize({ width, height: 844 });
+        await expect(toolsPanel).toBeHidden();
+        await openPromptTools(page);
         await page.locator(`[data-pm-view="${view}"]`).click();
         const list = page.locator('#completion_prompt_manager_list');
         await expect(list).toHaveAttribute('data-editor-view', view);
+        await expect(toolsPanel).toBeHidden();
         const drawer = await page.locator('#left-nav-panel').boundingBox();
         const toolbar = await page.locator('.chlo-block-navigation').boundingBox();
         const row = await list.locator('[data-pm-identifier]').first().boundingBox();
         const name = await title.boundingBox();
-        const actions = await page.locator('#chlo-preset-editor-actions').boundingBox();
-        expect(name.y + name.height).toBeLessThan(actions.y);
-        expect(actions.x + actions.width).toBeLessThanOrEqual(drawer.x + drawer.width);
-        expect(toolbar.y + toolbar.height).toBeLessThan(row.y);
+        const gap = row.y - (toolbar.y + toolbar.height);
+        expect(name.height).toBeLessThan(26);
+        expect(toolbar.x + toolbar.width).toBeLessThanOrEqual(drawer.x + drawer.width);
+        expect(gap).toBeGreaterThanOrEqual(0);
+        expect(gap).toBeLessThan(50);
+        expect(row.y - drawer.y).toBeLessThan(215);
         expect(toolbar.x).toBeCloseTo(row.x, 0);
         expect(toolbar.width).toBeCloseTo(row.width, 0);
     }
+    await tools.focus();
+    await tools.press('Enter');
+    await expect(toolsPanel).toBeVisible();
+    await tools.press('Tab');
+    await page.keyboard.press('Escape');
+    await expect(toolsPanel).toBeHidden();
+    await expect(tools).toBeFocused();
 });
 
 test('native import and export remain available and the collection follows the native preset options', async ({ page }) => {
@@ -305,6 +328,7 @@ test('native import and export remain available and the collection follows the n
     await page.locator('#temp_counter_openai').fill('0.72');
     await page.locator('#temp_counter_openai').press('Tab');
     await page.locator('#openai-tab-btn-prompts').click();
+    await openPromptTools(page);
     const saved = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await saved;
@@ -354,7 +378,12 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
         await expect(page.locator(`#${id}`)).toHaveCount(1);
     }
     await page.locator('#openai-tab-btn-prompts').click();
+    await openPromptTools(page);
     for (const selector of ['#update_oai_preset', '[data-preset-manager-rename="openai"]', '#new_oai_preset']) await expect(page.locator(`#chlo-preset-editor-actions ${selector}`)).toBeVisible();
+    await expect(page.locator('#chlo-prompt-tools-panel .completion_prompt_manager_header')).toContainText('Total Tokens:');
+    await page.locator('.chlo-available-blocks summary').click();
+    await expect(page.locator('#completion_prompt_manager_footer_append_prompt')).toBeVisible();
+    await expect(page.locator('#prompt-manager-import')).toBeVisible();
     await page.locator('#openai-tab-btn-parameters').click();
     await page.locator('#chlo-preset-layout-setting summary').click();
     await page.locator('#ChatCompletionTabs-enabled').uncheck();
@@ -393,6 +422,7 @@ test('Prompt order enables native dragging, and toggles and saves preserve the r
     await expect(row).toHaveClass(/prompt_disabled/);
     await row.locator('.prompt-manager-toggle-action').click();
     await expect(row).not.toHaveClass(/prompt_disabled/);
+    await openPromptTools(page);
     await page.locator('[data-pm-view="order"]').click();
     await expect(page.locator('#completion_prompt_manager_list')).toHaveAttribute('data-editor-view', 'order');
     const start = await row.locator('.drag-handle').boundingBox();
@@ -405,6 +435,7 @@ test('Prompt order enables native dragging, and toggles and saves preserve the r
     await page.mouse.move(end.x + 20, end.y + 2, { steps: 15 });
     await page.mouse.up();
     await expect(page.locator('#completion_prompt_manager_list [data-pm-identifier]').first()).toHaveAttribute('data-pm-identifier', 'pacing');
+    await openPromptTools(page);
     const response = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await response;
@@ -453,6 +484,7 @@ test('grouping wrappers and late instructions preserves saved order and the actu
         await route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'The archivist checks the catalogue.' }, finish_reason: 'stop' }] } });
     });
     for (const [view, earlier, later] of [['grouped', 'editor-reader', 'editor-open'], ['order', 'editor-open', 'editor-reader'], ['grouped', 'editor-reader', 'editor-open']]) {
+        await openPromptTools(page);
         await page.locator(`[data-pm-view="${view}"]`).click();
         await expect(list).toHaveAttribute('data-editor-view', view);
         const ids = await list.locator('[data-pm-identifier]').evaluateAll(rows => rows.map(row => row.dataset.pmIdentifier));
@@ -473,6 +505,7 @@ test('grouping wrappers and late instructions preserves saved order and the actu
     expect(requests[2].messages).toEqual(requests[0].messages);
     expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Editor voice: Calm.');
     expect(requests[0].messages.map(message => message.content).join('\n')).toContain('Check the current library scene.');
+    await openPromptTools(page);
     await page.getByRole('checkbox', { name: 'Show group controls' }).check();
     const reader = page.locator('[data-pm-identifier="editor-reader"]');
     await reader.getByRole('combobox', { name: 'Editor group for editor-reader' }).selectOption('context');
@@ -484,6 +517,7 @@ test('grouping wrappers and late instructions preserves saved order and the actu
     });
     expect(requests).toHaveLength(4);
     expect(requests[3].messages).toEqual(requests[0].messages);
+    await openPromptTools(page);
     const saved = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await saved;
@@ -499,12 +533,14 @@ test('editor organization persists separately, search opens collapsed matches, a
         const { oai_settings: s } = await import('/scripts/openai.js');
         return structuredClone({ prompts: s.prompts, order: s.prompt_order });
     });
+    await openPromptTools(page);
     await page.getByRole('checkbox', { name: 'Show group controls' }).check();
     const row = page.locator('[data-pm-identifier="voice-qa"]');
     await row.getByRole('combobox', { name: 'Editor group for Narrative voice' }).selectOption('context');
     await expect(row).toHaveAttribute('data-editor-group', 'context');
     await row.getByRole('button', { name: 'Move down in editor' }).click();
     await expect.poll(() => page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.chlo_preset.editor_layout.order)).not.toEqual(original.order[0].order.map(entry => entry.identifier));
+    await openPromptTools(page);
     const saved = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await saved;
@@ -585,10 +621,12 @@ test('cover upload saves an inactive preset without switching it and survives re
     expect(await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.preset_settings_openai)).toBe(active);
     expect(await shared(page)).toEqual(before);
     await card.locator('.chlo-preset-edit').click();
+    await openPromptTools(page);
     await page.locator('#new_oai_preset').click();
     await page.locator('dialog[open] textarea').fill('Cover copy QA');
     await page.locator('dialog[open] .popup-button-ok').click();
     await expect(page.locator('#chlo-preset-editor-title')).toHaveText('Cover copy QA');
+    await openPromptTools(page);
     await page.locator('[data-preset-manager-rename="openai"]').click();
     await page.locator('dialog[open] textarea').fill('Cover renamed QA');
     await page.locator('dialog[open] .popup-button-ok').click();
@@ -707,6 +745,7 @@ test('stateful Loom import generates through native controls with either macro e
     const regexSaved = page.waitForResponse('**/api/presets/save');
     await regexEditor.locator('.popup-button-ok').click();
     await regexSaved;
+    await openPromptTools(page);
     await page.locator('#update_oai_preset').click();
     const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/loom-stateful.json'), 'utf8'));
     expect(stored.chlo_preset.loom_compat).toBe(1);
@@ -761,6 +800,7 @@ test('visible grouped handles reorder and regroup blocks without modifying nativ
     expect(await page.locator('#completion_prompt_manager_list').evaluate(node => $(node).sortable('option', 'disabled'))).toBe(true);
     await page.getByRole('searchbox', { name: 'Find a block' }).clear();
     expect(await page.locator('#completion_prompt_manager_list').evaluate(node => $(node).sortable('option', 'disabled'))).toBe(false);
+    await openPromptTools(page);
     const saved = page.waitForResponse('**/api/presets/save');
     await page.locator('#update_oai_preset').click();
     await saved;

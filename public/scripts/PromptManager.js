@@ -641,7 +641,7 @@ class PromptManager {
             this.workspaceInsertAfter = this.workspaceSelectedId;
             if (inPromptWorkspace(this)) {
                 this.workspaceCollapsed = [];
-                const search = this.containerElement.querySelector('.chlo-block-search input');
+                const search = document.querySelector('#chlo-preset-editor-header .chlo-block-search');
                 if (search) {
                     search.value = '';
                     search.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1665,23 +1665,6 @@ class PromptManager {
         promptManagerDiv.insertAdjacentHTML('beforeend', headerHtml);
 
         this.listElement = promptManagerDiv.querySelector(`#${this.configuration.prefix}prompt_manager_list`);
-
-        if (promptManagerDiv.closest('#left-nav-panel.chlo-preset-panel')) {
-            const view = this.promptEditorView ?? 'grouped';
-            const controls = document.createElement('div');
-            controls.className = 'chlo-prompt-view';
-            controls.innerHTML = `<div class="chlo-prompt-view-buttons" role="group" aria-label="Prompt list view">
-                <button type="button" class="menu_button" data-pm-view="grouped" aria-pressed="${view === 'grouped'}">Editor layout</button>
-                <button type="button" class="menu_button" data-pm-view="order" aria-pressed="${view === 'order'}">Sending order</button>
-            </div><small class="chlo-prompt-view-help">${view === 'grouped' ? 'Drag a block by its ⠿ handle to arrange this editor. Sending order is unchanged.' : 'Drag to change the actual sending order. In-chat blocks use their depth.'}</small>`;
-            controls.addEventListener('click', event => {
-                const button = event.target.closest('[data-pm-view]');
-                if (!button || button.dataset.pmView === (this.promptEditorView ?? 'grouped')) return;
-                this.promptEditorView = button.dataset.pmView;
-                this.render(false);
-            });
-            this.listElement.before(controls);
-        }
 
         if (null !== this.activeCharacter) {
             const prompts = [...this.serviceSettings.prompts]

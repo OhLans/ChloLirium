@@ -24,10 +24,17 @@
 #left-nav-panel.chlo-preset-panel .chlo-config-tabs .openai-tab-button { min-width: 0; flex: 1; }
 #left-nav-panel.chlo-preset-panel > .scrollableInner { flex: 1; min-height: 0; padding: 0 2px 12px; overflow: hidden auto; }
 
-#left-nav-panel.chlo-preset-panel #chlo-preset-library-header,
-#left-nav-panel.chlo-preset-panel #chlo-preset-editor-header { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; }
-#left-nav-panel.chlo-preset-panel #chlo-preset-library-header h3,
-#left-nav-panel.chlo-preset-panel #chlo-preset-editor-title { font: 500 26px/1.3 Georgia, serif; letter-spacing: 0; margin: 0; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] #chlo-config-header { margin-block: 8px; padding-bottom: 8px; gap: 6px; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-title { display: none; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-tabs { grid-area: 1 / 1; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-actions { grid-area: 1 / 2; gap: 4px; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-tabs .openai-tab-buttons { gap: 2px; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-tabs .openai-tab-button { font-size: 13px; min-height: 35px; padding: 4px; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-tabs .openai-tab-button i { display: none; }
+#left-nav-panel.chlo-preset-panel[data-preset-view="prompts"] .chlo-config-actions > button { width: 32px; }
+
+#left-nav-panel.chlo-preset-panel #chlo-preset-library-header { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; }
+#left-nav-panel.chlo-preset-panel #chlo-preset-library-header h3 { font: 500 26px/1.3 Georgia, serif; letter-spacing: 0; margin: 0; }
 #left-nav-panel.chlo-preset-panel #chlo-preset-current { margin: 0; }
 #left-nav-panel.chlo-preset-panel #chlo-preset-collection { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; }
 #left-nav-panel.chlo-preset-panel .chlo-preset-search { width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 0; min-height: 42px; }
@@ -43,8 +50,6 @@
 .chlo-preview-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
 #chlo-preset-preview h3 { font: 500 18px/1.3 Georgia, serif; margin: 8px 0 4px; }
 #chlo-preset-preview p { margin: 4px 0; line-height: 1.55; }
-#left-nav-panel.chlo-preset-panel .chlo-back-library { width: fit-content; border: 0; padding: 0; background: none; color: inherit; font: inherit; cursor: pointer; opacity: .75; }
-
 #left-nav-panel.chlo-preset-panel #openai-tab-content-prompts > .range-block:has(> #completion_prompt_manager),
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager > .range-block { display: block; height: auto; min-width: 0; margin: 0; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_popup { box-sizing: border-box; padding: 14px; border: 1px solid var(--chlo-preset-line); border-radius: 14px; background: var(--chlo-preset-surface); }
@@ -58,14 +63,28 @@
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_popup_entry_form_prompt { min-height: clamp(220px, 37dvh, 440px); line-height: 1.65; padding: 12px; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_popup .completion_prompt_manager_popup_entry_form_footer { position: static; padding: 10px 0 0; background: none; flex-wrap: wrap; gap: 8px; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_popup_entry_form_save { background: color-mix(in srgb, var(--chlo-preset-accent) 40%, transparent); }
-#left-nav-panel.chlo-preset-panel .chlo-available-blocks { margin: 6px 0 12px; font-size: 13px; opacity: .8; }
-#left-nav-panel.chlo-preset-panel .chlo-available-blocks > summary { padding: 8px 0; cursor: pointer; }
-#left-nav-panel.chlo-preset-panel .chlo-block-search { display: flex; flex-wrap: wrap; gap: 7px; }
-#left-nav-panel.chlo-preset-panel .chlo-block-search input { flex: 1 1 120px; min-width: 0; padding: 10px 12px; margin: 0; }
-#left-nav-panel.chlo-preset-panel .chlo-add-block { flex: 0 0 auto; margin: 0; padding: 9px; font: inherit; font-size: 14px; border-radius: 9px; }
-#left-nav-panel.chlo-preset-panel .chlo-organize-toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; margin: 12px 0; opacity: .8; }
-#left-nav-panel.chlo-preset-panel .chlo-prompt-view { margin-top: 10px; }
-#left-nav-panel.chlo-preset-panel .chlo-block-navigation { min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--chlo-preset-line); }
+/* The prompt list and the open editor get the whole column. */
+#left-nav-panel.chlo-preset-panel #chlo-preset-editor-header { display: grid; gap: 7px; margin: 0 0 4px; }
+#left-nav-panel.chlo-preset-panel #openai-tab-content-prompts:has(#completion_prompt_manager_popup.openDrawer) #chlo-preset-editor-header { display: none; }
+.chlo-prompt-caption { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+#left-nav-panel.chlo-preset-panel #chlo-preset-editor-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 max(14px, var(--mainFontSize))/1.35 var(--mainFontFamily); opacity: .78; }
+.chlo-prompt-active-view { flex: none; font-size: 12px; opacity: .78; }
+#left-nav-panel.chlo-preset-panel .chlo-block-navigation { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: stretch; gap: 6px; min-width: 0; }
+#left-nav-panel.chlo-preset-panel input.chlo-block-search { box-sizing: border-box; min-height: 38px; width: 100%; padding: 6px 9px; margin: 0; }
+#left-nav-panel.chlo-preset-panel .chlo-block-navigation button { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 38px; margin: 0; padding: 5px 8px; font: inherit; font-size: 13px; border-radius: 9px; white-space: nowrap; }
+#left-nav-panel.chlo-preset-panel .chlo-block-navigation .chlo-prompt-tools-button { min-width: 36px; font-size: 19px; line-height: 1; }
+#left-nav-panel.chlo-preset-panel .chlo-prompt-tools-button[aria-expanded="true"] { background: color-mix(in srgb, var(--chlo-preset-accent) 25%, transparent); }
+#chlo-prompt-tools-panel { min-width: 0; padding: 10px; border: 1px solid var(--chlo-preset-line); border-radius: 10px; background: var(--chlo-preset-surface); }
+#chlo-prompt-tools-panel .completion_prompt_manager_header { display: block; margin: 0 0 7px; font-size: 13px; opacity: .8; }
+#chlo-prompt-tools-panel .completion_prompt_manager_header_advanced { display: none; }
+#chlo-prompt-tools-panel .chlo-organize-toggle { display: flex; align-items: center; gap: 7px; width: fit-content; font-size: 13px; margin-top: 6px; }
+#chlo-prompt-tools-panel .chlo-available-blocks { margin: 7px 0; font-size: 13px; }
+#chlo-prompt-tools-panel .chlo-available-blocks > summary { padding: 5px 0; cursor: pointer; }
+#chlo-prompt-tools-panel .completion_prompt_manager_footer { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+#chlo-prompt-tools-panel .completion_prompt_manager_footer select { flex: 1 1 135px; max-width: 100%; }
+#chlo-prompt-tools-panel .completion_prompt_manager_footer .menu_button { margin: 0; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list { margin-top: 6px; }
+#left-nav-panel.chlo-preset-panel #completion_prompt_manager .chlo-prompt-section:not(.chlo-prompt-section ~ .chlo-prompt-section) { padding-top: 8px; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager_list li.completion_prompt_manager_prompt { box-sizing: border-box; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list[data-editor-view="grouped"] .completion_prompt_manager_prompt { grid-template-columns: 18px minmax(0, 1fr) auto; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list[data-editor-view="grouped"] .drag-handle { display: flex; font-size: 22px; cursor: grab; }
