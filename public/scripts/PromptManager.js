@@ -862,7 +862,7 @@ class PromptManager {
             this.workspaceSearch = '';
             this.workspaceSelectedId = undefined;
             this.workspaceCollapsed = [];
-            if (this.containerElement) this.containerElement.scrollTop = 0;
+            if (inPromptWorkspace(this) && window.matchMedia('(min-width: 701px)').matches) this.#setScrollPosition(0);
             this.hidePopup();
             this.clearEditForm();
             this.renderDebounced();
@@ -879,7 +879,14 @@ class PromptManager {
      * @returns {number} - Scroll position of the prompt manager
      */
     #getScrollPosition() {
-        return document.getElementById(this.configuration.prefix + 'prompt_manager')?.closest('.scrollableInner')?.scrollTop;
+        return this.#getScrollContainer()?.scrollTop;
+    }
+
+    #getScrollContainer() {
+        if (inPromptWorkspace(this) && window.matchMedia('(min-width: 701px)').matches) {
+            return this.containerElement.querySelector('.chlo-block-scroller');
+        }
+        return this.containerElement?.closest('.scrollableInner');
     }
 
     /**
@@ -888,7 +895,7 @@ class PromptManager {
      */
     #setScrollPosition(scrollPosition) {
         if (scrollPosition === undefined || scrollPosition === null) return;
-        document.getElementById(this.configuration.prefix + 'prompt_manager')?.closest('.scrollableInner')?.scrollTo(0, scrollPosition);
+        this.#getScrollContainer()?.scrollTo(0, scrollPosition);
     }
 
     /**

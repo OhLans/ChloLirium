@@ -35,6 +35,8 @@ internal column divider with pointer dragging and Left/Right keyboard controls;
 their widths are remembered independently in this browser. Closing the
 configuration or disabling the layout restores the chat. Theme
 colors, pin controls, API profiles and all native parameter nodes are retained.
+On desktop, the title, tabs, pin and close button share one header. Preset
+actions share a row with the preset title, above the aligned editing columns.
 The opening page is a searchable vertical preset list with cover cards and a
 preview alongside it. Selecting a title previews the preset without applying
 it; Edit opens its blocks. On phones the title also opens the editor, since the
@@ -77,8 +79,9 @@ preset position or in-chat depth; the groups never change stored `prompt_order`,
 macro evaluation, roles, injections or prompt assembly.
 Visible block handles drag within and between editor groups; Up/Down keys on
 a handle move it within its group. Show group controls exposes per-block group
-selectors and up/down buttons. Search and layout controls stay visible at the
-top of the scrolling list. Dragging is disabled while a search is active so a
+selectors and up/down buttons. On desktop, search and layout controls occupy
+their own full-width strip above the independently scrolling rows. On phones
+they flow with the page. Dragging is disabled while a search is active so a
 filtered list cannot accidentally change positions; clearing search restores it.
 Sending order is the separate native sequence view, whose drag handler updates
 the actual prompt_order. Disabling the tab layout restores native ordering and
