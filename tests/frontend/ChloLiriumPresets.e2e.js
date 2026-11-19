@@ -579,6 +579,95 @@ test('editor organization persists separately, search opens collapsed matches, a
     expect(created.entry.enabled).toBe(true);
 });
 
+test('custom prompt sections can be arranged, filled and removed without changing sending order', async ({ page }) => {
+    const openPreset = name => page.locator('.chlo-preset-card').filter({ hasText: name }).locator('.chlo-preset-edit').click();
+    const getNativePrompts = () => page.evaluate(async () => {
+        const { oai_settings: s } = await import('/scripts/openai.js');
+        return { prompts: s.prompts, order: s.prompt_order };
+    });
+    await openPreset('Banana QA');
+    const original = await getNativePrompts();
+    const manage = page.getByRole('button', { name: 'Manage sections' });
+    const headings = page.locator('[data-pm-group] button');
+    await expect(manage).toBeHidden();
+    const openManager = async () => {
+        await openPromptTools(page);
+        await manage.click();
+    };
+    await openManager();
+    const dialog = page.locator('dialog[open]').filter({ hasText: 'Manage sections' });
+    const sectionRows = dialog.locator('[data-section-id]');
+    const names = dialog.getByRole('textbox', { name: 'Section name' });
+    const add = dialog.getByRole('button', { name: 'Add section' });
+    const apply = dialog.getByRole('button', { name: 'Apply sections' });
+    const row = page.locator('[data-pm-identifier="voice-qa"]');
+    await expect(names).toHaveCount(2);
+    await names.first().fill('Core instructions');
+    await add.click();
+    await apply.click();
+    await expect(dialog.getByRole('alert')).toHaveText('Enter a name for each section.');
+    await names.last().fill('Style & voice');
+    await add.click();
+    await names.last().fill('Reference notes');
+    await expect.poll(() => sectionRows.first().evaluate(el => Boolean($(el.parentElement).data('ui-sortable')))).toBe(true);
+    const first = await sectionRows.first().boundingBox();
+    await dragHandle(page, sectionRows.last().locator('.chlo-section-drag'), { x: first.x + 8, y: first.y + 3 });
+    await expect(names.first()).toHaveValue('Reference notes');
+    await apply.click();
+    await expect(headings).toHaveText([/Reference notes\s*0/, /Core instructions/, /Context & structure/, /Style & voice\s*0/]);
+    await openPromptTools(page);
+    await page.getByRole('checkbox', { name: 'Show group controls' }).check();
+    const groupPicker = row.getByRole('combobox', { name: 'Editor group for Narrative voice' });
+    await groupPicker.selectOption({ label: 'Style & voice' });
+    await expect(headings.last()).toHaveText(/Style & voice\s*1/);
+    await headings.last().click();
+    await expect(row).toBeHidden();
+    await page.getByRole('searchbox', { name: 'Find a block' }).fill('Narrative voice');
+    await expect(row).toBeVisible();
+    await page.getByRole('searchbox', { name: 'Find a block' }).clear();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openManager();
+    expect(await dialog.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(390);
+    await sectionRows.last().getByRole('button', { name: 'Remove section' }).click();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(headings.last()).toHaveText(/Style & voice\s*1/);
+    await openManager();
+    await sectionRows.last().getByRole('button', { name: 'Remove section' }).click();
+    await sectionRows.first().getByRole('button', { name: 'Move section down' }).click();
+    await apply.click();
+    await expect(headings).toHaveText([/Core instructions/, /Reference notes\s*0/, /Context & structure/]);
+    await expect(row).toHaveAttribute('data-editor-group', 'instructions');
+    await groupPicker.selectOption({ label: 'Reference notes' });
+    await expect(headings.nth(1)).toHaveText(/Reference notes\s*1/);
+    expect(await getNativePrompts()).toEqual(original);
+
+    await openPromptTools(page);
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const file = path.join(dataRoot, 'default-user/OpenAI Settings/Banana QA.json');
+    const data = JSON.parse(await readFile(file, 'utf8'));
+    expect(data.prompts).toEqual(original.prompts);
+    expect(data.prompt_order).toEqual(original.order);
+    const sections = data.chlo_preset.editor_layout;
+    expect(sections.group_order).toEqual(['instructions', sections.assignments['voice-qa'], 'context']);
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('preloader'));
+    await page.waitForFunction(async () => (await import('/scripts/events.js')).eventSource.autoFireLastArgs.has('app_ready'));
+    await page.locator('#ai-config-button > .drawer-toggle').click();
+    await openPreset('Sola QA');
+    await expect(headings).toHaveText([/Instructions/, /Context & structure/]);
+    await page.locator('#openai-tab-btn-presets').click();
+    await openPreset('Banana QA');
+    await expect(headings).toHaveText([/Core instructions/, /Reference notes\s*1/, /Context & structure/]);
+    await expect(row).toHaveAttribute('data-editor-group', sections.assignments['voice-qa']);
+    await openPromptTools(page);
+    await page.locator('[data-pm-view="order"]').click();
+    await expect(headings).toHaveCount(0);
+    expect(await getNativePrompts()).toEqual(original);
+});
+
 test('Loom import uses the same Import control and rejects unsupported macros before saving', async ({ page }) => {
     const before = await shared(page);
     const loom = JSON.parse(await readFile(path.join(root, 'tests/fixtures/chlolirium/loom-example.loom'), 'utf8'));

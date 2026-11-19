@@ -77,7 +77,9 @@
 #chlo-prompt-tools-panel { min-width: 0; padding: 10px; border: 1px solid var(--chlo-preset-line); border-radius: 10px; background: var(--chlo-preset-surface); }
 #chlo-prompt-tools-panel .completion_prompt_manager_header { display: block; margin: 0 0 7px; font-size: 13px; opacity: .8; }
 #chlo-prompt-tools-panel .completion_prompt_manager_header_advanced { display: none; }
-#chlo-prompt-tools-panel .chlo-organize-toggle { display: flex; align-items: center; gap: 7px; width: fit-content; font-size: 13px; margin-top: 6px; }
+#chlo-prompt-tools-panel .chlo-section-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
+#chlo-prompt-tools-panel .chlo-organize-toggle { display: flex; align-items: center; gap: 7px; width: fit-content; font-size: 13px; }
+#chlo-prompt-tools-panel .chlo-manage-sections { margin: 0; font-size: 13px; }
 #chlo-prompt-tools-panel .chlo-available-blocks { margin: 7px 0; font-size: 13px; }
 #chlo-prompt-tools-panel .chlo-available-blocks > summary { padding: 5px 0; cursor: pointer; }
 #chlo-prompt-tools-panel .completion_prompt_manager_footer { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
@@ -92,6 +94,7 @@
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list[data-editor-view="grouped"] .prompt_manager_prompt_tokens { grid-column: 2; }
 #left-nav-panel.chlo-preset-panel #completion_prompt_manager #completion_prompt_manager_list[data-editor-view="grouped"] .completion_prompt_manager_prompt > span:nth-child(3) { grid-column: 3; }
 #left-nav-panel.chlo-preset-panel .chlo-prompt-section > button { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 0; color: inherit; background: none; border: 0; text-align: start; font: inherit; cursor: pointer; }
+#left-nav-panel.chlo-preset-panel .chlo-prompt-section > button > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
 #left-nav-panel.chlo-preset-panel .chlo-prompt-section small { margin-inline-start: auto; }
 #left-nav-panel.chlo-preset-panel .chlo-prompt-section [aria-expanded="false"] > span:first-child { transform: rotate(-90deg); }
 #left-nav-panel.chlo-preset-panel .chlo-select-prompt { display: inline; max-width: 100%; border: 0; padding: 0; text-align: start; font: inherit; color: inherit; background: none; cursor: pointer; overflow-wrap: anywhere; }
@@ -102,3 +105,12 @@
 .chlo-block-organization > div { display: flex; gap: 4px; }
 .chlo-block-organization button { min-width: 32px; margin: 0; }
 #left-nav-panel.chlo-preset-panel [hidden] { display: none !important; }
+
+.chlo-section-editor h3 { margin: 0; }
+.chlo-section-editor ol { list-style: none; display: grid; gap: 6px; margin: 12px 0; padding: 0; }
+.chlo-section-editor li { display: grid; grid-template-columns: 16px minmax(0, 1fr) repeat(3, 34px); align-items: center; gap: 4px; }
+.chlo-section-editor .chlo-section-drag { cursor: grab; opacity: .7; }
+.chlo-section-editor li input { min-width: 0; width: 100%; margin: 0; box-sizing: border-box; }
+.chlo-section-editor li button { min-height: 34px; margin: 0; padding: 0; font-size: 16px; }
+.chlo-section-editor li button:disabled { opacity: .35; cursor: default; }
+.chlo-section-editor small { display: block; margin-top: 8px; opacity: .8; }
