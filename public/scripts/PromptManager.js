@@ -12,9 +12,9 @@ import { renderTemplateAsync } from './templates.js';
 import { Popup } from './popup.js';
 import { t } from './i18n.js';
 import { isMobile } from './RossAscends-mods.js';
-import { editorLayoutFromSequence, promptEditorGroups, promptEditorPlacement } from './chlolirium/presets/presentation.js';
+import { promptEditorGroups, promptEditorPlacement } from './chlolirium/presets/presentation.js';
 import { createChatLoomResolver } from './chlolirium/presets/loom-runtime.js';
-import { confirmPromptSwitch, inPromptWorkspace, mountPromptWorkspace, promptEditorLoaded } from './chlolirium/presets/workspace.js';
+import { confirmPromptSwitch, inPromptWorkspace, mountPromptWorkspace, promptEditorLoaded, savePromptWorkspaceOrder } from './chlolirium/presets/workspace.js';
 
 function debouncePromise(func, delay) {
     let timeoutId;
@@ -862,6 +862,7 @@ class PromptManager {
             this.workspaceSearch = '';
             this.workspaceSelectedId = undefined;
             this.workspaceCollapsed = [];
+            this.workspaceDividerFocus = undefined;
             if (inPromptWorkspace(this)) this.#setScrollPosition(0);
             this.hidePopup();
             this.clearEditForm();
@@ -1983,23 +1984,17 @@ class PromptManager {
      * @returns {void}
      */
     makeDraggable() {
+        const grouped = this.listElement.dataset.editorView === 'grouped';
+        const block = `.${this.configuration.prefix}prompt_manager_prompt_draggable`;
         $(`#${this.configuration.prefix}prompt_manager_list`).sortable({
             disabled: Boolean(this.workspaceSearch?.trim()) && inPromptWorkspace(this),
             delay: this.configuration.sortableDelay,
             handle: inPromptWorkspace(this) || isMobile() ? '.drag-handle' : null,
-            items: `.${this.configuration.prefix}prompt_manager_prompt_draggable`,
-            update: (event, ui) => {
-                if (this.listElement.dataset.editorView === 'grouped') {
-                    const sequence = [];
-                    let group = this.listElement.querySelector('[data-pm-group]')?.dataset.pmGroup ?? 'instructions';
-                    for (const row of this.listElement.children) {
-                        if (row.dataset.pmGroup) group = row.dataset.pmGroup;
-                        if (row.dataset.pmIdentifier) sequence.push({ identifier: row.dataset.pmIdentifier, group });
-                    }
-                    const layout = editorLayoutFromSequence(this.getPromptsForCharacter(this.activeCharacter), this.serviceSettings.chlo_preset?.editor_layout, sequence);
-                    this.serviceSettings.chlo_preset = { ...this.serviceSettings.chlo_preset, editor_layout: layout };
-                    this.saveServiceSettings();
-                    this.render(false);
+            items: grouped ? `> ${block}:visible, > [data-pm-group]:visible` : block,
+            ...(grouped ? { axis: 'y', placeholder: 'chlo-prompt-drop-placeholder', forcePlaceholderSize: true } : {}),
+            update: () => {
+                if (grouped) {
+                    savePromptWorkspaceOrder(this);
                     return;
                 }
                 const promptOrder = this.getPromptOrderForCharacter(this.activeCharacter);

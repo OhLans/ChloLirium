@@ -101,6 +101,23 @@ describe('Native preset presentation', () => {
         expect(prompts).toEqual(source);
     });
 
+    test('dragged dividers can leave leading blocks ungrouped and keep an empty heading available', () => {
+        const prompts = [{ identifier: 'one' }, { identifier: 'two' }, { identifier: 'three' }];
+        const layout = { groups: [{ id: 'notes', label: 'Notes' }] };
+        const sequence = [
+            { identifier: 'one', group: 'ungrouped' },
+            { identifier: 'two', group: 'notes' },
+            { identifier: 'three', group: 'notes' },
+        ];
+        const next = editorLayoutFromSequence(prompts, layout, sequence, ['notes', 'instructions']);
+        expect(promptEditorGroups(prompts, next)).toEqual([
+            { id: 'ungrouped', label: '', prompts: [prompts[0]] },
+            { id: 'notes', label: 'Notes', prompts: prompts.slice(1) },
+            { id: 'instructions', label: 'Instructions', prompts: [] },
+        ]);
+        expect(next.group_order).toEqual(['notes', 'context', 'instructions']);
+    });
+
     test('inserting a section respects the editor order and moves only the remainder of the chosen group', () => {
         const prompts = ['one', 'two', 'three', 'chatHistory', 'extra'].map(identifier => ({ identifier }));
         const layout = {

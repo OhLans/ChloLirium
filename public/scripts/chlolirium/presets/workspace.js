@@ -1,9 +1,31 @@
 import { Popup } from '../../popup.js';
 import { escapeHtml } from '../../utils.js';
-import { applyPromptSections, insertPromptSection, organizePrompt, promptEditorGroups, promptSectionDefinitions } from './presentation.js';
+import { applyPromptSections, editorLayoutFromSequence, insertPromptSection, organizePrompt, promptEditorGroups, promptSectionDefinitions, ungroupedPromptSection } from './presentation.js';
 import { chooseSectionForSplit, editPromptSections } from './sections.js';
 
 export const inPromptWorkspace = manager => Boolean(manager.containerElement?.closest('#left-nav-panel.chlo-preset-panel'));
+
+function commitEditorLayout(manager, layout) {
+    manager.serviceSettings.chlo_preset = { ...manager.serviceSettings.chlo_preset, editor_layout: layout };
+    manager.saveServiceSettings();
+    manager.render(false);
+}
+
+/** Save the visible ordering of cards and headings without touching generation order. */
+export function savePromptWorkspaceOrder(manager) {
+    const sequence = [];
+    const sections = [];
+    let group = ungroupedPromptSection;
+    for (const row of manager.listElement.children) {
+        if (row.dataset.pmGroup) {
+            group = row.dataset.pmGroup;
+            sections.push(group);
+        }
+        if (row.dataset.pmIdentifier) sequence.push({ identifier: row.dataset.pmIdentifier, group });
+    }
+    const layout = editorLayoutFromSequence(manager.getPromptsForCharacter(manager.activeCharacter), manager.serviceSettings.chlo_preset?.editor_layout, sequence, sections);
+    commitEditorLayout(manager, layout);
+}
 
 function formSnapshot(manager) {
     const values = {};
@@ -47,7 +69,7 @@ export function filterPromptWorkspace(manager) {
     const list = manager.listElement;
     if ($(list).data('ui-sortable')) $(list).sortable('option', 'disabled', Boolean(query));
     const help = document.querySelector('#chlo-preset-editor-header .chlo-prompt-view-help');
-    if (help) help.textContent = query ? 'Clear the search to drag blocks.' : list.dataset.editorView === 'grouped' ? 'Drag a block by its ⠿ handle to arrange this editor. Sending order is unchanged.' : 'Drag to change the actual sending order. In-chat blocks use their depth.';
+    if (help) help.textContent = query ? 'Clear the search to drag.' : list.dataset.editorView === 'grouped' ? 'Drag blocks or section headings by their ⠿ handles. Sending order is unchanged.' : 'Drag to change the actual sending order. In-chat blocks use their depth.';
     let shown = 0;
     const visibleGroups = new Set();
     for (const row of list.querySelectorAll('[data-pm-identifier]')) {
@@ -76,11 +98,7 @@ export function mountPromptWorkspace(manager) {
     const toolsButton = header.querySelector('.chlo-prompt-tools-button');
     const tools = header.querySelector('.chlo-prompt-list-tools');
     const closeTools = () => { if (toolsButton.getAttribute('aria-expanded') === 'true') toolsButton.click(); };
-    const commitLayout = layout => {
-        manager.serviceSettings.chlo_preset = { ...manager.serviceSettings.chlo_preset, editor_layout: layout };
-        manager.saveServiceSettings();
-        manager.render(false);
-    };
+    const commitLayout = layout => commitEditorLayout(manager, layout);
     if (search.value !== (manager.workspaceSearch ?? '')) search.value = manager.workspaceSearch ?? '';
     search.oninput = () => { manager.workspaceSearch = search.value; filterPromptWorkspace(manager); };
     header.querySelector('.chlo-add-block').onclick = event => { closeTools(); manager.handleNewPrompt(event); };
@@ -133,6 +151,7 @@ export function mountPromptWorkspace(manager) {
     const groups = promptEditorGroups(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), layout);
     const groupForPrompt = new Map(groups.flatMap(group => group.prompts.map(prompt => [prompt.identifier, group.id])));
     const sections = promptSectionDefinitions(layout);
+    const sectionChoices = [...sections, { id: ungroupedPromptSection, label: 'Ungrouped' }];
     list.classList.toggle('chlo-organizing', Boolean(manager.workspaceOrganize));
     const insertAbove = async identifier => {
         const preset = manager.serviceSettings.preset_settings_openai;
@@ -142,7 +161,7 @@ export function mountPromptWorkspace(manager) {
         const emptySections = sections.filter(item => item.removable && !groups.find(group => group.id === item.id)?.prompts.length);
         const choice = await chooseSectionForSplit({
             anchor: group.prompts[index].name || 'This block',
-            source: group.label,
+            source: group.label || 'Ungrouped',
             count: group.prompts.length - index,
             sections,
             emptySections,
@@ -172,7 +191,7 @@ export function mountPromptWorkspace(manager) {
         }
         const controls = document.createElement('div');
         controls.className = 'chlo-block-organization';
-        controls.innerHTML = `<label>Editor group<select aria-label="Editor group for ${escapeHtml(name)}">${sections.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === row.dataset.editorGroup ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}</select></label><div><button type="button" class="menu_button" data-editor-move="up" aria-label="Move up in editor">↑</button><button type="button" class="menu_button" data-editor-move="down" aria-label="Move down in editor">↓</button><button type="button" class="menu_button chlo-insert-section" title="Insert section above this block" aria-label="Insert section above this block">+ Section above</button></div>`;
+        controls.innerHTML = `<label>Editor group<select aria-label="Editor group for ${escapeHtml(name)}">${sectionChoices.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === row.dataset.editorGroup ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}</select></label><div><button type="button" class="menu_button" data-editor-move="up" aria-label="Move up in editor">↑</button><button type="button" class="menu_button" data-editor-move="down" aria-label="Move down in editor">↓</button><button type="button" class="menu_button chlo-insert-section" title="Insert section above this block" aria-label="Insert section above this block">+ Section above</button></div>`;
         controls.querySelector('select').addEventListener('change', event => commitLayout(organizePrompt(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), manager.serviceSettings.chlo_preset?.editor_layout, identifier, { group: event.target.value })));
         controls.querySelectorAll('[data-editor-move]').forEach(button => button.addEventListener('click', () => commitLayout(organizePrompt(manager.getPromptsForCharacter(manager.activeCharacter).filter(Boolean), manager.serviceSettings.chlo_preset?.editor_layout, identifier, { direction: button.dataset.editorMove }))));
         const insert = controls.querySelector('.chlo-insert-section');
@@ -181,17 +200,44 @@ export function mountPromptWorkspace(manager) {
         row.append(controls);
     }
     for (const heading of list.querySelectorAll('[data-pm-group]')) {
+        const group = heading.dataset.pmGroup;
+        const title = heading.querySelector('span').textContent;
+        const handle = document.createElement('span');
+        handle.className = 'drag-handle chlo-section-handle';
+        handle.textContent = '⠿';
+        handle.title = 'Drag to move this divider';
+        handle.tabIndex = 0;
+        handle.setAttribute('role', 'button');
+        handle.setAttribute('aria-label', `Move ${title} divider; use Up or Down arrow keys`);
+        handle.addEventListener('keydown', event => {
+            if (!['ArrowUp', 'ArrowDown'].includes(event.key) || manager.workspaceSearch?.trim()) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const direction = event.key === 'ArrowUp' ? 'previousElementSibling' : 'nextElementSibling';
+            let neighbor = heading[direction];
+            while (neighbor && (neighbor.hidden || !neighbor.matches('[data-pm-group], [data-pm-identifier]'))) neighbor = neighbor[direction];
+            if (!neighbor) return;
+            if (event.key === 'ArrowUp') neighbor.before(heading);
+            else neighbor.after(heading);
+            manager.workspaceDividerFocus = group;
+            savePromptWorkspaceOrder(manager);
+        });
         const button = document.createElement('button');
         button.type = 'button';
         button.innerHTML = `<span aria-hidden="true">⌄</span> ${heading.innerHTML}`;
-        heading.replaceChildren(button);
+        heading.replaceChildren(handle, button);
         button.addEventListener('click', () => {
             const collapsed = new Set(manager.workspaceCollapsed ?? []);
-            if (collapsed.has(heading.dataset.pmGroup)) collapsed.delete(heading.dataset.pmGroup);
-            else collapsed.add(heading.dataset.pmGroup);
+            if (collapsed.has(group)) collapsed.delete(group);
+            else collapsed.add(group);
             manager.workspaceCollapsed = [...collapsed];
             filterPromptWorkspace(manager);
         });
     }
     filterPromptWorkspace(manager);
+    if (manager.workspaceDividerFocus) {
+        const heading = [...list.querySelectorAll('[data-pm-group]')].find(row => row.dataset.pmGroup === manager.workspaceDividerFocus);
+        heading?.querySelector('.chlo-section-handle')?.focus({ preventScroll: true });
+        manager.workspaceDividerFocus = undefined;
+    }
 }

@@ -668,6 +668,56 @@ test('custom prompt sections can be arranged, filled and removed without changin
     expect(await getNativePrompts()).toEqual(original);
 });
 
+test('dragging a divider changes its boundary while every prompt card stays in place', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1800 });
+    await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-edit').click();
+    const list = page.locator('#completion_prompt_manager_list');
+    const row = id => list.locator(`[data-pm-identifier="${id}"]`);
+    const cards = () => list.locator('[data-pm-identifier]').evaluateAll(rows => rows.map(row => row.dataset.pmIdentifier));
+    const before = await cards();
+    const native = await page.evaluate(async () => {
+        const { oai_settings: s } = await import('/scripts/openai.js');
+        return { prompts: s.prompts, order: s.prompt_order };
+    });
+    await openPromptTools(page);
+    await page.getByRole('button', { name: 'Manage sections' }).click();
+    const dialog = page.locator('dialog[open]');
+    await dialog.getByRole('button', { name: 'Add section' }).click();
+    await dialog.getByRole('textbox', { name: 'Section name' }).last().fill('Divider notes');
+    await dialog.getByRole('button', { name: 'Apply sections' }).click();
+    const divider = list.locator('[data-pm-group]').filter({ hasText: 'Divider notes' });
+    const handle = divider.locator('.chlo-section-handle');
+    await expect(handle).toBeVisible();
+    await list.locator('[data-pm-group="context"] button').click();
+    const main = await row('main').boundingBox();
+    await dragHandle(page, handle, { x: main.x + 14, y: main.y + 4 });
+    const above = item => item.evaluate(el => ({ heading: el.previousElementSibling?.textContent, before: el.previousElementSibling?.previousElementSibling?.dataset.pmIdentifier }));
+    await expect.poll(() => above(row('main'))).toMatchObject({ heading: expect.stringContaining('Divider notes'), before: 'voice-qa' });
+    await expect(list.locator('[data-pm-group="context"] button')).toHaveAttribute('aria-expanded', 'false');
+    expect(await cards()).toEqual(before);
+
+    await handle.press('ArrowDown');
+    await expect.poll(() => above(row('enhanceDefinitions'))).toMatchObject({ heading: expect.stringContaining('Divider notes'), before: 'main' });
+    await expect(handle).toBeFocused();
+    expect(await cards()).toEqual(before);
+
+    // The first divider can move too. The card above it stays visibly ungrouped.
+    await list.locator('[data-pm-group="instructions"] .chlo-section-handle').press('ArrowDown');
+    await expect(row('voice-qa')).toHaveAttribute('data-editor-group', 'ungrouped');
+    await expect.poll(() => above(row('main'))).toMatchObject({ heading: expect.stringContaining('Instructions'), before: 'voice-qa' });
+    expect(await cards()).toEqual(before);
+
+    await openPromptTools(page);
+    const saved = page.waitForResponse('**/api/presets/save');
+    await page.locator('#update_oai_preset').click();
+    await saved;
+    const stored = JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Sola QA.json'), 'utf8'));
+    expect(stored.prompts).toEqual(native.prompts);
+    expect(stored.prompt_order).toEqual(native.order);
+    expect(stored.chlo_preset.editor_layout.order).toEqual(before);
+    expect(stored.chlo_preset.editor_layout.assignments['voice-qa']).toBe('ungrouped');
+});
+
 test('a separator can be inserted at a specific prompt without moving either neighboring block', async ({ page }) => {
     await page.locator('.chlo-preset-card').filter({ hasText: 'Banana QA' }).locator('.chlo-preset-edit').click();
     await openPromptTools(page);
