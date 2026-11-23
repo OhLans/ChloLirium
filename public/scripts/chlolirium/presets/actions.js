@@ -63,7 +63,6 @@ export function initPresetActions(collection) {
     const specs = [
         ['#import_oai_preset', 'Import', 'chlo-preset-library-actions'],
         ['#export_oai_preset', 'Export', 'chlo-preset-library-actions'],
-        ['#delete_oai_preset', 'Delete', 'chlo-preset-library-actions'],
         ['#update_oai_preset', 'Save preset', 'chlo-preset-editor-actions'],
         ['[data-preset-manager-rename="openai"]', 'Rename', 'chlo-preset-editor-actions'],
         ['#new_oai_preset', 'Save as', 'chlo-preset-editor-actions'],

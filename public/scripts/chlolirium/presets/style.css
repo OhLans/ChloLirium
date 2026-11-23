@@ -73,8 +73,10 @@
 #left-nav-panel .chlo-preset-name { font-family: var(--mainFontFamily); font-size: max(18px, var(--mainFontSize)); line-height: 1.4; overflow-wrap: anywhere; }
 #left-nav-panel .chlo-preset-open small { opacity: .6; font-size: 12px; }
 #left-nav-panel .chlo-preset-card-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: end; gap: 10px; }
+#left-nav-panel .chlo-preset-card-buttons { display: flex; flex-wrap: wrap; justify-content: end; gap: 5px; }
 #left-nav-panel .chlo-preset-card-footer .menu_button { display: flex; gap: 8px; align-items: center; min-height: 32px; padding: 5px 10px; margin: 0; border-radius: 8px; font-size: 13px; }
 #left-nav-panel .chlo-preset-card-footer .chlo-preset-use { background: color-mix(in srgb, var(--chlo-preset-accent) 30%, transparent); }
+#left-nav-panel .chlo-preset-card-footer .chlo-preset-delete:hover { background-color: var(--crimson-hover); }
 #left-nav-panel .chlo-preset-active { margin-inline-end: auto; font-size: 11px; opacity: .75; text-transform: uppercase; letter-spacing: .08em; }
 .chlo-preset-cover-dialog { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .chlo-preset-cover-dialog h3 { margin: 0; overflow-wrap: anywhere; }

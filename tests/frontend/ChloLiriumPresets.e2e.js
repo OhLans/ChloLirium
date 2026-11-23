@@ -164,8 +164,12 @@ test('all tabs share a compact header with their main content immediately below'
             expect(await panel.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
         }
         expect(sizes).toEqual([sizes[0], sizes[0], sizes[0]]);
+        await page.locator('#openai-tab-btn-presets').click();
+        const buttons = await panel.locator('.chlo-preset-card.selected .chlo-preset-card-buttons button')
+            .evaluateAll(items => items.map(item => ({ label: item.textContent.trim(), y: item.getBoundingClientRect().y })));
+        expect(buttons.map(item => item.label)).toEqual(['Use', 'Edit', 'Delete']);
+        expect(new Set(buttons.map(item => item.y)).size).toBe(1);
     }
-    await page.locator('#openai-tab-btn-presets').click();
     await expect(libraryTools).toBeHidden();
     const button = page.getByRole('button', { name: 'Preset tools', exact: true });
     await button.press('Enter');
@@ -418,10 +422,11 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
     await openPresetTools(page);
     await expect(page.locator('#chlo-preset-current')).toHaveText('Active: Sola QA');
-    for (const id of ['import_oai_preset', 'export_oai_preset', 'delete_oai_preset']) {
+    for (const id of ['import_oai_preset', 'export_oai_preset']) {
         await expect(page.locator(`#chlo-preset-library-actions #${id}`)).toBeVisible();
         await expect(page.locator(`#${id}`)).toHaveCount(1);
     }
+    await expect(page.locator('#chlo-preset-library-actions #delete_oai_preset')).toHaveCount(0);
     await page.locator('#openai-tab-btn-prompts').click();
     await openPromptTools(page);
     for (const selector of ['#update_oai_preset', '[data-preset-manager-rename="openai"]', '#new_oai_preset']) await expect(page.locator(`#chlo-preset-editor-actions ${selector}`)).toBeVisible();
@@ -438,6 +443,7 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
     await page.locator('#ChatCompletionTabs-enabled').uncheck();
     await expect(page.locator('#chlo-native-preset-toolbar')).toBeVisible();
     await expect(page.locator('#chlo-native-preset-toolbar #update_oai_preset')).toBeVisible();
+    await expect(page.locator('#chlo-native-preset-toolbar #delete_oai_preset')).toBeVisible();
     await expect(page.locator('#range_block_openai > .range-block').first().locator('#oai_max_context_unlocked')).toBeVisible();
     await expect.poll(storedSetting).toBe(false);
     await page.locator('#ChatCompletionTabs-enabled').check();
@@ -844,6 +850,41 @@ test('Loom import uses the same Import control and rejects unsupported macros be
     await expect(readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Unsupported QA.json'))).rejects.toThrow();
 });
 
+test('card deletion confirms the named inactive preset and leaves the active settings alone', async ({ page }) => {
+    const name = 'Delete & keep active QA';
+    const active = await page.evaluate(async name => {
+        const { oai_settings, saveChatCompletionPromptPreset } = await import('/scripts/openai.js');
+        await saveChatCompletionPromptPreset(name, { ...oai_settings, temp_openai: 0.19 });
+        return oai_settings.preset_settings_openai;
+    }, name);
+    const before = await shared(page);
+    const card = page.getByRole('article', { name, exact: true });
+    const remove = card.getByRole('button', { name: `Delete ${name}` });
+    const dialog = page.locator('dialog[open]');
+    const file = path.join(dataRoot, 'default-user/OpenAI Settings', `${name}.json`);
+    await expect(card.getByRole('button', { name: 'Use', exact: true })).toHaveAttribute('aria-pressed', 'false');
+    await remove.press('Enter');
+    await expect(dialog.getByRole('heading')).toHaveText(`Delete “${name}”?`);
+    await dialog.locator('.popup-button-cancel').click();
+    await expect(card).toBeVisible();
+    expect(await readFile(file, 'utf8')).toBeTruthy();
+
+    await page.route('**/api/presets/delete', route => route.fulfill({ status: 500, body: 'Unavailable' }), { times: 1 });
+    await remove.click();
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(page.locator('.toast-warning')).toContainText('Preset was not deleted from server');
+    await expect(card).toBeVisible();
+
+    await remove.click();
+    const request = page.waitForRequest('**/api/presets/delete');
+    await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+    expect((await request).postDataJSON()).toEqual({ apiId: 'openai', name });
+    await expect(card).toHaveCount(0);
+    await expect(page.getByRole('article', { name: active, exact: true }).getByRole('button', { name: 'Use', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(readFile(file, 'utf8')).rejects.toHaveProperty('code', 'ENOENT');
+    expect(await shared(page)).toEqual(before);
+});
+
 test('cover upload saves an inactive preset without switching it and survives rename, save-as and export', async ({ page }) => {
     const before = await shared(page);
     const active = await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.preset_settings_openai);
@@ -889,10 +930,11 @@ test('cover upload saves an inactive preset without switching it and survives re
     const exported = JSON.parse(await readFile(await file.path(), 'utf8'));
     expect(exported.chlo_preset.cover).toBe(cover);
     await page.screenshot({ path: path.join(root, '../chlo-preset-cover.png') });
-    await openPresetTools(page);
-    await page.locator('#delete_oai_preset').click();
-    await page.locator('dialog[open] .popup-button-ok').click();
+    await page.getByRole('button', { name: 'Delete Cover renamed QA', exact: true }).click();
+    await expect(page.locator('dialog[open]')).toContainText('Another preset will be selected');
+    await page.locator('dialog[open]').getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.locator('.chlo-preset-card').filter({ hasText: 'Cover renamed QA' })).toHaveCount(0);
+    await expect(page.locator('.chlo-preset-card .chlo-preset-use[aria-pressed="true"]')).toHaveCount(1);
 });
 
 test('a saved image loads on reload, and removing it restores the book tile', async ({ page }) => {
