@@ -2,49 +2,59 @@ import { oai_settings } from '../../openai.js';
 
 let controls = [];
 
+function wireTools(header, button, panel, actions) {
+    const setOpen = open => {
+        panel.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+    };
+    button.addEventListener('click', () => setOpen(panel.hidden));
+    header.addEventListener('keydown', event => {
+        // Native buttons already click on Enter.
+        if (event.key === 'Enter' && event.target instanceof HTMLButtonElement) event.stopPropagation();
+        if (event.key !== 'Escape' || panel.hidden) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(false);
+        button.focus();
+    });
+    document.addEventListener('click', event => {
+        if (!panel.hidden && !header.contains(event.target)) setOpen(false);
+    });
+    actions.addEventListener('click', () => {
+        const restoreFocus = panel.contains(document.activeElement);
+        setOpen(false);
+        // Leave focus in any dialog opened by the native handler.
+        if (restoreFocus) button.focus();
+    });
+}
+
 /** Move the real native controls, retaining IDs and every existing handler. */
 export function initPresetActions(collection) {
     const header = document.createElement('header');
     header.id = 'chlo-preset-library-header';
-    header.innerHTML = '<h3>Preset library</h3><div id="chlo-preset-library-actions" class="chlo-preset-actions"></div><small id="chlo-preset-current"></small>';
+    header.innerHTML = `<div class="chlo-block-navigation chlo-library-navigation">
+            <input type="search" class="text_pole chlo-block-search chlo-preset-search" aria-label="Search presets" placeholder="Search presets…">
+            <button type="button" class="menu_button chlo-tools-button" aria-label="Preset tools" title="Preset tools" aria-expanded="false" aria-controls="chlo-preset-library-tools">⋯</button>
+        </div>
+        <div id="chlo-preset-library-tools" class="chlo-tools-panel" hidden>
+            <small id="chlo-preset-current"></small>
+            <div id="chlo-preset-library-actions" class="chlo-preset-actions" role="group" aria-label="Library actions"></div>
+        </div>`;
     collection.prepend(header);
+    wireTools(header, header.querySelector('.chlo-tools-button'), header.querySelector('#chlo-preset-library-tools'), header.querySelector('#chlo-preset-library-actions'));
     const editor = document.createElement('header');
     editor.id = 'chlo-preset-editor-header';
     editor.innerHTML = `<div class="chlo-prompt-caption"><h3 id="chlo-preset-editor-title"></h3><small class="chlo-prompt-active-view" hidden>Sending order</small></div>
         <div class="chlo-block-navigation">
             <input type="search" class="text_pole chlo-block-search" aria-label="Find a block" placeholder="Find a block…">
             <button type="button" class="menu_button chlo-add-block"><span aria-hidden="true">+</span> Add block</button>
-            <button type="button" class="menu_button chlo-prompt-tools-button" aria-label="Prompt tools" title="Prompt tools" aria-expanded="false" aria-controls="chlo-prompt-tools-panel">⋯</button>
+            <button type="button" class="menu_button chlo-tools-button chlo-prompt-tools-button" aria-label="Prompt tools" title="Prompt tools" aria-expanded="false" aria-controls="chlo-prompt-tools-panel">⋯</button>
         </div>
-        <div id="chlo-prompt-tools-panel" hidden>
+        <div id="chlo-prompt-tools-panel" class="chlo-tools-panel" hidden>
             <div class="chlo-prompt-list-tools"></div>
             <div id="chlo-preset-editor-actions" class="chlo-preset-actions" role="group" aria-label="Preset actions"></div>
         </div>`;
-    const toolsButton = editor.querySelector('.chlo-prompt-tools-button');
-    const toolsPanel = editor.querySelector('#chlo-prompt-tools-panel');
-    const setToolsOpen = open => {
-        toolsPanel.hidden = !open;
-        toolsButton.setAttribute('aria-expanded', String(open));
-    };
-    toolsButton.addEventListener('click', () => setToolsOpen(toolsPanel.hidden));
-    editor.addEventListener('keydown', event => {
-        // Native buttons already click on Enter. Keep the app's global menu
-        // shortcut from clicking them a second time.
-        if (event.key === 'Enter' && event.target instanceof HTMLButtonElement) event.stopPropagation();
-        if (event.key !== 'Escape' || toolsPanel.hidden) return;
-        event.preventDefault();
-        event.stopPropagation();
-        setToolsOpen(false);
-        toolsButton.focus();
-    });
-    document.addEventListener('click', event => {
-        if (!toolsPanel.hidden && !editor.contains(event.target)) setToolsOpen(false);
-    });
-    editor.querySelector('#chlo-preset-editor-actions').addEventListener('click', () => {
-        setToolsOpen(false);
-        // Native actions can open a dialog; let it take focus if it does.
-        if (toolsPanel.contains(document.activeElement)) toolsButton.focus();
-    });
+    wireTools(editor, editor.querySelector('.chlo-prompt-tools-button'), editor.querySelector('#chlo-prompt-tools-panel'), editor.querySelector('#chlo-preset-editor-actions'));
     document.getElementById('openai_api-presets').append(editor);
     const layout = document.createElement('details');
     layout.id = 'chlo-preset-layout-setting';
@@ -67,7 +77,7 @@ export function initPresetActions(collection) {
             node.setAttribute('role', 'button');
             node.tabIndex = 0;
             node.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); node.click(); }
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); node.click(); }
             });
             const text = document.createElement('span');
             text.className = 'chlo-preset-action-label';

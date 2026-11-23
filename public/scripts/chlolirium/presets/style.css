@@ -1,4 +1,4 @@
-/* The existing drawer retains its width, position, colors and pin behavior. */
+/* Keep the native drawer placement and inherit the active theme. */
 #left-nav-panel.chlo-preset-panel {
     --chlo-preset-line: color-mix(in srgb, var(--SmartThemeBodyColor) 16%, transparent);
     --chlo-preset-surface: color-mix(in srgb, var(--SmartThemeBodyColor) 4%, transparent);
@@ -7,8 +7,6 @@
 
 #left-nav-panel.chlo-preset-panel #openai_api-presets { min-width: 0; }
 #left-nav-panel.chlo-preset-panel #chlo-native-preset-toolbar { display: none; }
-#left-nav-panel.chlo-preset-panel:not([data-preset-view="parameters"]) > #clickSlidersTips,
-#left-nav-panel.chlo-preset-panel:not([data-preset-view="parameters"]) > a.topRightInset { display: none; }
 #left-nav-panel.chlo-preset-panel .openai-tab-buttons {
     gap: 5px;
     margin: 8px 0 18px;
@@ -37,14 +35,11 @@
 #left-nav-panel.chlo-preset-panel .openai-tab-content { animation: none; margin-block: 0; }
 #chlo-preset-collection, #chlo-preset-editor-header, #chlo-preset-layout-setting,
 .chlo-preset-action-label, .chlo-prompt-section, .chlo-prompt-placement { display: none; }
-#left-nav-panel.chlo-preset-panel #chlo-preset-collection { display: block; padding-bottom: 18px; }
 #left-nav-panel.chlo-preset-panel #chlo-preset-editor-header,
 #left-nav-panel.chlo-preset-panel #chlo-preset-layout-setting { display: block; }
 #left-nav-panel.chlo-preset-panel .chlo-preset-action-label { display: inline; }
 #left-nav-panel.chlo-preset-panel #chlo-preset-layout-setting { margin-block: 16px; }
-#chlo-preset-library-header, #chlo-preset-editor-header { margin-bottom: 20px; }
-#chlo-preset-library-header h3, #chlo-preset-editor-title { font-family: var(--mainFontFamily); font-size: max(22px, var(--mainFontSize)); font-weight: 500; line-height: 1.4; margin: 0 0 14px; overflow-wrap: anywhere; }
-#chlo-preset-current { display: block; opacity: .65; margin-top: 12px; overflow-wrap: anywhere; line-height: 1.5; }
+#chlo-preset-current { display: block; opacity: .75; margin-bottom: 8px; overflow-wrap: anywhere; line-height: 1.5; }
 #left-nav-panel.chlo-preset-panel .chlo-preset-actions { display: flex; gap: 7px; flex-wrap: wrap; }
 #left-nav-panel.chlo-preset-panel .chlo-preset-actions .menu_button { display: inline-flex; flex: 1 1 auto; justify-content: center; align-items: center; gap: 7px; min-height: 38px; padding: 8px; margin: 0; border-radius: 9px; font-size: 14px; white-space: nowrap; }
 #left-nav-panel.chlo-preset-panel #update_oai_preset { background: color-mix(in srgb, var(--chlo-preset-accent) 32%, transparent); }
@@ -91,20 +86,24 @@
 /* All original controls and their native event handlers stay in the drawer. */
 #left-nav-panel.chlo-preset-panel #range_block_openai > .range-block,
 #left-nav-panel.chlo-preset-panel #openai_settings > div {
-    margin: 0 0 14px;
-    padding: 15px;
+    margin: 0 0 7px;
+    padding: 10px 12px;
     border: 1px solid var(--chlo-preset-line);
-    border-radius: 13px;
+    border-radius: 12px;
     background: var(--chlo-preset-surface);
 }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-title { text-align: start; font-size: max(16px, var(--mainFontSize)); margin-bottom: 12px; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-range-and-counter { gap: 12px; }
+#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-title { text-align: start; font-size: max(15px, var(--mainFontSize)); margin-bottom: 6px; }
+#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-range-and-counter { gap: 6px; }
 #left-nav-panel.chlo-preset-panel #range_block_openai .range-block-range { min-width: 0; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-counter { min-width: 85px; }
+#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-counter { flex: 0 0 clamp(70px, 26%, 88px); min-width: 0; margin-inline: 0; }
+#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-counter input { width: 100%; }
+#left-nav-panel.chlo-preset-panel #range_block_openai .toggle-description { width: auto; margin: 2px 0 0; }
+#left-nav-panel.chlo-preset-panel #range_block_openai > .range-block:has(> .wide100p > input[type="number"]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(70px, 29%); gap: 6px; }
+#left-nav-panel.chlo-preset-panel #range_block_openai > .range-block:has(> .wide100p > input[type="number"]) .range-block-title { margin: 0; }
 #left-nav-panel.chlo-preset-panel input:not([type=range]):not([type=checkbox]):not([type=radio]),
 #left-nav-panel.chlo-preset-panel select,
 #left-nav-panel.chlo-preset-panel textarea { border-radius: 9px; font-size: max(16px, var(--mainFontSize)); min-width: 0; }
-#left-nav-panel.chlo-preset-panel #range_block_openai input:not([type=range]):not([type=checkbox]) { min-height: 40px; }
+#left-nav-panel.chlo-preset-panel #range_block_openai input:not([type=range]):not([type=checkbox]) { min-height: 34px; }
 
 /* Editing groups are separate from execution order; dragging uses Prompt order. */
 #left-nav-panel.chlo-preset-panel .chlo-prompt-view-buttons { display: flex; gap: 5px; padding: 4px; border-radius: 10px; background: var(--chlo-preset-surface); }
