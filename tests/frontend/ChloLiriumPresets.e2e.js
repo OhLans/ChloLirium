@@ -96,7 +96,7 @@ const dragHandle = async (page, handle, point) => {
     await page.mouse.up();
 };
 
-test('configuration uses a narrower desktop drawer and keeps a single vertical library', async ({ page }) => {
+test('configuration keeps the native drawer width and a single vertical library', async ({ page }) => {
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
     const drawer = page.locator('#left-nav-panel');
     for (const width of [1440, 1920]) {
@@ -110,8 +110,7 @@ test('configuration uses a narrower desktop drawer and keeps a single vertical l
         });
         expect(geometry.styled.x).toBe(geometry.native.x);
         expect(geometry.styled.y).toBe(geometry.native.y);
-        expect(geometry.styled.width).toBeLessThan(geometry.native.width);
-        expect(geometry.styled.width).toBeLessThanOrEqual(410);
+        expect(geometry.styled.width).toBe(geometry.native.width);
         expect(geometry.styled.width).toBeLessThan(width / 2);
         await expect(page.locator('#sheld')).toBeVisible();
         const rows = await page.locator('.chlo-preset-card').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().toJSON()));
