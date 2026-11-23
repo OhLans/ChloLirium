@@ -3,10 +3,6 @@
 #left-nav-panel.chlo-preset-panel #clickSlidersTips,
 #left-nav-panel.chlo-preset-panel > .topRightInset { display: none !important; }
 
-@media (min-width: 1001px) {
-    #left-nav-panel.chlo-preset-panel { max-width: clamp(320px, 23vw, 410px); }
-}
-
 #left-nav-panel.chlo-preset-panel #chlo-config-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
