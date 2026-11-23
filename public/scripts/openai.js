@@ -53,6 +53,7 @@ import {
     createThumbnail,
     delay,
     download,
+    escapeHtml,
     getAudioDurationFromDataURL,
     getBase64Async,
     getFileText,
@@ -4960,40 +4961,55 @@ function onLogitBiasPresetExportClick() {
     download(presetJsonString, presetFileName, 'application/json');
 }
 
-async function onDeletePresetClick() {
-    const confirm = await callGenericPopup(t`Delete the preset? This action is irreversible and your current settings will be overwritten.`, POPUP_TYPE.CONFIRM);
+/** Delete the named preset without activating it first. */
+export async function deleteChatCompletionPreset(name) {
+    if (!name || !Object.hasOwn(openai_setting_names, name)) return;
+    const value = openai_setting_names[name];
+    const select = /** @type {HTMLSelectElement} */ (document.getElementById('settings_preset_openai'));
+    const option = Array.from(select.options).find(item => item.value === String(value));
+    if (!option || option.value === 'gui') return;
 
-    if (!confirm) {
+    const description = name === oai_settings.preset_settings_openai
+        ? t`This cannot be undone. Another preset will be selected if available.`
+        : t`This cannot be undone.`;
+    const result = await Popup.show.confirm(t`Delete “${escapeHtml(name)}”?`, description, { okButton: t`Delete` });
+    if (result !== POPUP_RESULT.AFFIRMATIVE || openai_setting_names[name] !== value || option.parentElement !== select) return;
+
+    try {
+        const response = await fetch('/api/presets/delete', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify({ apiId: 'openai', name }),
+        });
+        if (!response.ok) {
+            toastr.warning(t`Preset was not deleted from server`);
+            return;
+        }
+    } catch (error) {
+        console.error('Could not delete the preset', error);
+        toastr.warning(t`Preset was not deleted from server`);
         return;
     }
 
-    const nameToDelete = oai_settings.preset_settings_openai;
-    const value = openai_setting_names[oai_settings.preset_settings_openai];
-    $(`#settings_preset_openai option[value="${value}"]`).remove();
-    delete openai_setting_names[oai_settings.preset_settings_openai];
-    oai_settings.preset_settings_openai = null;
-
-    if (Object.keys(openai_setting_names).length) {
-        oai_settings.preset_settings_openai = Object.keys(openai_setting_names)[0];
-        const newValue = openai_setting_names[oai_settings.preset_settings_openai];
-        $(`#settings_preset_openai option[value="${newValue}"]`).prop('selected', true);
-        $('#settings_preset_openai').trigger('change');
+    const wasActive = oai_settings.preset_settings_openai === name;
+    delete openai_setting_names[name];
+    option.remove();
+    if (wasActive) {
+        const next = Object.keys(openai_setting_names)[0];
+        if (next !== undefined) {
+            $(select).val(String(openai_setting_names[next])).trigger('change');
+            await getPresetApplicationPromise();
+        } else {
+            oai_settings.preset_settings_openai = null;
+        }
     }
-
-    const response = await fetch('/api/presets/delete', {
-        method: 'POST',
-        headers: getRequestHeaders(),
-        body: JSON.stringify({ apiId: 'openai', name: nameToDelete }),
-    });
-
-    if (!response.ok) {
-        toastr.warning(t`Preset was not deleted from server`);
-    } else {
-        toastr.success(t`Preset deleted`);
-        await eventSource.emit(event_types.PRESET_DELETED, { apiId: 'openai', name: nameToDelete });
-    }
-
+    toastr.success(t`Preset deleted`);
+    await eventSource.emit(event_types.PRESET_DELETED, { apiId: 'openai', name });
     saveSettingsDebounced();
+}
+
+function onDeletePresetClick() {
+    return deleteChatCompletionPreset(oai_settings.preset_settings_openai);
 }
 
 async function onLogitBiasPresetDeleteClick() {

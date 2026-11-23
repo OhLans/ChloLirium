@@ -1,5 +1,5 @@
 import { eventSource, event_types } from '../../../script.js';
-import { getPresetApplicationPromise, oai_settings, openai_settings, promptManager } from '../../openai.js';
+import { deleteChatCompletionPreset, getPresetApplicationPromise, oai_settings, openai_settings, promptManager } from '../../openai.js';
 import { escapeHtml } from '../../utils.js';
 import { initPresetActions, updatePresetActions } from './actions.js';
 import { editPresetCover } from './covers.js';
@@ -85,7 +85,13 @@ export function initPresetPanel() {
                     <span class="chlo-preset-name">${escapeHtml(option.text)}</span>
                     <small>${presetBlockCount(preset)} blocks${format}</small>
                 </button>
-                <div class="chlo-preset-card-footer">${selected ? '<small class="chlo-preset-active">Active</small>' : ''}<button type="button" class="menu_button chlo-preset-use" aria-pressed="${selected}">Use</button><button type="button" class="menu_button chlo-preset-edit">Edit</button></div>
+                <div class="chlo-preset-card-footer">${selected ? '<small class="chlo-preset-active">Active</small>' : ''}
+                    <div class="chlo-preset-card-buttons">
+                        <button type="button" class="menu_button chlo-preset-use" aria-pressed="${selected}">Use</button>
+                        <button type="button" class="menu_button chlo-preset-edit">Edit</button>
+                        <button type="button" class="menu_button chlo-preset-delete" aria-label="Delete ${escapeHtml(option.text)}">Delete</button>
+                    </div>
+                </div>
             </article>`;
         }).join('');
         for (const image of cards.querySelectorAll('img')) image.addEventListener('error', () => image.hidden = true);
@@ -108,11 +114,16 @@ export function initPresetPanel() {
     };
 
     let selection = 0;
+    collection.addEventListener('keydown', event => {
+        // The Delete button already handles Enter natively.
+        if (event.key === 'Enter' && event.target.closest('.chlo-preset-delete')) event.stopPropagation();
+    });
     collection.addEventListener('click', async event => {
         const card = event.target.closest('.chlo-preset-card, .chlo-preset-preview');
         if (!card) return;
         try {
             if (event.target.closest('.chlo-preset-cover, .chlo-preview-cover')) { await editPresetCover(card.dataset.name); return; }
+            if (event.target.closest('.chlo-preset-delete')) { await deleteChatCompletionPreset(card.dataset.name); return; }
             if (!event.target.closest('.chlo-preset-open, .chlo-preset-edit, .chlo-preset-use')) return;
             if (event.target.closest('.chlo-preset-open')) { renderPreview(previewName === card.dataset.name ? undefined : card.dataset.name); return; }
             if (!await confirmPromptSwitch(promptManager)) return;
