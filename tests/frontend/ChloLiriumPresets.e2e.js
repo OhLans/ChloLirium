@@ -80,6 +80,11 @@ const openPromptTools = async page => {
     if (await button.getAttribute('aria-expanded') !== 'true') await button.click();
 };
 
+const openPresetTools = async page => {
+    const button = page.getByRole('button', { name: 'Preset tools', exact: true });
+    if (await button.getAttribute('aria-expanded') !== 'true') await button.click();
+};
+
 const dragHandle = async (page, handle, point) => {
     const start = await handle.boundingBox();
     await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -91,7 +96,7 @@ const dragHandle = async (page, handle, point) => {
     await page.mouse.up();
 };
 
-test('configuration keeps the native drawer geometry and a single vertical library', async ({ page }) => {
+test('configuration uses a narrower desktop drawer and keeps a single vertical library', async ({ page }) => {
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
     const drawer = page.locator('#left-nav-panel');
     for (const width of [1440, 1920]) {
@@ -103,7 +108,10 @@ test('configuration keeps the native drawer geometry and a single vertical libra
             node.classList.add('chlo-preset-panel');
             return { styled, native };
         });
-        expect(geometry.styled).toEqual(geometry.native);
+        expect(geometry.styled.x).toBe(geometry.native.x);
+        expect(geometry.styled.y).toBe(geometry.native.y);
+        expect(geometry.styled.width).toBeLessThan(geometry.native.width);
+        expect(geometry.styled.width).toBeLessThanOrEqual(410);
         expect(geometry.styled.width).toBeLessThan(width / 2);
         await expect(page.locator('#sheld')).toBeVisible();
         const rows = await page.locator('.chlo-preset-card').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().toJSON()));
@@ -134,6 +142,40 @@ test('configuration keeps the native drawer geometry and a single vertical libra
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
 });
 
+test('all tabs share a compact header with their main content immediately below', async ({ page }) => {
+    const panel = page.locator('#left-nav-panel');
+    const header = panel.locator('#chlo-config-header');
+    const libraryTools = panel.locator('#chlo-preset-library-tools');
+    for (const width of [1920, 320]) {
+        await page.setViewportSize({ width, height: 844 });
+        const sizes = [];
+        for (const [tab, content] of [
+            ['presets', '.chlo-preset-card'],
+            ['parameters', '#openai_max_context'],
+            ['prompts', '#completion_prompt_manager_list [data-pm-identifier]'],
+        ]) {
+            await page.locator(`#openai-tab-btn-${tab}`).click();
+            await expect(panel).toHaveAttribute('data-preset-view', tab);
+            await expect(header.locator('.openai-tab-button.active')).toHaveAttribute('id', `openai-tab-btn-${tab}`);
+            const size = await header.boundingBox();
+            sizes.push(size.height);
+            const contentBox = await panel.locator(content).first().boundingBox();
+            expect(contentBox.y - (size.y + size.height)).toBeLessThan(135);
+            expect(contentBox.x + contentBox.width).toBeLessThanOrEqual(size.x + size.width + 1);
+            expect(await panel.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+        }
+        expect(sizes).toEqual([sizes[0], sizes[0], sizes[0]]);
+    }
+    await page.locator('#openai-tab-btn-presets').click();
+    await expect(libraryTools).toBeHidden();
+    const button = page.getByRole('button', { name: 'Preset tools', exact: true });
+    await button.press('Enter');
+    await expect(libraryTools).toBeVisible();
+    await button.press('Escape');
+    await expect(libraryTools).toBeHidden();
+    await expect(button).toBeFocused();
+});
+
 test('prompt-only card and dropdown selections keep unspecified parameters and the active connection', async ({ page }) => {
     const before = await shared(page);
     await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-edit').click();
@@ -150,6 +192,8 @@ test('prompt-only card and dropdown selections keep unspecified parameters and t
 test('parameters reuse the same native input and preserve its event handler through page changes', async ({ page }) => {
     const input = await page.locator('#temp_openai').elementHandle();
     await page.locator('#openai-tab-btn-parameters').click();
+    const firstFields = await page.locator('#range_block_openai > .range-block:visible').evaluateAll(rows => rows.slice(0, 5).map(row => row.querySelector('input')?.id));
+    expect(firstFields).toEqual(['openai_max_context', 'openai_max_tokens', 'stream_toggle', 'temp_openai', 'top_p_openai']);
     await page.locator('#temp_counter_openai').fill('0.82');
     await page.locator('#temp_counter_openai').press('Tab');
     expect((await shared(page)).temperature).toBe(0.82);
@@ -287,7 +331,7 @@ test('prompt cards start immediately after the compact toolbar on desktop and ph
         await expect(list).toHaveAttribute('data-editor-view', view);
         await expect(toolsPanel).toBeHidden();
         const drawer = await page.locator('#left-nav-panel').boundingBox();
-        const toolbar = await page.locator('.chlo-block-navigation').boundingBox();
+        const toolbar = await page.locator('#chlo-preset-editor-header .chlo-block-navigation').boundingBox();
         const row = await list.locator('[data-pm-identifier]').first().boundingBox();
         const name = await title.boundingBox();
         const gap = row.y - (toolbar.y + toolbar.height);
@@ -357,6 +401,7 @@ test('native import and export remain available and the collection follows the n
     });
     expect(await shared(page)).toEqual({ ...applied, temperature: 0.72 });
     await page.locator('#openai-tab-btn-presets').click();
+    await openPresetTools(page);
     await page.locator('#export_oai_preset').click();
     await expect(page.locator('dialog[open]')).toContainText('export connection data');
     const downloaded = page.waitForEvent('download');
@@ -372,6 +417,7 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
     await expect(page.locator('#chlo-native-preset-toolbar')).toBeHidden();
     await page.locator('.chlo-preset-card').filter({ hasText: 'Sola QA' }).locator('.chlo-preset-use').click();
     await expect(page.locator('#openai-tab-content-presets')).toHaveClass(/active/);
+    await openPresetTools(page);
     await expect(page.locator('#chlo-preset-current')).toHaveText('Active: Sola QA');
     for (const id of ['import_oai_preset', 'export_oai_preset', 'delete_oai_preset']) {
         await expect(page.locator(`#chlo-preset-library-actions #${id}`)).toBeVisible();
@@ -386,11 +432,19 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
     await expect(page.locator('#prompt-manager-import')).toBeVisible();
     await page.locator('#openai-tab-btn-parameters').click();
     await page.locator('#chlo-preset-layout-setting summary').click();
+    const storedSetting = async () => {
+        const settings = JSON.parse(await readFile(path.join(dataRoot, 'default-user/settings.json'), 'utf8'));
+        return settings.extension_settings.ChatCompletionTabs?.enabled;
+    };
     await page.locator('#ChatCompletionTabs-enabled').uncheck();
     await expect(page.locator('#chlo-native-preset-toolbar')).toBeVisible();
     await expect(page.locator('#chlo-native-preset-toolbar #update_oai_preset')).toBeVisible();
+    await expect(page.locator('#range_block_openai > .range-block').first().locator('#oai_max_context_unlocked')).toBeVisible();
+    await expect.poll(storedSetting).toBe(false);
     await page.locator('#ChatCompletionTabs-enabled').check();
     await expect(page.locator('#chlo-native-preset-toolbar')).toBeHidden();
+    // This worker reuses its fixture directory. Let the debounced save finish.
+    await expect.poll(storedSetting).toBe(true);
 });
 
 test('both examples are seeded and show real grouped native blocks without replacing shared parameters', async ({ page }) => {
@@ -828,6 +882,7 @@ test('cover upload saves an inactive preset without switching it and survives re
     await expect.poll(async () => JSON.parse(await readFile(path.join(dataRoot, 'default-user/OpenAI Settings/Cover renamed QA.json'), 'utf8')).chlo_preset.cover).toBe(cover);
     await page.locator('#openai-tab-btn-presets').click();
     await expect(page.locator('.chlo-preset-card').filter({ hasText: 'Cover renamed QA' }).locator('img')).toHaveAttribute('src', cover);
+    await openPresetTools(page);
     await page.locator('#export_oai_preset').click();
     const downloaded = page.waitForEvent('download');
     await page.locator('dialog[open] .popup-button-ok').click();
@@ -835,6 +890,7 @@ test('cover upload saves an inactive preset without switching it and survives re
     const exported = JSON.parse(await readFile(await file.path(), 'utf8'));
     expect(exported.chlo_preset.cover).toBe(cover);
     await page.screenshot({ path: path.join(root, '../chlo-preset-cover.png') });
+    await openPresetTools(page);
     await page.locator('#delete_oai_preset').click();
     await page.locator('dialog[open] .popup-button-ok').click();
     await expect(page.locator('.chlo-preset-card').filter({ hasText: 'Cover renamed QA' })).toHaveCount(0);

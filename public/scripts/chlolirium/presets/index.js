@@ -24,16 +24,7 @@ export function initPresetPanel() {
     preview.className = 'chlo-preset-preview';
     document.getElementById('openai_api-presets').append(collection);
     initPresetActions(collection);
-    const search = document.createElement('input');
-    search.type = 'search';
-    search.className = 'text_pole chlo-preset-search';
-    search.placeholder = 'Search presets…';
-    search.setAttribute('aria-label', 'Search presets');
-    cards.before(search);
-    const hint = document.createElement('small');
-    hint.className = 'chlo-catalog-help';
-    hint.textContent = 'Drag ⠿ to reorder presets. Select a title to preview it; Edit opens its blocks.';
-    cards.before(hint);
+    const search = collection.querySelector('.chlo-preset-search');
     let previewName;
     let catalogOrder = [];
     try {
