@@ -40,6 +40,10 @@ body.rivelle-navigator-icons-enabled [data-rn-key="backgrounds"] .rn-native-visu
     --rni-icon: url("../../assets/icons/backgrounds.svg");
 }
 
+body.rivelle-navigator-icons-enabled [data-rn-key="regex"] .rn-native-visual {
+    --rni-icon: url("../../assets/icons/regex.svg");
+}
+
 body.rivelle-navigator-icons-enabled [data-rn-key="extensions"] .rn-native-visual {
     --rni-icon: url("../../assets/icons/extensions.svg");
 }

@@ -49,6 +49,15 @@ const LEFT_NAV = [
         panel: '#Backgrounds',
     },
     {
+        key: 'regex',
+        title: 'Regex',
+        click: '#regex-drawer-button > .drawer-toggle',
+        icon: '#regex-drawer-button .drawer-icon',
+        panel: '#chlo-regex-drawer',
+        available: '#regex-drawer-button:not(.displayNone)',
+        optional: true,
+    },
+    {
         key: 'extensions',
         title: 'Extensions',
         click: '#extensions-settings-button > .drawer-toggle',
@@ -569,7 +578,7 @@ function syncOptionalIntegrations() {
         const button = $(`[data-rn-key="${item.key}"]`);
         if (!button) continue;
 
-        const available = Boolean($(item.click) && $(item.icon) && $(item.panel));
+        const available = Boolean($(item.click) && $(item.icon) && $(item.panel) && (!item.available || $(item.available)));
         toggleClass(button, 'rn-integration-missing', !available);
         button.setAttribute('aria-hidden', available ? 'false' : 'true');
         button.tabIndex = available ? 0 : -1;
@@ -593,7 +602,10 @@ function syncActiveStates() {
 function syncOneActiveState(item) {
     const open = panelIsOpen(item);
     const button = $(`[data-rn-key="${item.key}"]`);
-    if (button) toggleClass(button, 'active', open);
+    if (button) {
+        toggleClass(button, 'active', open);
+        if (item.available) setAttribute(button, 'aria-expanded', String(open));
+    }
     if (item === AI_CONFIG) {
         // Reuse the native panel observer: no click-derived state, DOM moves,
         // layout reads, or extra observers are needed for the header shift.
@@ -623,6 +635,10 @@ function setupNativeObservers() {
     }, scheduleHotSwapSync);
 
     // Active drawer states are class changes on a small fixed set of panels.
+    observers.observe('regex-availability', $('#regex-drawer-button'), {
+        attributes: true,
+        attributeFilter: ['class'],
+    }, syncOptionalIntegrations);
     for (const item of ALL_ITEMS) {
         const panel = $(item.panel);
         observers.observe(`panel:${item.key}`, panel, {

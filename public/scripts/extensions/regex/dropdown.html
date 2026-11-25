@@ -1,130 +1,142 @@
 <div class="regex_settings">
-    <div class="inline-drawer">
-        <div class="inline-drawer-toggle inline-drawer-header">
-            <b data-i18n="ext_regex_title">
-                Regex
-            </b>
-            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+    <header class="chlo-regex-header">
+        <h2 id="chlo-regex-title" data-i18n="ext_regex_title">Regex</h2>
+        <button type="button" class="chlo-regex-icon-button" data-regex-action="close" aria-label="Close Regex"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="chlo-regex-toolbar">
+        <label class="chlo-regex-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input id="chlo-regex-search" type="search" aria-label="Search scripts" placeholder="Search scripts…">
+        </label>
+        <details class="chlo-regex-menu">
+            <summary class="chlo-regex-new">+ New script</summary>
+            <div class="chlo-regex-menu-items">
+                <button type="button" id="open_regex_editor">Global script</button>
+                <button type="button" id="open_preset_editor">Preset script</button>
+                <button type="button" id="open_scoped_editor">Character script</button>
+            </div>
+        </details>
+        <details class="chlo-regex-menu">
+            <summary class="chlo-regex-icon-button" aria-label="Regex tools" title="Regex tools"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></summary>
+            <div class="chlo-regex-menu-items">
+                <button type="button" data-regex-action="new-section">New section</button>
+                <button type="button" id="import_regex" data-i18n="Import">Import</button>
+                <button type="button" data-regex-action="bulk" id="chlo-regex-bulk-button" aria-pressed="false">Bulk edit / export</button>
+                <button type="button" data-regex-action="presets" aria-controls="regex_presets_block" aria-expanded="false" data-i18n="ext_regex_presets">Regex Presets</button>
+                <button type="button" data-regex-view="order" aria-pressed="false">Run order</button>
+                <button type="button" id="open_regex_debugger" data-i18n="ext_regex_debugger">Debugger</button>
+            </div>
+        </details>
+        <input type="file" id="import_regex_file" hidden accept=".json,application/json" multiple>
+        <input id="regex_bulk_edit" type="checkbox" hidden>
+    </div>
+    <div class="chlo-regex-filters">
+        <div class="chlo-regex-scopes" role="group" aria-label="Script scope">
+            <button type="button" data-regex-scope="all" aria-pressed="true">All</button>
+            <button type="button" data-regex-scope="global" aria-pressed="false">Global</button>
+            <button type="button" data-regex-scope="preset" aria-pressed="false">Preset</button>
+            <button type="button" data-regex-scope="character" aria-pressed="false">Character</button>
         </div>
-        <div class="inline-drawer-content">
-            <div class="flex-container">
-                <div id="open_regex_editor" class="menu_button menu_button_icon" data-i18n="[title]ext_regex_new_global_script_desc" title="New global regex script">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    <small data-i18n="ext_regex_new_global_script">+ Global</small>
-                </div>
-                <div id="open_preset_editor" class="menu_button menu_button_icon" data-i18n="[title]ext_regex_new_preset_script_desc" title="New preset regex script">
-                    <i class="fa-solid fa-sliders"></i>
-                    <small data-i18n="ext_regex_new_preset_script">+ Preset</small>
-                </div>
-                <div id="open_scoped_editor" class="menu_button menu_button_icon" data-i18n="[title]ext_regex_new_scoped_script_desc" title="New scoped regex script">
-                    <i class="fa-solid fa-address-card"></i>
-                    <small data-i18n="ext_regex_new_scoped_script">+ Scoped</small>
-                </div>
-                <div id="import_regex" class="menu_button menu_button_icon">
-                    <i class="fa-solid fa-file-import"></i>
-                    <small data-i18n="ext_regex_import_script">Import</small>
-                </div>
-                <input type="file" id="import_regex_file" hidden accept="*.json" multiple />
-                <label for="regex_bulk_edit" class="menu_button menu_button_icon">
-                    <input id="regex_bulk_edit" type="checkbox" class="displayNone" />
-                    <i class="fa-solid fa-edit"></i>
-                    <small data-i18n="ext_regex_bulk_edit">Bulk Edit</small>
-                </label>
-                <div id="open_regex_debugger" class="menu_button menu_button_icon" data-i18n="[title]ext_regex_debugger_desc" title="Advanced Regex Debugger">
-                    <i class="fa-solid fa-bug-slash"></i>
-                    <small data-i18n="ext_regex_debugger">Debugger</small>
-                </div>
-            </div>
-            <hr class="regex_bulk_operations_hr" />
-            <div class="regex_bulk_operations flex-container">
-                <div id="bulk_select_all_toggle" class="menu_button menu_button_icon" title="Toggle Select All">
-                    <i class="fa-solid fa-check-double"></i>
-                </div>
-                <div id="bulk_enable_regex" class="menu_button menu_button_icon">
-                    <i class="fa-solid fa-toggle-on"></i>
-                    <small data-i18n="Enable">Enable</small>
-                </div>
-                <div id="bulk_disable_regex" class="menu_button menu_button_icon">
-                    <i class="fa-solid fa-toggle-off"></i>
-                    <small data-i18n="Disable">Disable</small>
-                </div>
-                <div id="bulk_regex_move_to_global" class="menu_button menu_button_icon" hidden>
-                    <i class="fa-solid fa-globe"></i>
-                    <small data-i18n="ext_regex_move_to_global">Move to global scripts</small>
-                </div>
-                <div id="bulk_regex_move_to_preset" class="menu_button menu_button_icon" hidden>
-                    <i class="fa-solid fa-sliders"></i>
-                    <small data-i18n="ext_regex_move_to_preset">Move to preset scripts</small>
-                </div>
-                <div id="bulk_regex_move_to_scoped" class="menu_button menu_button_icon" hidden>
-                    <i class="fa-solid fa-address-card"></i>
-                    <small data-i18n="ext_regex_move_to_scoped">Move to scoped scripts</small>
-                </div>
-                <div id="bulk_export_regex" class="menu_button menu_button_icon">
-                    <i class="fa-solid fa-file-export"></i>
-                    <small data-i18n="Export">Export</small>
-                </div>
-                <div id="bulk_delete_regex" class="menu_button menu_button_icon">
-                    <i class="fa-solid fa-trash"></i>
-                    <small data-i18n="Delete">Delete</small>
-                </div>
-            </div>
-            <hr />
-            <div id="regex_presets_block">
-                <div class="flex-container alignItemsBaseline">
-                    <strong class="flex1" data-i18n="ext_regex_presets">Regex Presets</strong>
-                </div>
-                <small data-i18n="ext_regex_presets_desc">
-                    Save and switch between groups of enabled regex scripts.
-                </small>
-                <div class="flex-container marginTop5">
-                    <select id="regex_presets" class="text_pole flex1"></select>
-                    <div id="regex_preset_create" class="menu_button fa-solid fa-file-circle-plus" data-i18n="[title]ext_regex_preset_create" title="Create a new regex preset"></div>
-                    <div id="regex_preset_update" class="menu_button fa-solid fa-save" data-i18n="[title]ext_regex_preset_update" title="Update existing regex preset"></div>
-                    <div id="regex_preset_apply" class="menu_button fa-solid fa-recycle" data-i18n="[title]ext_regex_preset_apply" title="Re-apply current preset"></div>
-                    <div id="regex_preset_delete" class="menu_button fa-solid fa-trash" data-i18n="[title]ext_regex_preset_delete" title="Delete current preset"></div>
-                </div>
-            </div>
-            <hr />
-            <div id="global_scripts_block">
-                <div>
-                    <strong data-i18n="ext_regex_global_scripts">Global Scripts</strong>
-                </div>
-                <small data-i18n="ext_regex_global_scripts_desc">
-                    Available for all characters. Saved to local settings.
-                </small>
-                <div id="saved_regex_scripts" no-scripts-text="No scripts found" data-i18n="[no-scripts-text]No scripts found" class="flex-container regex-script-container flexFlowColumn"></div>
-            </div>
-            <hr />
-            <div id="preset_scripts_block">
-                <div class="flex-container alignItemsBaseline">
-                    <strong class="flex1" data-i18n="ext_regex_preset_scripts">Preset Scripts</strong>
-                    <label id="toggle_preset_regex" class="checkbox flex-container" for="regex_preset_toggle">
-                        <input type="checkbox" id="regex_preset_toggle" class="enable_scoped" />
-                        <span class="regex-toggle-on fa-solid fa-toggle-on fa-lg" data-i18n="[title]ext_regex_disallow_preset" title="Disallow using preset regex"></span>
-                        <span class="regex-toggle-off fa-solid fa-toggle-off fa-lg" data-i18n="[title]ext_regex_allow_preset" title="Allow using preset regex"></span>
-                    </label>
-                </div>
-                <small data-i18n="ext_regex_preset_scripts_desc">
-                    Only available for this preset. Saved to the preset data.
-                </small>
-                <div id="saved_preset_scripts" no-scripts-text="No scripts found" data-i18n="[no-scripts-text]No scripts found" class="flex-container regex-script-container flexFlowColumn"></div>
-            </div>
-            <hr />
-            <div id="scoped_scripts_block">
-                <div class="flex-container alignItemsBaseline">
-                    <strong class="flex1" data-i18n="ext_regex_scoped_scripts">Scoped Scripts</strong>
-                    <label id="toggle_scoped_regex" class="checkbox flex-container" for="regex_scoped_toggle">
-                        <input type="checkbox" id="regex_scoped_toggle" class="enable_scoped" />
-                        <span class="regex-toggle-on fa-solid fa-toggle-on fa-lg" data-i18n="[title]ext_regex_disallow_scoped" title="Disallow using scoped regex"></span>
-                        <span class="regex-toggle-off fa-solid fa-toggle-off fa-lg" data-i18n="[title]ext_regex_allow_scoped" title="Allow using scoped regex"></span>
-                    </label>
-                </div>
-                <small data-i18n="ext_regex_scoped_scripts_desc">
-                    Only available for this character. Saved to the card data.
-                </small>
-                <div id="saved_scoped_scripts" no-scripts-text="No scripts found" data-i18n="[no-scripts-text]No scripts found" class="flex-container regex-script-container flexFlowColumn"></div>
-            </div>
+        <button type="button" class="chlo-regex-back" data-regex-view="sections" hidden>Back to sections</button>
+    </div>
+    <div class="regex_bulk_operations flex-container">
+        <button type="button" id="bulk_select_all_toggle" class="menu_button menu_button_icon" title="Select visible scripts" aria-label="Select visible scripts">
+            <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+        </button>
+        <span id="chlo-regex-selected-count" role="status">0 selected</span>
+        <div id="bulk_enable_regex" class="menu_button menu_button_icon">
+            <i class="fa-solid fa-toggle-on"></i>
+            <small data-i18n="Enable">Enable</small>
+        </div>
+        <div id="bulk_disable_regex" class="menu_button menu_button_icon">
+            <i class="fa-solid fa-toggle-off"></i>
+            <small data-i18n="Disable">Disable</small>
+        </div>
+        <div id="bulk_regex_move_to_global" class="menu_button menu_button_icon" hidden>
+            <i class="fa-solid fa-globe"></i>
+            <small data-i18n="ext_regex_move_to_global">Move to global scripts</small>
+        </div>
+        <div id="bulk_regex_move_to_preset" class="menu_button menu_button_icon" hidden>
+            <i class="fa-solid fa-sliders"></i>
+            <small data-i18n="ext_regex_move_to_preset">Move to preset scripts</small>
+        </div>
+        <div id="bulk_regex_move_to_scoped" class="menu_button menu_button_icon" hidden>
+            <i class="fa-solid fa-address-card"></i>
+            <small data-i18n="ext_regex_move_to_scoped">Move to scoped scripts</small>
+        </div>
+        <div id="bulk_export_regex" class="menu_button menu_button_icon">
+            <i class="fa-solid fa-file-export"></i>
+            <small data-i18n="Export">Export</small>
+        </div>
+        <div id="bulk_delete_regex" class="menu_button menu_button_icon">
+            <i class="fa-solid fa-trash"></i>
+            <small data-i18n="Delete">Delete</small>
         </div>
     </div>
+    <section id="regex_presets_block" hidden>
+        <div class="flex-container alignItemsBaseline">
+            <strong class="flex1" data-i18n="ext_regex_presets">Regex Presets</strong>
+        </div>
+        <small data-i18n="ext_regex_presets_desc">
+            Save and switch between groups of enabled regex scripts.
+        </small>
+        <div class="flex-container marginTop5">
+            <select id="regex_presets" class="text_pole flex1" aria-label="Regex presets"></select>
+            <div id="regex_preset_create" class="menu_button fa-solid fa-file-circle-plus" data-i18n="[title]ext_regex_preset_create" title="Create a new regex preset"></div>
+            <div id="regex_preset_update" class="menu_button fa-solid fa-save" data-i18n="[title]ext_regex_preset_update" title="Update existing regex preset"></div>
+            <div id="regex_preset_apply" class="menu_button fa-solid fa-recycle" data-i18n="[title]ext_regex_preset_apply" title="Re-apply current preset"></div>
+            <div id="regex_preset_delete" class="menu_button fa-solid fa-trash" data-i18n="[title]ext_regex_preset_delete" title="Delete current preset"></div>
+        </div>
+    </section>
+    <div class="chlo-regex-permissions">
+        <label id="toggle_preset_regex" hidden>
+            <input type="checkbox" id="regex_preset_toggle">
+            Allow scripts from this preset
+        </label>
+        <label id="toggle_scoped_regex" hidden>
+            <input type="checkbox" id="regex_scoped_toggle">
+            Allow scripts from this character
+        </label>
+    </div>
+    <div class="chlo-regex-scroll">
+        <div id="chlo-regex-new-editor" hidden></div>
+        <div id="chlo-regex-sections"></div>
+        <div id="chlo-regex-order" hidden>
+            <p class="chlo-regex-order-note">Scripts run from top to bottom. Move a script within its scope using the handle or arrows.</p>
+            <section id="global_scripts_block">
+                <h3>Global</h3>
+                <div id="saved_regex_scripts" class="regex-script-container"></div>
+            </section>
+            <section id="preset_scripts_block">
+                <h3>Preset</h3>
+                <div id="saved_preset_scripts" class="regex-script-container"></div>
+            </section>
+            <section id="scoped_scripts_block">
+                <h3>Character</h3>
+                <div id="saved_scoped_scripts" class="regex-script-container"></div>
+            </section>
+        </div>
+        <p class="chlo-regex-empty" role="status" hidden></p>
+    </div>
+    <template id="chlo-regex-section-template">
+        <section class="chlo-regex-section">
+            <div class="chlo-regex-section-header">
+                <button type="button" class="chlo-regex-section-toggle" aria-expanded="true">
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    <span class="chlo-regex-section-name"></span>
+                    <span class="chlo-regex-count"></span>
+                </button>
+                <details class="chlo-regex-section-tools">
+                    <summary class="chlo-regex-icon-button" aria-label="Section tools"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></summary>
+                    <div class="chlo-regex-section-actions">
+                        <button type="button" data-regex-action="rename-section">Rename</button>
+                        <button type="button" data-regex-action="section-up">Move up</button>
+                        <button type="button" data-regex-action="section-down">Move down</button>
+                        <button type="button" data-regex-action="remove-section">Remove section</button>
+                    </div>
+                </details>
+            </div>
+            <div class="chlo-regex-section-rows"></div>
+        </section>
+    </template>
 </div>
