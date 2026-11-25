@@ -252,21 +252,20 @@ test('the master checkbox saves individual rule states without changing preset p
     await expect.poll(applyRules).toBe(allEnabled);
 });
 
-
 test('the drawer attributes installed and declared sources without guessing from rule names', async ({ page }) => {
+    const saved = JSON.parse(await readFile(settingsPath, 'utf8'));
+    const settings = saved.extension_settings;
+    settings.disabledExtensions.push('third-party/SillyTavern-Worldhopper');
+    settings.worldhopper = { codex: { displayScripts: { 'wh-body-lines': 'recorded-version' } } };
+    const example = settings.regex[0];
+    settings.regex.push(
+        { ...example, id: 'wh-body-lines', scriptName: 'My renamed body rules' },
+        { ...example, id: 'wh-possession-box', scriptName: 'WH - Possession' },
+        { ...example, id: 'book-regex', scriptName: 'Formatting', chlo_regex_source: { type: 'lorebook', name: 'Test Codex' } },
+        { ...example, id: 'lookalike', scriptName: 'WH - Possession' },
+    );
+    await writeFile(settingsPath, JSON.stringify(saved));
     await ready(page);
-    await page.evaluate(async () => {
-        const { extension_settings: settings } = await import('/scripts/extensions.js');
-        settings.disabledExtensions.push('third-party/SillyTavern-Worldhopper');
-        settings.worldhopper = { codex: { displayScripts: { 'wh-body-lines': 'recorded-version' } } };
-        const example = settings.regex[0];
-        settings.regex.push(
-            { ...example, id: 'wh-body-lines', scriptName: 'My renamed body rules' },
-            { ...example, id: 'wh-possession-box', scriptName: 'WH - Possession' },
-            { ...example, id: 'book-regex', scriptName: 'Formatting', chlo_regex_source: { type: 'lorebook', name: 'Test Codex' } },
-            { ...example, id: 'lookalike', scriptName: 'WH - Possession' },
-        );
-    });
     await page.locator('[data-rn-key="regex"]').click();
     const title = id => row(page, id).locator('xpath=ancestor::section[1]').locator('.chlo-regex-section-name');
     await expect(title('wh-body-lines')).toHaveText('Worldhopper Engine');
