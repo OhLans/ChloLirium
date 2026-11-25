@@ -1,13 +1,7 @@
 <div class="regex_settings">
     <header class="chlo-regex-header">
         <h2 id="chlo-regex-title" data-i18n="ext_regex_title">Regex</h2>
-        <div class="chlo-regex-header-actions">
-            <label class="chlo-regex-switch-label" title="Turn individual rules on or off across Global, the active preset, and the selected character.">
-                <input type="checkbox" id="chlo-regex-master-toggle" checked>
-                All regex
-            </label>
-            <button type="button" class="chlo-regex-icon-button" data-regex-action="close" aria-label="Close Regex"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-        </div>
+        <button type="button" class="chlo-regex-icon-button" data-regex-action="close" aria-label="Close Regex"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </header>
     <div class="chlo-regex-toolbar">
         <label class="chlo-regex-search">
@@ -38,10 +32,22 @@
     </div>
     <div class="chlo-regex-filters">
         <div class="chlo-regex-scopes" role="group" aria-label="Script scope">
-            <button type="button" data-regex-scope="all" aria-pressed="true">All</button>
-            <button type="button" data-regex-scope="global" aria-pressed="false">Global</button>
-            <button type="button" data-regex-scope="preset" aria-pressed="false">Preset</button>
-            <button type="button" data-regex-scope="character" aria-pressed="false">Character</button>
+            <div class="chlo-regex-scope-pair">
+                <button type="button" data-regex-scope="all" aria-pressed="true">All</button>
+                <button type="button" class="chlo-regex-switch" data-regex-bulk-scope="all" role="switch" aria-label="Toggle all regex rules" aria-checked="false" disabled></button>
+            </div>
+            <div class="chlo-regex-scope-pair">
+                <button type="button" data-regex-scope="global" aria-pressed="false">Global</button>
+                <button type="button" class="chlo-regex-switch" data-regex-bulk-scope="global" role="switch" aria-label="Toggle global regex rules" aria-checked="false" disabled></button>
+            </div>
+            <div class="chlo-regex-scope-pair">
+                <button type="button" data-regex-scope="preset" aria-pressed="false">Preset</button>
+                <button type="button" class="chlo-regex-switch" data-regex-bulk-scope="preset" role="switch" aria-label="Toggle preset regex rules" aria-checked="false" disabled></button>
+            </div>
+            <div class="chlo-regex-scope-pair">
+                <button type="button" data-regex-scope="character" aria-pressed="false">Character</button>
+                <button type="button" class="chlo-regex-switch" data-regex-bulk-scope="character" role="switch" aria-label="Toggle character regex rules" aria-checked="false" disabled></button>
+            </div>
         </div>
         <button type="button" class="chlo-regex-back" data-regex-view="sections" hidden>Back to sections</button>
     </div>
@@ -97,7 +103,7 @@
     <div class="chlo-regex-permissions">
         <label id="toggle_preset_regex" hidden>
             <input type="checkbox" role="switch" id="regex_preset_toggle" aria-label="Allow scripts from this preset">
-            Preset regex
+            Allow preset scripts
             <span class="chlo-regex-preset-name" aria-hidden="true"></span>
         </label>
         <label id="toggle_scoped_regex" hidden>

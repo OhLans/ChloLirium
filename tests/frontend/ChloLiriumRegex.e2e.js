@@ -68,6 +68,7 @@ test.afterAll(async () => {
 const drawer = page => page.locator('#chlo-regex-drawer');
 const row = (page, id) => drawer(page).locator(`[data-regex-id="${id}"]`);
 const scopes = page => drawer(page).getByRole('group', { name: 'Script scope' });
+const scopeSwitch = (page, scope) => scopes(page).getByRole('switch', { name: `Toggle ${scope} regex rules` });
 const tools = page => drawer(page).locator('summary[aria-label="Regex tools"]');
 const ruleState = page => page.evaluate(async () => (await import('/scripts/extensions/regex/engine.js')).getRegexScripts());
 
@@ -181,6 +182,9 @@ test('the native toolbar opens the same drawer on a small screen', async ({ page
     const position = await drawer(page).boundingBox();
     expect(position.x).toBe(0);
     expect(position.width).toBeLessThanOrEqual(320);
+    const switchPositions = await scopes(page).getByRole('switch').evaluateAll(switches => switches.map(button => button.getBoundingClientRect().right));
+    expect(switchPositions).toHaveLength(4);
+    expect(Math.max(...switchPositions)).toBeLessThanOrEqual(320);
     await expect(row(page, 'widget')).toBeVisible();
     await drawer(page).getByText('+ New script', { exact: true }).click();
     await drawer(page).getByRole('button', { name: 'Global script', exact: true }).click();
@@ -203,10 +207,10 @@ test('the native toolbar opens the same drawer on a small screen', async ({ page
     await expect(debuggerPopup.locator('#regex_debugger_final_output')).toHaveText('A·quiet room.');
 });
 
-test('the master checkbox saves individual rule states without changing preset permissions', async ({ page }) => {
+test('the All switch saves individual rule states without changing preset permissions', async ({ page }) => {
     await ready(page);
     const open = () => page.locator('[data-rn-key="regex"]').click();
-    const master = drawer(page).getByRole('checkbox', { name: 'All regex' });
+    const master = scopeSwitch(page, 'all');
     const preset = drawer(page).getByRole('switch', { name: 'Allow scripts from this preset' });
     const applyRules = () => page.evaluate(async () => {
         const { getRegexedString, regex_placement } = await import('/scripts/extensions/regex/engine.js');
@@ -223,7 +227,7 @@ test('the master checkbox saves individual rule states without changing preset p
     expect(globalOnly).toMatch(/^A[ ·]sample \[note\]$/);
     await preset.check();
     await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'preset'));
-    await expect(master).toHaveJSProperty('indeterminate', true);
+    await expect(master).toHaveAttribute('data-mixed', '');
     await master.click();
     await expect.poll(applyRules).toBe('A   sample [note]');
     await expect(row(page, 'normalize').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
@@ -235,7 +239,7 @@ test('the master checkbox saves individual rule states without changing preset p
     await open();
     await expect(master).not.toBeChecked();
     await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
-    await master.check();
+    await master.click();
     await expect(row(page, 'markers').getByRole('switch')).toHaveAttribute('aria-checked', 'true');
     expect((await ruleState(page)).every(rule => !rule.disabled)).toBe(true);
     const allEnabled = globalOnly.replace('[note]', '');
@@ -250,6 +254,70 @@ test('the master checkbox saves individual rule states without changing preset p
     await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Regex QA');
     await expect(preset).not.toBeChecked();
     await expect.poll(applyRules).toBe(allEnabled);
+});
+
+test('the separate scope switches update only their matching rules, even when filtered', async ({ page }) => {
+    await ready(page);
+    const nav = page.locator('[data-rn-key="regex"]');
+    await nav.click();
+    await expect(scopeSwitch(page, 'character')).toBeDisabled();
+    await drawer(page).getByRole('button', { name: 'Close Regex' }).click();
+    await page.evaluate(async rule => {
+        const ctx = SillyTavern.getContext();
+        const form = new FormData();
+        form.set('ch_name', 'Regex Scope QA');
+        form.set('first_mes', 'Hello from Regex Scope QA.');
+        const response = await fetch('/api/characters/create', { method: 'POST', headers: ctx.getRequestHeaders({ omitContentType: true }), body: form });
+        if (!response.ok) throw new Error(`Could not create the regex test character: ${response.status}`);
+        await ctx.getCharacters();
+        const id = ctx.characters.findIndex(card => card.name === 'Regex Scope QA');
+        const { accountStorage } = await import('/scripts/util/AccountStorage.js');
+        accountStorage.setItem(`AlertRegex_${ctx.characters[id].avatar}`, 'true');
+        await ctx.writeExtensionField(id, 'regex_scripts', [rule]);
+        await ctx.selectCharacterById(id);
+    }, script('scope-character', 'Character cleanup', '/sample/g', 'character'));
+    await nav.click();
+
+    const expectRule = async (id, enabled) => {
+        await expect.poll(async () => (await ruleState(page)).find(rule => rule.id === id)?.disabled).toBe(!enabled);
+    };
+    const setScope = async (scope, enabled) => {
+        const control = scopeSwitch(page, scope);
+        await expect(control).toBeEnabled();
+        await expect(control).toHaveAttribute('aria-checked', String(!enabled));
+        await control.click();
+        await expect(control).toHaveAttribute('aria-checked', String(enabled));
+        await expect(control).toBeEnabled();
+    };
+    for (const scope of ['global', 'preset', 'character']) {
+        await expect(scopeSwitch(page, scope)).toHaveAttribute('aria-checked', 'true');
+    }
+    await scopes(page).getByRole('button', { name: 'Preset', exact: true }).click();
+    await drawer(page).getByRole('searchbox').fill('Preset-only cleanup');
+    await setScope('preset', false);
+    await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    await expect(scopes(page).getByRole('button', { name: 'Preset', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expectRule('loom-widget', false);
+    await expectRule('normalize', true);
+    await expectRule('scope-character', true);
+
+    await setScope('global', false);
+    await expectRule('normalize', false);
+    await expectRule('scope-character', true);
+    await setScope('character', false);
+    await expectRule('scope-character', false);
+    await expect(scopeSwitch(page, 'all')).not.toBeChecked();
+    await setScope('character', true);
+    await expectRule('scope-character', true);
+    await expectRule('normalize', false);
+    await expectRule('preset-regex', false);
+
+    await setScope('all', false);
+    await expectRule('scope-character', false);
+    await setScope('all', true);
+    await expectRule('scope-character', true);
+    await expectRule('normalize', true);
+    await expectRule('preset-regex', true);
 });
 
 test('the drawer attributes installed and declared sources without guessing from rule names', async ({ page }) => {
