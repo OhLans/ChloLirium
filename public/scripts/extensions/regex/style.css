@@ -1,99 +1,505 @@
 @import "debugger.css";
 
-.regex_settings .menu_button {
-    width: fit-content;
+.chlo-regex-nav-toggle {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    line-height: 1;
+}
+
+.chlo-regex-icon::before {
+    content: "";
+    display: block;
+    width: var(--topBarIconSize, 20px);
+    height: var(--topBarIconSize, 20px);
+    background: currentColor;
+    mask: url("../../chlolirium/courtyard/assets/icons/regex.svg") center / contain no-repeat;
+}
+
+#chlo-regex-drawer {
+    box-sizing: border-box;
+    top: var(--topBarBlockSize);
+    width: max(340px, calc((100dvw - var(--sheldWidth) - 2px) / 2));
+    padding: 0;
+    z-index: 3000;
+    overflow: hidden;
+    border-radius: 0;
+}
+
+#chlo-regex-drawer > #regex_container {
+    min-height: 0;
+    flex: 1;
     display: flex;
+}
+
+@media (min-width: 1050px) {
+    body.rivelle-navigator-enabled #rn-left-rail [data-rn-key="regex"] .rn-native-visual::before {
+        content: "";
+        width: 20px;
+        height: 20px;
+    }
+
+    body.rivelle-navigator-enabled:not(.rn-collapsed) #chlo-regex-drawer {
+        left: var(--rn-rail, 48px);
+    }
+
+    body.rivelle-navigator-enabled #rn-left-rail [data-rn-key="regex"].active {
+        color: var(--rn-text);
+        background-color: color-mix(in srgb, var(--rn-accent) 26%, transparent);
+    }
+}
+
+@media (max-width: 1000px) {
+    #chlo-regex-drawer {
+        width: 100dvw;
+    }
+}
+
+.regex_settings {
+    --regex-accent: var(--customThemeColor, var(--SmartThemeQuoteColor));
+    --regex-line: color-mix(in srgb, var(--SmartThemeBodyColor) 18%, transparent);
+    --regex-soft: color-mix(in srgb, var(--SmartThemeBodyColor) 7%, transparent);
+    --regex-popup: color-mix(in srgb, var(--SmartThemeBlurTintColor) 68%, #282021);
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
     gap: 10px;
-    flex-direction: row;
+    padding: 13px 15px 0;
 }
 
-.regex_settings .checkbox {
-    align-items: center;
-}
-
-.regex-script-container {
-    margin-top: 10px;
-    margin-bottom: 10px;
-}
-
-.regex-script-container:empty::after {
-    content: attr(no-scripts-text);
-    font-size: 0.95em;
-    opacity: 0.7;
-    display: block;
-    text-align: center;
-}
-
-#scoped_scripts_block,
-#preset_scripts_block {
-    opacity: 1;
-    transition: opacity var(--animation-duration-2x) ease-in-out;
-}
-
-#scoped_scripts_block .move_to_scoped,
-#global_scripts_block .move_to_global,
-#preset_scripts_block .move_to_preset {
-    display: none;
-}
-
-#scoped_scripts_block:not(:has(#regex_scoped_toggle:checked)),
-#preset_scripts_block:not(:has(#regex_preset_toggle:checked)) {
-    opacity: 0.5;
-}
-
-.enable_scoped:checked~.regex-toggle-on,
-.enable_scoped:not(:checked)~.regex-toggle-off {
-    display: block;
-}
-
-.enable_scoped:checked~.regex-toggle-off,
-.enable_scoped:not(:checked)~.regex-toggle-on {
-    display: none;
-}
-
-.regex-script-label {
-    align-items: baseline;
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 10px;
-    padding: 0 5px;
-    margin-top: 1px;
-    margin-bottom: 1px;
-}
-
-.regex-script-label:has(.disable_regex:checked) .regex_script_name {
-    text-decoration: line-through;
-    filter: grayscale(0.5);
-}
-
-input.disable_regex,
-input.enable_scoped {
+.regex_settings [hidden] {
     display: none !important;
 }
 
-.regex-toggle-off {
-    cursor: pointer;
-    opacity: 0.5;
-    filter: grayscale(0.5);
-    transition: opacity var(--animation-duration-2x) ease-in-out;
-}
-
-.regex-toggle-off:hover {
-    opacity: 1;
-    filter: none;
-}
-
-.regex-toggle-on {
+.regex_settings :is(button, summary) {
     cursor: pointer;
 }
 
-.disable_regex:checked~.regex-toggle-on,
-.disable_regex:not(:checked)~.regex-toggle-off {
+.regex_settings button:disabled {
+    cursor: default;
+    opacity: 0.42;
+}
+
+.regex_settings :is(button, summary):focus-visible {
+    outline: 2px solid var(--regex-accent);
+    outline-offset: 2px;
+}
+
+.regex_settings summary {
+    list-style: none;
+}
+
+.regex_settings summary::-webkit-details-marker {
     display: none;
 }
 
-.disable_regex:not(:checked)~.regex-toggle-on,
-.disable_regex:checked~.regex-toggle-off {
-    display: block;
+.chlo-regex-header,
+.chlo-regex-toolbar,
+.chlo-regex-filters,
+.chlo-regex-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.chlo-regex-header {
+    justify-content: space-between;
+}
+
+.chlo-regex-header h2 {
+    font-size: 1.27em;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.chlo-regex-icon-button,
+.chlo-regex-new {
+    display: inline-grid;
+    place-items: center;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--regex-line);
+    border-radius: 8px;
+    background: var(--regex-soft);
+    color: inherit;
+    white-space: nowrap;
+}
+
+.chlo-regex-icon-button {
+    width: 34px;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.chlo-regex-header .chlo-regex-icon-button {
+    background: transparent;
+    border-color: transparent;
+}
+
+.chlo-regex-new {
+    background: color-mix(in srgb, var(--regex-accent) 29%, transparent);
+    border-color: color-mix(in srgb, var(--regex-accent) 44%, transparent);
+}
+
+.chlo-regex-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 8px;
+    border: 1px solid var(--regex-line);
+    border-radius: 8px;
+    background: var(--regex-soft);
+}
+
+.chlo-regex-search:focus-within {
+    border-color: var(--regex-accent);
+}
+
+.chlo-regex-search:has(:disabled) {
+    opacity: 0.5;
+}
+
+.chlo-regex-search i {
+    font-size: 0.86em;
+    opacity: 0.7;
+}
+
+.chlo-regex-search input {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    color: inherit;
+}
+
+.chlo-regex-filters {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--regex-line);
+}
+
+.chlo-regex-scopes {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.chlo-regex-scopes button,
+.chlo-regex-back {
+    padding: 4px 8px;
+    min-height: 28px;
+    border: 1px solid var(--regex-line);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font-size: 0.88em;
+}
+
+.chlo-regex-back {
+    border-color: transparent;
+    border-radius: 6px;
+}
+
+.chlo-regex-filters button[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--regex-accent) 28%, transparent);
+    border-color: color-mix(in srgb, var(--regex-accent) 40%, transparent);
+}
+
+.chlo-regex-menu,
+.chlo-regex-section-tools {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.chlo-regex-menu-items,
+.chlo-regex-section-actions {
+    display: grid;
+    position: absolute;
+    z-index: 4;
+    top: calc(100% + 4px);
+    right: 0;
+    width: max-content;
+    max-width: min(220px, 55dvw);
+    border: 1px solid var(--regex-line);
+    border-radius: 8px;
+    padding: 4px;
+    background: var(--regex-popup);
+    box-shadow: 0 5px 15px var(--black30a);
+}
+
+.chlo-regex-menu:not([open]) .chlo-regex-menu-items,
+.chlo-regex-section-tools:not([open]) .chlo-regex-section-actions {
+    display: none;
+}
+
+.chlo-regex-menu-items button,
+.chlo-regex-section-actions button {
+    min-height: 30px;
+    border: 0;
+    border-radius: 4px;
+    padding: 5px 8px;
+    text-align: left;
+    background: none;
+    color: inherit;
+}
+
+.regex_settings :is(button, summary):not(:disabled, .chlo-regex-switch, [aria-pressed="true"]):hover {
+    background-color: var(--regex-soft);
+}
+
+.chlo-regex-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding: 0 3px max(18px, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.chlo-regex-section {
+    border-bottom: 1px solid var(--regex-line);
+}
+
+.chlo-regex-section-toggle {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+    min-height: 38px;
+    min-width: 0;
+    padding: 2px 5px;
+    text-align: left;
+    color: inherit;
+    font-weight: 600;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+}
+
+.chlo-regex-section-toggle i {
+    width: 1em;
+    text-align: center;
+    font-size: 0.71em;
+    opacity: 0.85;
+}
+
+.chlo-regex-section-toggle[aria-expanded="false"] i {
+    transform: rotate(-90deg);
+}
+
+.chlo-regex-section-name {
+    overflow-wrap: anywhere;
+}
+
+.chlo-regex-count,
+.chlo-regex-scope-label {
+    padding: 2px 6px;
+    color: inherit;
+    font-size: 0.75em;
+    font-weight: normal;
+    white-space: nowrap;
+    border-radius: 999px;
+    background: var(--regex-soft);
+}
+
+.chlo-regex-section-tools > summary {
+    border: 0;
+    background: none;
+    height: 30px;
+}
+
+.chlo-regex-section-rows .regex-script-label {
+    margin-left: 10px;
+}
+
+.chlo-regex-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 39px;
+    padding: 2px 3px;
+    border-top: 1px solid var(--regex-line);
+}
+
+.chlo-regex-row .chlo-regex-icon-button {
+    width: 24px;
+    height: 29px;
+    background: none;
+    border-color: transparent;
+    opacity: 0.75;
+}
+
+.chlo-regex-row .chlo-regex-icon-button:disabled {
+    opacity: 0.23;
+}
+
+.regex-script-label .regex_script_name {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    border-radius: 4px;
+    padding: 4px;
+    text-align: left;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+    background: transparent;
+    color: inherit;
+}
+
+.chlo-regex-switch {
+    flex: 0 0 36px;
+    display: flex;
+    align-items: center;
+    height: 21px;
+    padding: 2px;
+    border: 1px solid var(--regex-line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor) 14%, transparent);
+    color: var(--SmartThemeBodyColor);
+}
+
+.chlo-regex-switch[aria-checked="true"] {
+    justify-content: flex-end;
+    background: color-mix(in srgb, var(--regex-accent) 52%, transparent);
+}
+
+.chlo-regex-switch::before {
+    content: "";
+    height: 13px;
+    width: 13px;
+    background: currentColor;
+    border-radius: 50%;
+}
+
+.chlo-regex-blocked .chlo-regex-scope-label::after {
+    content: " · Blocked";
+}
+
+.regex_settings:not([data-regex-scope="all"]) .chlo-regex-scope-label,
+.regex_settings[data-regex-view="order"] .chlo-regex-scope-label,
+.regex_settings:not([data-regex-view="order"]) :is(.drag-handle, .chlo-regex-order-button),
+.regex_settings[data-regex-view="order"] .chlo-regex-section-field,
+.regex_settings:not(:has(#regex_bulk_edit:checked)) :is(.regex_bulk_checkbox, .regex_bulk_operations) {
+    display: none;
+}
+
+.chlo-regex-row-actions {
+    border-radius: 6px;
+    background: var(--regex-soft);
+    padding: 6px 8px;
+    margin: 0 0 4px;
+}
+
+#chlo-regex-selected-count {
+    align-self: center;
+    font-size: 0.85em;
+}
+
+.chlo-regex-section-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chlo-regex-row-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0 2px;
+}
+
+.chlo-regex-permissions:not(:has(label:not([hidden]))) {
+    display: none;
+}
+
+.chlo-regex-permissions label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88em;
+}
+
+.chlo-regex-order-note,
+.chlo-regex-empty {
+    font-size: 0.9em;
+    margin: 0 0 12px;
+}
+
+#chlo-regex-order h3 {
+    margin: 12px 0 4px;
+    font-size: 0.95em;
+}
+
+#regex_presets_block .flex-container:last-child {
+    flex-wrap: nowrap;
+}
+
+#regex_presets {
+    min-width: 0;
+}
+
+.chlo-regex-inline-editor {
+    padding: 10px;
+    margin: 0 0 8px;
+    border: 1px solid color-mix(in srgb, var(--regex-accent) 47%, transparent);
+    border-radius: 8px;
+    background: var(--regex-soft);
+}
+
+.chlo-regex-inline-editor .regex_editor :is(input[type="text"], textarea) {
+    max-width: 100%;
+}
+
+.chlo-regex-inline-editor .regex_editor .title_restorable {
+    min-height: 0;
+    margin: 4px 0 2px;
+    padding: 0;
+    border: 0;
+    letter-spacing: normal;
+}
+
+.chlo-regex-inline-editor :is(.find_regex, .regex_replace_string) {
+    font-family: monospace;
+}
+
+.chlo-regex-advanced {
+    padding-top: 5px;
+}
+
+.chlo-regex-advanced > summary {
+    padding: 6px 0;
+    font-size: 0.91em;
+}
+
+.chlo-regex-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.chlo-regex-editor-actions button {
+    padding: 5px 10px;
+    border: 1px solid var(--regex-line);
+    border-radius: 6px;
+    color: inherit;
+}
+
+.chlo-regex-editor-actions button[type="button"] {
+    background: transparent;
 }
 
 #regex_info_block_wrapper {
@@ -101,9 +507,9 @@ input.enable_scoped {
 }
 
 #regex_info_block {
-    margin: 10px 0;
+    margin: 4px 0;
     padding: 5px 20px;
-    font-size: 0.9em;
+    font-size: 0.84em;
 }
 
 #regex_info_block_wrapper:has(#regex_info_block:empty) {
@@ -113,49 +519,6 @@ input.enable_scoped {
 #regex_info_block_flags_hint {
     position: absolute;
     top: 50%;
-    right: 10px;
+    right: 8px;
     transform: translateY(-50%);
-}
-
-.regex_settings label[for="regex_bulk_edit"]:has(#regex_bulk_edit:checked) {
-    color: var(--golden);
-}
-
-.regex_settings .regex-script-container .regex-script-label .regex_bulk_checkbox {
-    margin-left: 5px;
-    margin-right: 5px;
-}
-
-.regex_settings .regex_bulk_operations,
-.regex_settings .regex_bulk_checkbox,
-.regex_settings .regex_bulk_operations_hr {
-    display: none;
-}
-
-.regex_settings:has(#regex_bulk_edit:checked) .regex_bulk_operations {
-    display: flex;
-}
-
-.regex_settings:has(#regex_bulk_edit:checked) .regex_bulk_operations_hr {
-    display: block;
-}
-
-.regex_settings:has(#regex_bulk_edit:checked) .regex_bulk_checkbox {
-    display: inline-grid;
-}
-
-@supports not selector(:has(*)) {
-    .regex-script-label label.regex_script_expand {
-        display: none;
-    }
-
-    .regex-script-label .regex_script_buttons {
-        display: flex;
-    }
-}
-
-.regex-script-label label.regex_script_expand input[name="regex_expand"],
-.regex-script-label:has(input[name="regex_expand"]:checked) label.regex_script_expand,
-.regex-script-label:not(:has(input[name="regex_expand"]:checked)) .regex_script_buttons {
-    display: none;
 }

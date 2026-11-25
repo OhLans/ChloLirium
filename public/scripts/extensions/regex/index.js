@@ -12,6 +12,28 @@ import { allowPresetScripts, allowScopedScripts, disallowPresetScripts, disallow
 import { t } from '../../i18n.js';
 import { accountStorage } from '../../util/AccountStorage.js';
 import { getPresetManager } from '../../preset-manager.js';
+import { createRegexDrawer } from './drawer.js';
+
+const scopesByType = {
+    [SCRIPT_TYPES.GLOBAL]: 'global',
+    [SCRIPT_TYPES.PRESET]: 'preset',
+    [SCRIPT_TYPES.SCOPED]: 'character',
+};
+let drawer;
+let scriptTemplatePromise;
+
+function getDrawerContext() {
+    const api = getCurrentPresetAPI();
+    const preset = getCurrentPresetName();
+    const character = selected_group ? undefined : characters?.[this_chid];
+    return {
+        hasPreset: Boolean(preset),
+        hasCharacter: Boolean(character),
+        presetAllowed: isPresetScriptsAllowed(api, preset),
+        characterAllowed: isScopedScriptsAllowed(character),
+        owners: { global: '', preset: preset ? JSON.stringify([api, preset]) : null, character: character?.avatar ?? null },
+    };
+}
 
 // Re-exports for legacy extensions
 export { getRegexScripts };
@@ -493,12 +515,14 @@ function setToggleAllIcon(allAreChecked) {
  * Sets the visibility of the bulk move buttons based on selected scripts.
  */
 function setMoveButtonsVisibility() {
-    const hasGlobalScripts = $('#saved_regex_scripts .regex-script-label:has(.regex_bulk_checkbox:checked)').length > 0;
-    const hasScopedScripts = $('#saved_scoped_scripts .regex-script-label:has(.regex_bulk_checkbox:checked)').length > 0;
-    const hasPresetScripts = $('#saved_preset_scripts .regex-script-label:has(.regex_bulk_checkbox:checked)').length > 0;
-    $('#bulk_regex_move_to_global').toggle(hasScopedScripts || hasPresetScripts);
-    $('#bulk_regex_move_to_scoped').toggle(hasGlobalScripts || hasPresetScripts);
-    $('#bulk_regex_move_to_preset').toggle(hasGlobalScripts || hasScopedScripts);
+    const selected = drawer?.getSelection() ?? [];
+    const scopes = new Set(selected.map(row => row.scope));
+    const checkboxCount = drawer?.getVisibleRows().length ?? 0;
+    setToggleAllIcon(checkboxCount > 0 && drawer.getVisibleRows().every(row => row.node.querySelector('.regex_bulk_checkbox').checked));
+    $('#chlo-regex-selected-count').text(t`${selected.length} selected`);
+    for (const [scope, suffix] of [['global', 'global'], ['preset', 'preset'], ['character', 'scoped']]) {
+        $(`#bulk_regex_move_to_${suffix}`).prop('hidden', ![...scopes].some(item => item !== scope));
+    }
 }
 
 /**
@@ -542,12 +566,12 @@ async function saveRegexScript(regexScript, existingScriptIndex, scriptType, sav
 
     if (scriptType === SCRIPT_TYPES.SCOPED) {
         await saveScriptsByType(array, SCRIPT_TYPES.SCOPED);
-        allowScopedScripts(characters?.[this_chid]);
+        if (existingScriptIndex === -1) allowScopedScripts(characters?.[this_chid]);
     }
 
     if (scriptType === SCRIPT_TYPES.PRESET) {
         await saveScriptsByType(array, SCRIPT_TYPES.PRESET);
-        allowPresetScripts(getCurrentPresetAPI(), getCurrentPresetName());
+        if (existingScriptIndex === -1) allowPresetScripts(getCurrentPresetAPI(), getCurrentPresetName());
     }
 
     if (saveSettings) {
@@ -562,9 +586,7 @@ async function saveRegexScript(regexScript, existingScriptIndex, scriptType, sav
     }
 
     const debuggerPopup = $('#regex_debugger_popup');
-    if (debuggerPopup.length) {
-        populateDebuggerRuleList(debuggerPopup.parent());
-    }
+    if (debuggerPopup.length) refreshDebuggerRules(debuggerPopup);
 }
 
 /**
@@ -572,9 +594,10 @@ async function saveRegexScript(regexScript, existingScriptIndex, scriptType, sav
  * @param {string} id ID of the script to delete
  * @param {SCRIPT_TYPES} scriptType Type of the script
  * @param {boolean} saveSettings Whether to save the settings immediately
+ * @param {boolean} [keepSection=false] Keep the section assignment until the scope move completes
  * @returns {Promise<void>}
  */
-async function deleteRegexScript(id, scriptType, saveSettings = true) {
+async function deleteRegexScript(id, scriptType, saveSettings = true, keepSection = false) {
     const array = getScriptsByType(scriptType);
 
     const existingScriptIndex = array.findIndex(script => script.id === id);
@@ -594,6 +617,7 @@ async function deleteRegexScript(id, scriptType, saveSettings = true) {
             default:
                 break;
         }
+        if (!keepSection) drawer?.forgetSection(scopesByType[scriptType], id);
         if (saveSettings) {
             saveSettingsDebounced();
             await loadRegexScripts();
@@ -620,50 +644,52 @@ async function moveRegexScript(script, toType, fromType = null, saveSettings = t
     if (fromType === toType || fromType === SCRIPT_TYPE_UNKNOWN || toType === SCRIPT_TYPE_UNKNOWN) {
         return;
     }
-    await deleteRegexScript(script.id, fromType, false);
+    await deleteRegexScript(script.id, fromType, false, true);
+    drawer?.moveSection(scopesByType[fromType], scopesByType[toType], script.id);
     await saveRegexScript(script, -1, toType, saveSettings);
 }
 
 async function loadRegexScripts() {
-    $('#saved_regex_scripts').empty();
-    $('#saved_scoped_scripts').empty();
-    $('#saved_preset_scripts').empty();
-    setToggleAllIcon(false);
-
-    const scriptTemplate = $(await renderExtensionTemplateAsync('regex', 'scriptTemplate'));
+    if (!drawer) return;
+    scriptTemplatePromise ??= renderExtensionTemplateAsync('regex', 'scriptTemplate').then(html => $(html));
+    const scriptTemplate = await scriptTemplatePromise;
+    const rows = [];
+    const context = getDrawerContext();
 
     /**
      * Renders a script to the UI.
-     * @param {string} container Container to render the script to
      * @param {import('../../char-data.js').RegexScriptData} script Script data
      * @param {SCRIPT_TYPES} scriptType Type of the script
-     * @param {number} index Index of the script in the array
      */
-    function renderScript(container, script, scriptType, index) {
-        // Have to clone here
+    function renderScript(script, scriptType) {
         const scriptHtml = scriptTemplate.clone();
-        const save = () => saveRegexScript(script, index, scriptType);
+        const scope = scopesByType[scriptType];
 
         if (!script.id) {
             script.id = uuidv4();
         }
 
-        scriptHtml.attr('id', script.id);
+        scriptHtml.attr('data-regex-id', script.id);
         scriptHtml.find('.regex_script_name').text(script.scriptName).attr('title', script.scriptName);
-        scriptHtml.find('.disable_regex').prop('checked', script.disabled ?? false)
-            .on('input', async function () {
-                script.disabled = !!$(this).prop('checked');
-                await save();
-            });
-        scriptHtml.find('.regex-toggle-on').on('click', function () {
-            scriptHtml.find('.disable_regex').prop('checked', true).trigger('input');
+        scriptHtml.find('.regex_bulk_checkbox').attr('aria-label', t`Select ${script.scriptName}`);
+        const ruleSwitch = scriptHtml.find('.disable_regex').attr('aria-label', t`Enable ${script.scriptName}`);
+        ruleSwitch.attr('aria-checked', String(!script.disabled)).on('click', async function () {
+            const array = getScriptsByType(scriptType);
+            const index = array.indexOf(script);
+            if (index === -1) return;
+            ruleSwitch.prop('disabled', true);
+            script.disabled = !script.disabled;
+            ruleSwitch.attr('aria-checked', String(!script.disabled));
+            try {
+                await saveRegexScript(script, index, scriptType);
+            } finally {
+                ruleSwitch.prop('disabled', false);
+            }
         });
-        scriptHtml.find('.regex-toggle-off').on('click', function () {
-            scriptHtml.find('.disable_regex').prop('checked', false).trigger('input');
-        });
-        scriptHtml.find('.edit_existing_regex').on('click', async function () {
-            await onRegexEditorOpenClick(scriptHtml.attr('id'), scriptType);
-        });
+        scriptHtml.find('.edit_existing_regex').on('click', () => onRegexEditorOpenClick(script.id, scriptType));
+        scriptHtml.find('.move_to_global').prop('hidden', scope === 'global');
+        scriptHtml.find('.move_to_scoped').prop({ hidden: scope === 'character', disabled: !context.hasCharacter });
+        scriptHtml.find('.move_to_preset').prop({ hidden: scope === 'preset', disabled: !context.hasPreset });
         scriptHtml.find('.move_to_global').on('click', async function () {
             const confirm = await callGenericPopup(t`Are you sure you want to move this regex script to global?`, POPUP_TYPE.CONFIRM);
 
@@ -710,58 +736,32 @@ async function loadRegexScripts() {
             await deleteRegexScript(script.id, scriptType);
             await reloadCurrentChat();
         });
-        scriptHtml.find('.regex_bulk_checkbox').on('change', function () {
-            setMoveButtonsVisibility();
-            const checkboxes = $('#regex_container .regex_bulk_checkbox');
-            const allAreChecked = checkboxes.length === checkboxes.filter(':checked').length;
-            setToggleAllIcon(allAreChecked);
-        });
-        scriptHtml.find('input[name="regex_expand"]').on('change', function () {
-            if (!(this instanceof HTMLInputElement)) {
-                return;
-            }
-
-            if (!this.checked) {
-                return;
-            }
-
-            const closeMenuHandler = (e) => {
-                if (e.target instanceof HTMLElement) {
-                    if (e.target.closest('.regex-script-label')) {
-                        return;
-                    }
-                    this.checked = false;
-                    document.removeEventListener('click', closeMenuHandler);
-                }
-            };
-
-            // Use setTimeout to avoid closing immediately from the same click
-            setTimeout(() => {
-                document.addEventListener('click', closeMenuHandler, { passive: true, once: false });
-            }, 0);
-        });
-
-        $(container).append(scriptHtml);
+        scriptHtml.find('.regex_bulk_checkbox').on('change', setMoveButtonsVisibility);
+        rows.push({ scope, id: script.id, name: script.scriptName ?? '', node: scriptHtml[0] });
     }
 
-    getScriptsByType(SCRIPT_TYPES.GLOBAL).forEach((script, index) => renderScript('#saved_regex_scripts', script, SCRIPT_TYPES.GLOBAL, index));
-    getScriptsByType(SCRIPT_TYPES.SCOPED).forEach((script, index) => renderScript('#saved_scoped_scripts', script, SCRIPT_TYPES.SCOPED, index));
-    getScriptsByType(SCRIPT_TYPES.PRESET).forEach((script, index) => renderScript('#saved_preset_scripts', script, SCRIPT_TYPES.PRESET, index));
+    for (const scriptType of Object.values(SCRIPT_TYPES)) {
+        if (scriptType === SCRIPT_TYPES.SCOPED && !context.hasCharacter) continue;
+        getScriptsByType(scriptType).forEach(script => renderScript(script, scriptType));
+    }
 
-    $('#regex_scoped_toggle').prop('checked', isScopedScriptsAllowed(characters?.[this_chid]));
-    $('#regex_preset_toggle').prop('checked', isPresetScriptsAllowed(getCurrentPresetAPI(), getCurrentPresetName()));
-
-    setMoveButtonsVisibility();
+    $('#regex_scoped_toggle').prop('checked', context.characterAllowed);
+    $('#regex_preset_toggle').prop('checked', context.presetAllowed);
+    drawer.update(rows, context);
 }
 
 /**
  * Opens the regex editor.
  * @param {string|boolean} existingId Existing ID
  * @param {SCRIPT_TYPES} scriptType Type of the script
+ * @param {boolean} [inline=true] Open in the drawer instead of above the debugger
  * @returns {Promise<void>}
  */
-async function onRegexEditorOpenClick(existingId, scriptType) {
+async function onRegexEditorOpenClick(existingId, scriptType, inline = true) {
     const editorHtml = $(await renderExtensionTemplateAsync('regex', 'editor'));
+    const scope = scopesByType[scriptType];
+    const owner = getDrawerContext().owners[scope];
+    if (owner === null) return;
     const array = getScriptsByType(scriptType);
 
     // If an ID exists, fill in all the values
@@ -853,9 +853,14 @@ async function onRegexEditorOpenClick(existingId, scriptType) {
     editorHtml.find('input, textarea, select').on('input', updateTestResult);
     updateInfoBlock(editorHtml);
 
-    const popupResult = await callGenericPopup(editorHtml, POPUP_TYPE.CONFIRM, '', { okButton: t`Save`, cancelButton: t`Cancel`, allowVerticalScrolling: true });
-    if (popupResult) {
+    if (existingId && existingScriptIndex < 0) return;
+    const save = async () => {
+        if (getDrawerContext().owners[scope] !== owner) return false;
+        const scripts = getScriptsByType(scriptType);
+        const index = existingId ? scripts.findIndex(script => script.id === existingId) : -1;
+        if (existingId && index < 0) return false;
         const newRegexScript = {
+            ...scripts[index],
             ...compatibilityFields(),
             id: existingId ? String(existingId) : uuidv4(),
             scriptName: String(editorHtml.find('.regex_script_name').val()),
@@ -878,7 +883,20 @@ async function onRegexEditorOpenClick(existingId, scriptType) {
             maxDepth: parseInt(String(editorHtml.find('input[name="max_depth"]').val())),
         };
 
-        saveRegexScript(newRegexScript, existingScriptIndex, scriptType);
+        newRegexScript.scriptName = newRegexScript.scriptName.trim();
+        if (!newRegexScript.scriptName) {
+            toastr.error(t`A script name is required.`);
+            editorHtml.find('.regex_script_name').trigger('focus');
+            return false;
+        }
+        await saveRegexScript(newRegexScript, index, scriptType);
+        return true;
+    };
+    if (inline) {
+        drawer.openEditor(editorHtml[0], scope, existingId, save);
+    } else {
+        const confirmed = await callGenericPopup(editorHtml, POPUP_TYPE.CONFIRM, '', { okButton: t`Save`, allowVerticalScrolling: true });
+        if (confirmed) await save();
     }
 }
 
@@ -1121,7 +1139,7 @@ function populateDebuggerRuleList(container) {
             );
         ruleElement.find('.rule-enabled').prop('checked', !script.disabled);
         // @ts-ignore
-        ruleElement.find('.edit_rule').on('click', () => onRegexEditorOpenClick(script.id, script.type));
+        ruleElement.find('.edit_rule').on('click', () => onRegexEditorOpenClick(script.id, script.type, false));
 
         ruleElement.on('click', function (event) {
             if ($(event.target).is('input, .menu_button, .menu_button i')) {
@@ -1172,24 +1190,25 @@ function populateDebuggerRuleList(container) {
     }
 }
 
+function refreshDebuggerRules(container) {
+    populateDebuggerRuleList(container);
+    for (const suffix of ['global', 'scoped', 'preset']) {
+        // @ts-ignore
+        container.find(`#regex_debugger_rules_${suffix}`).sortable({ delay: getSortableDelay() }).disableSelection();
+    }
+}
+
 /**
  * Opens the regex debugger.
  * @returns {Promise<void>}
  */
 async function onRegexDebuggerOpenClick() {
     const templateContent = await renderExtensionTemplateAsync('regex', 'debugger');
-    const debuggerHtml = $('<div>').html(templateContent);
+    const debuggerHtml = $('<div id="regex_debugger_popup">').html(templateContent);
 
     const stepTemplate = debuggerHtml.find('#regex_debugger_step_template');
 
-    populateDebuggerRuleList(debuggerHtml);
-
-    // @ts-ignore
-    debuggerHtml.find('#regex_debugger_rules_global').sortable({ delay: getSortableDelay() }).disableSelection();
-    // @ts-ignore
-    debuggerHtml.find('#regex_debugger_rules_scoped').sortable({ delay: getSortableDelay() }).disableSelection();
-    // @ts-ignore
-    debuggerHtml.find('#regex_debugger_rules_preset').sortable({ delay: getSortableDelay() }).disableSelection();
+    refreshDebuggerRules(debuggerHtml);
 
     debuggerHtml.find('#regex_debugger_run_test').on('click', function () {
         const allScripts = debuggerHtml.data('allScripts');
@@ -1286,14 +1305,7 @@ async function onRegexDebuggerOpenClick() {
         await loadRegexScripts();
         toastr.success(t`Regex script order saved!`);
 
-        const currentPopupContent = $('div:has(> #regex_debugger_rules)');
-        populateDebuggerRuleList(currentPopupContent);
-        // @ts-ignore
-        currentPopupContent.find('#regex_debugger_rules_global').sortable({ delay: getSortableDelay() }).disableSelection();
-        // @ts-ignore
-        currentPopupContent.find('#regex_debugger_rules_scoped').sortable({ delay: getSortableDelay() }).disableSelection();
-        // @ts-ignore
-        currentPopupContent.find('#regex_debugger_rules_preset').sortable({ delay: getSortableDelay() }).disableSelection();
+        refreshDebuggerRules(debuggerHtml);
     });
 
     debuggerHtml.find('#regex_debugger_expand_steps').on('click', function () {
@@ -1343,7 +1355,7 @@ async function onRegexDebuggerOpenClick() {
         callGenericPopup(popupContent, POPUP_TYPE.TEXT, t`Final Output`, { wide: true, large: true, allowVerticalScrolling: true });
     });
 
-    await callGenericPopup(debuggerHtml.children(), POPUP_TYPE.TEXT, '', { wide: true, allowVerticalScrolling: true });
+    await callGenericPopup(debuggerHtml, POPUP_TYPE.TEXT, '', { wide: true, allowVerticalScrolling: true });
 }
 
 /**
@@ -1578,7 +1590,7 @@ async function onRegexImportFileChange(file, scriptType) {
 function getScriptType(script) {
     for (const scriptType of Object.values(SCRIPT_TYPES)) {
         const scripts = getScriptsByType(scriptType);
-        if (scripts.some(s => s.id === script.id)) {
+        if (scripts.includes(script)) {
             return scriptType;
         }
     }
@@ -1586,12 +1598,10 @@ function getScriptType(script) {
 }
 
 function getSelectedScripts() {
-    const scripts = getRegexScripts();
-    const selector = '#regex_container .regex-script-label:has(.regex_bulk_checkbox:checked)';
-    const selectedIds = Array.from(document.querySelectorAll(selector))
-        .map(e => e.getAttribute('id'))
-        .filter(id => id);
-    return scripts.filter(script => selectedIds.includes(script.id));
+    const typesByScope = { global: SCRIPT_TYPES.GLOBAL, preset: SCRIPT_TYPES.PRESET, character: SCRIPT_TYPES.SCOPED };
+    return (drawer?.getSelection() ?? [])
+        .map(({ scope, id }) => getScriptsByType(typesByScope[scope]).find(script => script.id === id))
+        .filter(Boolean);
 }
 
 function purgeEmbeddedRegexScripts({ character }) {
@@ -1738,6 +1748,28 @@ export async function init() {
 
     const settingsHtml = $(await renderExtensionTemplateAsync('regex', 'dropdown'));
     $('#regex_container').append(settingsHtml);
+    const toggle = document.querySelector('#regex-drawer-button > .drawer-toggle');
+    drawer = createRegexDrawer(settingsHtml[0], {
+        getLayout: () => extension_settings.chloRegexLayout,
+        saveLayout: layout => {
+            extension_settings.chloRegexLayout = layout;
+            saveSettingsDebounced();
+        },
+        toggleDrawer: () => toggle.click(),
+        moveRule: async (scope, id, delta) => {
+            const type = Object.values(SCRIPT_TYPES).find(value => scopesByType[value] === scope);
+            const scripts = [...getScriptsByType(type)];
+            const index = scripts.findIndex(script => script.id === id);
+            const target = index + delta;
+            if (index < 0 || target < 0 || target >= scripts.length) return;
+            [scripts[index], scripts[target]] = [scripts[target], scripts[index]];
+            await saveRegexOrder(scripts, type);
+            const trigger = drawer.getVisibleRows().find(row => row.scope === scope && row.id === id);
+            trigger?.node.querySelector('.edit_existing_regex').focus({ preventScroll: true });
+        },
+        updateBulk: setMoveButtonsVisibility,
+    });
+
     $('#open_regex_editor').on('click', function () {
         onRegexEditorOpenClick(false, SCRIPT_TYPES.GLOBAL);
     });
@@ -1778,16 +1810,10 @@ export async function init() {
     });
 
     $('#bulk_select_all_toggle').on('click', async function () {
-        const checkboxes = $('#regex_container .regex_bulk_checkbox');
-        if (checkboxes.length === 0) {
-            return;
-        }
-
-        const allAreChecked = checkboxes.length === checkboxes.filter(':checked').length;
-        const newState = !allAreChecked; // true if we just checked all, false if we just unchecked all
-
-        checkboxes.prop('checked', newState);
-        setToggleAllIcon(newState);
+        const boxes = drawer.getVisibleRows().map(row => row.node.querySelector('.regex_bulk_checkbox'));
+        if (!boxes.length) return;
+        const selected = !boxes.every(box => box.checked);
+        boxes.forEach(box => { box.checked = selected; });
         setMoveButtonsVisibility();
     });
 
@@ -1920,45 +1946,38 @@ export async function init() {
         await loadRegexScripts();
     });
 
-    let sortableDatas = [
-        {
-            selector: '#saved_regex_scripts',
-            setter: scripts => saveScriptsByType(scripts, SCRIPT_TYPES.GLOBAL),
-            getter: () => getScriptsByType(SCRIPT_TYPES.GLOBAL),
-        },
-        {
-            selector: '#saved_scoped_scripts',
-            setter: scripts => saveScriptsByType(scripts, SCRIPT_TYPES.SCOPED),
-            getter: () => getScriptsByType(SCRIPT_TYPES.SCOPED),
-        },
-        {
-            selector: '#saved_preset_scripts',
-            setter: scripts => saveScriptsByType(scripts, SCRIPT_TYPES.PRESET),
-            getter: () => getScriptsByType(SCRIPT_TYPES.PRESET),
-        },
-    ];
-    for (const { selector, setter, getter } of sortableDatas) {
+    async function saveRegexOrder(scripts, type) {
+        await saveScriptsByType(scripts, type);
+        saveSettingsDebounced();
+        await loadRegexScripts();
+        if (getCurrentChatId()) await reloadCurrentChat();
+    }
+    const orderLists = {
+        [SCRIPT_TYPES.GLOBAL]: '#saved_regex_scripts',
+        [SCRIPT_TYPES.PRESET]: '#saved_preset_scripts',
+        [SCRIPT_TYPES.SCOPED]: '#saved_scoped_scripts',
+    };
+    for (const type of Object.values(SCRIPT_TYPES)) {
+        const list = $(orderLists[type]);
+        let sortOwner;
         // @ts-ignore
-        $(selector).sortable({
+        list.sortable({
             delay: getSortableDelay(),
             handle: '.drag-handle',
-            stop: async function () {
-                const oldScripts = getter();
-                const newScripts = [];
-                $(selector).children().each(function () {
-                    const id = $(this).attr('id');
-                    const existingScript = oldScripts.find((e) => e.id === id);
-                    if (existingScript) {
-                        newScripts.push(existingScript);
-                    }
-                });
-
-                await setter(newScripts);
-                saveSettingsDebounced();
-
-                console.debug(`Regex scripts in ${selector} reordered`);
-                await reloadCurrentChat();
-                await loadRegexScripts();
+            items: '> .regex-script-label',
+            start: () => { sortOwner = getDrawerContext().owners[scopesByType[type]]; },
+            stop: async () => {
+                const oldScripts = getScriptsByType(type);
+                const scriptsById = new Map(oldScripts.map(script => [script.id, script]));
+                const ids = list.children('.regex-script-label').map((_, row) => row.getAttribute('data-regex-id')).get();
+                // A view change or a scope switch cannot overwrite a partially rendered list.
+                if (sortOwner !== getDrawerContext().owners[scopesByType[type]]
+                    || new Set(ids).size !== oldScripts.length || ids.some(id => !scriptsById.has(id))) {
+                    await loadRegexScripts();
+                    return;
+                }
+                const sorted = ids.map(id => scriptsById.get(id));
+                if (sorted.some((script, index) => oldScripts[index] !== script)) await saveRegexOrder(sorted, type);
             },
         });
     }
@@ -1984,7 +2003,8 @@ export async function init() {
         }
 
         saveSettingsDebounced();
-        reloadCurrentChat();
+        loadRegexScripts();
+        if (getCurrentChatId()) reloadCurrentChat();
     });
 
     $('#regex_preset_toggle').on('input', function () {
@@ -1998,12 +2018,12 @@ export async function init() {
         }
 
         saveSettingsDebounced();
-        reloadCurrentChat();
+        loadRegexScripts();
+        if (getCurrentChatId()) reloadCurrentChat();
     });
 
     await loadRegexScripts();
-    // @ts-ignore
-    $('#saved_regex_scripts').sortable('enable');
+    $('#regex-drawer-button').removeClass('displayNone');
 
     /**
      * @typedef {object} ScriptDecorators
