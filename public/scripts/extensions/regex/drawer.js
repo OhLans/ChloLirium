@@ -32,13 +32,33 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
     const key = (scriptScope, id) => `${scriptScope}:${id}`;
     const selectedRows = () => rows.filter(({ node }) => node.querySelector('.regex_bulk_checkbox').checked);
     const closeMenus = () => $$('details[open].chlo-regex-menu, details[open].chlo-regex-section-tools').forEach(details => { details.open = false; });
+    const chat = document.getElementById('sheld');
+    const resizeDrawer = () => {
+        if (!chat || !panel.classList.contains('openDrawer')) return;
+        if (matchMedia('(max-width: 1000px)').matches) {
+            // A focused native toolbar button can scroll the transformed page sideways.
+            if (scrollX) window.scrollTo(0, scrollY);
+            return;
+        }
+        panel.style.setProperty('--regex-chat-edge', `${chat.getBoundingClientRect().left}px`);
+    };
+    const chatSize = new ResizeObserver(resizeDrawer);
+    const chatPosition = new MutationObserver(resizeDrawer);
+
+    function defaultSection(row) {
+        const preset = row.scope === 'preset' ? permissions.presetName : '';
+        const parts = [preset, row.folder].filter(Boolean);
+        return parts.length
+            ? { id: `source:${JSON.stringify([preset, row.folder])}`, name: parts.join(' / ') }
+            : { id: '', name: 'Ungrouped' };
+    }
 
     function setRowTools(row, open) {
         row.node.querySelector('.chlo-regex-row-actions').hidden = !open;
         row.node.querySelector('.chlo-regex-row-tools').setAttribute('aria-expanded', String(open));
     }
 
-    function updateRow(row, assignments, sections) {
+    function updateRow(row, assignedSection, sections, defaultName) {
         const label = row.node.querySelector('.chlo-regex-scope-label');
         const blocked = (row.scope === 'preset' && !permissions.presetAllowed)
             || (row.scope === 'character' && !permissions.characterAllowed);
@@ -47,10 +67,10 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
         label.title = blocked ? `${scopeNames[row.scope]} scripts are not allowed in the current context` : '';
         const select = row.node.querySelector('.chlo-regex-section-select');
         select.replaceChildren(
-            new Option('Ungrouped', ''),
+            new Option(defaultName, ''),
             ...sections.map(section => new Option(section.name, section.id)),
         );
-        select.value = assignments[row.key] ?? '';
+        select.value = assignedSection ?? '';
     }
 
     function attachEditor() {
@@ -67,18 +87,22 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
         const y = scroll.scrollTop;
         const { sections, assignments } = layout();
         const byId = new Map(sections.map(section => [section.id, section]));
+        const groupByRow = new Map();
+        const names = new Map(sections.map(section => [section.id, section.name]));
         const query = search.value.trim().toLocaleLowerCase();
-        const matchesScope = row => scope === 'all' || scope === row.scope;
-        const visible = rows.filter(row => {
-            const section = byId.get(assignments[row.key]);
-            return matchesScope(row) && (!query || view === 'order'
-                || row.name.toLocaleLowerCase().includes(query)
-                || section?.name.toLocaleLowerCase().includes(query));
-        });
-        const visibleSet = new Set(visible);
+        const visible = [];
         for (const row of rows) {
-            if (!visibleSet.has(row)) row.node.querySelector('.regex_bulk_checkbox').checked = false;
-            updateRow(row, assignments, sections);
+            const fallback = defaultSection(row);
+            const assigned = byId.get(assignments[row.key]);
+            const section = assigned ?? fallback;
+            groupByRow.set(row, section.id);
+            if (section.id) names.set(section.id, section.name);
+            const matchesScope = scope === 'all' || scope === row.scope;
+            if (matchesScope && (!query || view === 'order'
+                || row.name.toLocaleLowerCase().includes(query)
+                || section.name.toLocaleLowerCase().includes(query))) visible.push(row);
+            else row.node.querySelector('.regex_bulk_checkbox').checked = false;
+            updateRow(row, assigned?.id, sections, fallback.name);
         }
 
         root.dataset.regexView = view;
@@ -91,7 +115,10 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
         $('.chlo-regex-back').hidden = view !== 'order';
         sectionsHost.hidden = view !== 'sections';
         orderHost.hidden = view !== 'order';
-        $('#toggle_preset_regex').hidden = scope !== 'preset' || !permissions.hasPreset;
+        $('#toggle_preset_regex').hidden = !['all', 'preset'].includes(scope) || !rows.some(row => row.scope === 'preset');
+        const name = $('.chlo-regex-preset-name');
+        name.textContent = permissions.presetName ?? '';
+        name.title = name.textContent;
         $('#toggle_scoped_regex').hidden = scope !== 'character' || !permissions.hasCharacter;
         $('#open_preset_editor').disabled = !permissions.hasPreset;
         $('#open_scoped_editor').disabled = !permissions.hasCharacter;
@@ -111,24 +138,21 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
                 });
             }
         } else {
-            const groups = new Map(sections.map(section => [section.id, []]));
-            const occupied = new Set(rows.map(row => assignments[row.key]));
+            const groups = new Map([...names.keys()].map(id => [id, []]));
+            const occupied = new Set(groupByRow.values());
             groups.set('', []);
-            for (const row of visible) {
-                const sectionId = assignments[row.key];
-                groups.get(groups.has(sectionId) ? sectionId : '').push(row);
-            }
+            for (const row of visible) groups.get(groupByRow.get(row)).push(row);
             for (const [id, group] of groups) {
-                if (!group.length && (!id || query || (scope !== 'all' && occupied.has(id)))) continue;
+                if (!group.length && (!byId.has(id) || query || (scope !== 'all' && occupied.has(id)))) continue;
                 const section = $('#chlo-regex-section-template').content.firstElementChild.cloneNode(true);
                 const heading = section.querySelector('.chlo-regex-section-toggle');
                 const list = section.querySelector('.chlo-regex-section-rows');
-                const name = byId.get(id)?.name ?? 'Ungrouped';
+                const name = names.get(id) ?? 'Ungrouped';
                 const expanded = query !== '' || !collapsed.has(id);
                 section.dataset.sectionId = id;
                 heading.setAttribute('aria-expanded', String(expanded));
                 section.querySelector('.chlo-regex-section-name').textContent = name;
-                section.querySelector('.chlo-regex-section-tools').hidden = !id;
+                section.querySelector('.chlo-regex-section-tools').hidden = !byId.has(id);
                 section.querySelector('.chlo-regex-section-tools summary').setAttribute('aria-label', `Tools for ${name}`);
                 section.querySelector('.chlo-regex-count').textContent = String(group.length);
                 section.querySelector('[data-regex-action="section-up"]').disabled = sections[0]?.id === id;
@@ -274,7 +298,17 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
     new MutationObserver(() => {
         const open = panel.classList.contains('openDrawer');
         document.querySelector('#regex-drawer-button > .drawer-toggle')?.setAttribute('aria-expanded', String(open));
-        if (!open) closeMenus();
+        if (open && chat) {
+            resizeDrawer();
+            chatSize.observe(chat, { box: 'border-box' });
+            chatPosition.observe(chat, { attributes: true, attributeFilter: ['class', 'style'] });
+            window.addEventListener('resize', resizeDrawer);
+        } else {
+            closeMenus();
+            chatSize.disconnect();
+            chatPosition.disconnect();
+            window.removeEventListener('resize', resizeDrawer);
+        }
     }).observe(panel, { attributes: true, attributeFilter: ['class'] });
 
     return {

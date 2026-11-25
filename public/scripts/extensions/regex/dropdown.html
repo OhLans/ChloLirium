@@ -1,7 +1,13 @@
 <div class="regex_settings">
     <header class="chlo-regex-header">
         <h2 id="chlo-regex-title" data-i18n="ext_regex_title">Regex</h2>
-        <button type="button" class="chlo-regex-icon-button" data-regex-action="close" aria-label="Close Regex"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <div class="chlo-regex-header-actions">
+            <label class="chlo-regex-switch-label" title="Pause or resume all regex processing. Individual settings are kept.">
+                <input type="checkbox" role="switch" id="chlo-regex-master-toggle" checked>
+                All regex
+            </label>
+            <button type="button" class="chlo-regex-icon-button" data-regex-action="close" aria-label="Close Regex"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
     </header>
     <div class="chlo-regex-toolbar">
         <label class="chlo-regex-search">
@@ -90,8 +96,9 @@
     </section>
     <div class="chlo-regex-permissions">
         <label id="toggle_preset_regex" hidden>
-            <input type="checkbox" id="regex_preset_toggle">
-            Allow scripts from this preset
+            <input type="checkbox" role="switch" id="regex_preset_toggle" aria-label="Allow scripts from this preset">
+            Preset regex
+            <span class="chlo-regex-preset-name" aria-hidden="true"></span>
         </label>
         <label id="toggle_scoped_regex" hidden>
             <input type="checkbox" id="regex_scoped_toggle">

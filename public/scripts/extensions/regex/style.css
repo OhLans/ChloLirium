@@ -18,9 +18,12 @@
 }
 
 #chlo-regex-drawer {
+    --regex-drawer-inset: 0px;
+    --regex-chat-edge: calc((100dvw - var(--sheldWidth)) / 2);
     box-sizing: border-box;
     top: var(--topBarBlockSize);
-    width: max(340px, calc((100dvw - var(--sheldWidth) - 2px) / 2));
+    left: var(--regex-drawer-inset);
+    width: clamp(240px, calc(var(--regex-chat-edge) - var(--regex-drawer-inset) - 8px), 430px);
     padding: 0;
     z-index: 3000;
     overflow: hidden;
@@ -41,7 +44,7 @@
     }
 
     body.rivelle-navigator-enabled:not(.rn-collapsed) #chlo-regex-drawer {
-        left: var(--rn-rail, 48px);
+        --regex-drawer-inset: var(--rn-rail, 48px);
     }
 
     body.rivelle-navigator-enabled #rn-left-rail [data-rn-key="regex"].active {
@@ -51,6 +54,10 @@
 }
 
 @media (max-width: 1000px) {
+    html:has(#chlo-regex-drawer.openDrawer) {
+        overflow-x: clip;
+    }
+
     #chlo-regex-drawer {
         width: 100dvw;
     }
@@ -114,6 +121,27 @@
     font-size: 1.27em;
     line-height: 1.3;
     margin: 0;
+}
+
+.chlo-regex-header-actions,
+.chlo-regex-switch-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chlo-regex-switch-label {
+    min-width: 0;
+    cursor: pointer;
+    font-size: 0.88em;
+}
+
+.chlo-regex-preset-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.75;
 }
 
 .chlo-regex-icon-button,

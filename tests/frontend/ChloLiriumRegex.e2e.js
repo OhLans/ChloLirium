@@ -33,12 +33,17 @@ test.beforeAll(async () => {
     settings.accountStorage = { ...settings.accountStorage, 'AlertRegex_openai_Regex QA': 'true' };
     settings.extension_settings.SillyTavernMoonlitEchoesTheme = { enabled: true, customThemeColor: 'rgba(174, 149, 149, 1)', activePreset: 'QA', presets: { QA: { customThemeColor: 'rgba(174, 149, 149, 1)' } } };
     const preset = JSON.parse(await readFile(path.join(root, 'default/content/presets/openai/Default.json'), 'utf8'));
-    const legacyRules = [script('normalize', 'Normalize whitespace', '/ {2,}/g', ' '), script('markers', 'Clean scene markers', String.raw`/\[note\]/g`, ''), script('widget', 'Render scene widget', String.raw`/\[widget\]/g`, '[Widget]')];
-    preset.extensions = { regex_scripts: [script('preset-regex', 'Preset-only cleanup', '/sample/g', 'preset')] };
+    const legacyRules = [script('normalize', 'Normalize whitespace', '/ {2,}/g', ' '), { ...script('markers', 'Clean scene markers', String.raw`/\[note\]/g`, ''), disabled: true }, script('widget', 'Render scene widget', String.raw`/\[widget\]/g`, '[Widget]')];
+    preset.extensions = { regex_scripts: [
+        script('preset-regex', 'Preset-only cleanup', '/sample/g', 'preset'),
+        { ...script('loom-widget', 'Widgets / Render panel', '/panel/g', 'widget'), chlo_loom: { version: 1, mode: 'none' } },
+    ] };
+    const otherPreset = { ...preset, extensions: { regex_scripts: [script('other-regex', 'Another preset rule', '/sample/g', 'other')] } };
     Object.assign(settings.oai_settings, { chat_completion_source: 'custom', custom_model: 'qa-model', custom_url: 'http://127.0.0.1:9', preset_settings_openai: 'Regex QA', extensions: preset.extensions });
-    Object.assign(settings.extension_settings, { regex: legacyRules, regex_presets: [], preset_allowed_regex: {} });
+    Object.assign(settings.extension_settings, { regex: legacyRules, regex_presets: [], preset_allowed_regex: { openai: ['Other Regex QA'] } });
     await writeFile(settingsPath, JSON.stringify(settings));
     await writeFile(path.join(user, 'OpenAI Settings/Regex QA.json'), JSON.stringify(preset));
+    await writeFile(path.join(user, 'OpenAI Settings/Other Regex QA.json'), JSON.stringify(otherPreset));
     const port = 20000 + Math.floor(Math.random() * 10000);
     url = `http://127.0.0.1:${port}`;
     server = spawn(process.execPath, ['server.js', '--dataRoot', dataRoot, '--port', String(port), '--browserLaunchEnabled', 'false', '--listen', 'false'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -104,9 +109,14 @@ test('Regex has its own rail entry and keeps the chat visible on desktop', async
     await expect(nav).toHaveAttribute('aria-expanded', 'true');
     await expect(drawer(page)).toBeVisible();
     const position = await drawer(page).boundingBox();
-    expect(position.width).toBeCloseTo(originalWidth, -1);
+    const chat = page.locator('#sheld');
+    const gap = async () => (await chat.boundingBox()).x - await drawer(page).evaluate(node => node.getBoundingClientRect().right);
+    expect(position.width).toBeLessThan(originalWidth);
     expect(position.x).toBeGreaterThanOrEqual(40);
-    await expect(page.locator('#sheld')).toBeVisible();
+    await expect(chat).toBeVisible();
+    await expect.poll(gap).toBeGreaterThanOrEqual(7);
+    await chat.evaluate(node => Object.assign(node.style, { left: '376px', right: 'auto', marginInline: '0' }));
+    await expect.poll(gap).toBeGreaterThanOrEqual(7);
     await drawer(page).getByRole('button', { name: 'Close Regex' }).click();
     await expect(drawer(page)).toBeHidden();
     await expect(nav).toHaveAttribute('aria-expanded', 'false');
@@ -116,12 +126,14 @@ test('sections survive reload, search their names, and leave the underlying rule
     await ready(page);
     await page.locator('[data-rn-key="regex"]').click();
     const original = await ruleState(page);
+    await expect(row(page, 'preset-regex').locator('xpath=ancestor::section[1]').locator('.chlo-regex-section-name')).toHaveText('Regex QA');
+    await expect(row(page, 'loom-widget').locator('xpath=ancestor::section[1]').locator('.chlo-regex-section-name')).toHaveText('Regex QA / Widgets');
     await addSection(page, 'Layout & widgets');
     await addSection(page, 'Prose cleanup');
     await row(page, 'widget').getByRole('button', { name: 'Script tools' }).click();
     await row(page, 'widget').getByLabel('Section').selectOption({ label: 'Layout & widgets' });
     await expect(drawer(page).locator('.chlo-regex-section').filter({ hasText: 'Layout & widgets' }).locator('[data-regex-id="widget"]')).toBeVisible();
-    await drawer(page).getByRole('searchbox').fill('widgets');
+    await drawer(page).getByRole('searchbox').fill('Layout & widgets');
     await expect(drawer(page).locator('.regex-script-label')).toHaveCount(1);
     await expect(row(page, 'widget')).toBeVisible();
     await drawer(page).getByRole('searchbox').clear();
@@ -189,4 +201,46 @@ test('the native toolbar opens the same drawer on a small screen', async ({ page
     await debuggerPopup.getByLabel('Raw Input').fill('A   quiet room.');
     await debuggerPopup.getByRole('button', { name: 'Run Test' }).click();
     await expect(debuggerPopup.locator('#regex_debugger_final_output')).toHaveText('A·quiet room.');
+});
+
+test('master pause preserves rule switches and preset pause affects only its own preset', async ({ page }) => {
+    await ready(page);
+    const open = () => page.locator('[data-rn-key="regex"]').click();
+    const master = drawer(page).getByRole('switch', { name: 'All regex' });
+    const preset = drawer(page).getByRole('switch', { name: 'Allow scripts from this preset' });
+    const applyRules = () => page.evaluate(async () => {
+        const { getRegexedString, regex_placement } = await import('/scripts/extensions/regex/engine.js');
+        return getRegexedString('A   sample [note]', regex_placement.AI_OUTPUT, { isMarkdown: true });
+    });
+    const selectPreset = name => page.evaluate(async name => {
+        const { getPresetManager } = await import('/scripts/preset-manager.js');
+        const manager = getPresetManager();
+        await manager.selectPreset(manager.findPreset(name));
+    }, name);
+    await open();
+    await expect(preset).not.toBeChecked();
+    const globalOnly = await applyRules();
+    expect(globalOnly).toMatch(/^A[ ·]sample \[note\]$/);
+    await preset.check();
+    await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'preset'));
+    const before = await ruleState(page);
+    await master.uncheck();
+    await expect.poll(applyRules).toBe('A   sample [note]');
+    expect(await ruleState(page)).toEqual(before);
+    await expect.poll(async () => JSON.parse(await readFile(settingsPath, 'utf8')).extension_settings.chloRegexPaused).toBe(true);
+    await ready(page);
+    await open();
+    await expect(master).not.toBeChecked();
+    await master.check();
+    await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'preset'));
+    await preset.uncheck();
+    await expect.poll(applyRules).toBe(globalOnly);
+    await selectPreset('Other Regex QA');
+    await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Other Regex QA');
+    await expect(preset).toBeChecked();
+    await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'other'));
+    await selectPreset('Regex QA');
+    await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Regex QA');
+    await expect(preset).not.toBeChecked();
+    await expect.poll(applyRules).toBe(globalOnly);
 });

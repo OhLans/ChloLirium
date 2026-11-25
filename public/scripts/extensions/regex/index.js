@@ -8,7 +8,7 @@ import { commonEnumProviders, enumIcons } from '../../slash-commands/SlashComman
 import { SlashCommandEnumValue, enumTypes } from '../../slash-commands/SlashCommandEnumValue.js';
 import { SlashCommandParser } from '../../slash-commands/SlashCommandParser.js';
 import { download, equalsIgnoreCaseAndAccents, escapeHtml, getFileText, getSortableDelay, isFalseBoolean, isTrueBoolean, regexFromString, setInfoBlock, uuidv4 } from '../../utils.js';
-import { allowPresetScripts, allowScopedScripts, disallowPresetScripts, disallowScopedScripts, getCurrentPresetAPI, getCurrentPresetName, getRegexScripts, getScriptsByType, isPresetScriptsAllowed, isScopedScriptsAllowed, regex_placement, RegexProvider, runRegexScript, saveScriptsByType, SCRIPT_TYPE_UNKNOWN, SCRIPT_TYPES, substitute_find_regex } from './engine.js';
+import { allowPresetScripts, allowScopedScripts, disallowPresetScripts, disallowScopedScripts, getCurrentPresetAPI, getCurrentPresetName, getRegexScripts, getScriptsByType, isPresetScriptsAllowed, isRegexProcessingPaused, isScopedScriptsAllowed, regex_placement, RegexProvider, runRegexScript, saveScriptsByType, SCRIPT_TYPE_UNKNOWN, SCRIPT_TYPES, substitute_find_regex } from './engine.js';
 import { t } from '../../i18n.js';
 import { accountStorage } from '../../util/AccountStorage.js';
 import { getPresetManager } from '../../preset-manager.js';
@@ -28,6 +28,7 @@ function getDrawerContext() {
     const character = selected_group ? undefined : characters?.[this_chid];
     return {
         hasPreset: Boolean(preset),
+        presetName: preset,
         hasCharacter: Boolean(character),
         presetAllowed: isPresetScriptsAllowed(api, preset),
         characterAllowed: isScopedScriptsAllowed(character),
@@ -737,7 +738,11 @@ async function loadRegexScripts() {
             await reloadCurrentChat();
         });
         scriptHtml.find('.regex_bulk_checkbox').on('change', setMoveButtonsVisibility);
-        rows.push({ scope, id: script.id, name: script.scriptName ?? '', node: scriptHtml[0] });
+        const name = script.scriptName ?? '';
+        // Older Loom imports encoded the original folder in the name.
+        const folder = typeof script.folder === 'string' ? script.folder.trim()
+            : script.chlo_loom?.version === 1 && name.includes(' / ') ? name.split(' / ', 1)[0].trim() : '';
+        rows.push({ scope, id: script.id, name, folder, node: scriptHtml[0] });
     }
 
     for (const scriptType of Object.values(SCRIPT_TYPES)) {
@@ -747,6 +752,7 @@ async function loadRegexScripts() {
 
     $('#regex_scoped_toggle').prop('checked', context.characterAllowed);
     $('#regex_preset_toggle').prop('checked', context.presetAllowed);
+    $('#chlo-regex-master-toggle').prop('checked', !isRegexProcessingPaused());
     drawer.update(rows, context);
 }
 
@@ -1448,8 +1454,9 @@ function runRegexCallback(args, value) {
         return value;
     }
 
+    if (isRegexProcessingPaused()) return value;
     const scriptName = args.name;
-    const scripts = getRegexScripts();
+    const scripts = getRegexScripts({ allowedOnly: true });
 
     for (const script of scripts) {
         if (script.scriptName.toLowerCase() === scriptName.toLowerCase()) {
@@ -1658,6 +1665,7 @@ async function checkCharEmbeddedRegexScripts() {
  * @param {string} presetName The name of the preset
  */
 function notifyReloadCurrentChat(presetName) {
+    if (isRegexProcessingPaused()) return;
     toastr.info(
         t`Reload the chat for regex to take effect` + '<br><u>' + t`Click here to reload immediately` + '</u>',
         t`Preset '${escapeHtml(presetName)}' contains enabled regex scripts`,
@@ -2007,19 +2015,27 @@ export async function init() {
         if (getCurrentChatId()) reloadCurrentChat();
     });
 
-    $('#regex_preset_toggle').on('input', function () {
-        const isEnable = !!$(this).prop('checked');
-        const name = getCurrentPresetName();
-
-        if (isEnable) {
-            allowPresetScripts(getCurrentPresetAPI(), name);
-        } else {
-            disallowPresetScripts(getCurrentPresetAPI(), name);
-        }
-
+    $('#chlo-regex-master-toggle').on('change', async function () {
+        extension_settings.chloRegexPaused = !this.checked;
         saveSettingsDebounced();
-        loadRegexScripts();
-        if (getCurrentChatId()) reloadCurrentChat();
+        if (getCurrentChatId()) await reloadCurrentChat();
+    });
+
+    $('#regex_preset_toggle').on('change', async function () {
+        const api = getCurrentPresetAPI();
+        const name = getCurrentPresetName();
+        if (!api || !name) return;
+
+        // An explicit choice should not trigger the first-use prompt next time.
+        accountStorage.setItem(`AlertRegex_${api}_${name}`, 'true');
+        if (this.checked) {
+            allowPresetScripts(api, name);
+        } else {
+            disallowPresetScripts(api, name);
+        }
+        saveSettingsDebounced();
+        await loadRegexScripts();
+        if (getCurrentChatId()) await reloadCurrentChat();
     });
 
     await loadRegexScripts();
