@@ -36,6 +36,10 @@ export const SCRIPT_TYPE_UNKNOWN = -1;
  */
 const DEFAULT_GET_REGEX_SCRIPTS_OPTIONS = Object.freeze({ allowedOnly: false });
 
+export function isRegexProcessingPaused() {
+    return extension_settings.chloRegexPaused === true;
+}
+
 /**
  * Manages the compiled regex cache with LRU eviction.
  */
@@ -98,6 +102,7 @@ export class RegexProvider {
  * @returns {RegexScript[]} An array of regex scripts, where each script is an object containing the necessary information.
  */
 export function getRegexScripts(options = DEFAULT_GET_REGEX_SCRIPTS_OPTIONS) {
+    if (options.allowedOnly && isRegexProcessingPaused()) return [];
     return [...Object.values(SCRIPT_TYPES).flatMap(type => getScriptsByType(type, options))];
 }
 
