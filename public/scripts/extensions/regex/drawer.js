@@ -117,7 +117,13 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
         $('.chlo-regex-back').hidden = view !== 'order';
         sectionsHost.hidden = view !== 'sections';
         orderHost.hidden = view !== 'order';
-        $('#toggle_preset_regex').hidden = !['all', 'preset'].includes(scope) || !rows.some(row => row.scope === 'preset');
+        const hasPresetRules = rows.some(row => row.scope === 'preset');
+        const presetBlocked = $('#chlo-regex-preset-blocked');
+        presetBlocked.hidden = !hasPresetRules || permissions.presetAllowed;
+        const presetSwitch = $('[data-regex-bulk-scope="preset"]');
+        if (presetBlocked.hidden) presetSwitch.removeAttribute('aria-describedby');
+        else presetSwitch.setAttribute('aria-describedby', presetBlocked.id);
+        $('#toggle_preset_regex').hidden = !hasPresetRules;
         const name = $('.chlo-regex-preset-name');
         name.textContent = permissions.presetName ?? '';
         name.title = name.textContent;

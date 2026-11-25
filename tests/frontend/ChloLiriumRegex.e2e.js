@@ -67,8 +67,10 @@ test.afterAll(async () => {
 
 const drawer = page => page.locator('#chlo-regex-drawer');
 const row = (page, id) => drawer(page).locator(`[data-regex-id="${id}"]`);
-const scopes = page => drawer(page).getByRole('group', { name: 'Script scope' });
-const scopeSwitch = (page, scope) => scopes(page).getByRole('switch', { name: `Toggle ${scope} regex rules` });
+const scopes = page => drawer(page).getByRole('group', { name: 'Filter scripts by scope' });
+const bulkScopes = page => drawer(page).getByRole('group', { name: 'Enable or disable scripts by scope' });
+const scopeSwitch = (page, scope) => bulkScopes(page).getByRole('switch', { name: `Toggle ${scope} regex rules` });
+const presetBlocked = page => bulkScopes(page).getByText('Blocked', { exact: true });
 const tools = page => drawer(page).locator('summary[aria-label="Regex tools"]');
 const ruleState = page => page.evaluate(async () => (await import('/scripts/extensions/regex/engine.js')).getRegexScripts());
 
@@ -146,10 +148,10 @@ test('sections survive reload, search their names, and leave the underlying rule
     await scopes(page).getByRole('button', { name: 'Preset', exact: true }).click();
     await expect(row(page, 'preset-regex')).toBeVisible();
     await expect(row(page, 'widget')).toHaveCount(0);
-    await expect(drawer(page).getByLabel('Allow scripts from this preset')).not.toBeChecked();
+    await expect(presetBlocked(page)).toBeVisible();
     await row(page, 'preset-regex').getByRole('switch').click();
     await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
-    await expect(drawer(page).getByLabel('Allow scripts from this preset')).not.toBeChecked();
+    await expect(presetBlocked(page)).toBeVisible();
     await row(page, 'preset-regex').getByRole('switch').click();
     await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'true');
 });
@@ -182,9 +184,18 @@ test('the native toolbar opens the same drawer on a small screen', async ({ page
     const position = await drawer(page).boundingBox();
     expect(position.x).toBe(0);
     expect(position.width).toBeLessThanOrEqual(320);
-    const switchPositions = await scopes(page).getByRole('switch').evaluateAll(switches => switches.map(button => button.getBoundingClientRect().right));
+    await expect(scopes(page).getByRole('button')).toHaveCount(4);
+    await expect(scopes(page).getByRole('switch')).toHaveCount(0);
+    await expect(presetBlocked(page)).toBeVisible();
+    const switchPositions = await bulkScopes(page).getByRole('switch').evaluateAll(switches => switches.map(button => {
+        const { right, top } = button.getBoundingClientRect();
+        return { right, top };
+    }));
     expect(switchPositions).toHaveLength(4);
-    expect(Math.max(...switchPositions)).toBeLessThanOrEqual(320);
+    expect(Math.max(...switchPositions.map(button => button.right))).toBeLessThanOrEqual(320);
+    expect(new Set(switchPositions.map(button => button.top)).size).toBe(1);
+    const filterPosition = await scopes(page).boundingBox();
+    expect(switchPositions[0].top).toBeGreaterThan(filterPosition.y + filterPosition.height);
     await expect(row(page, 'widget')).toBeVisible();
     await drawer(page).getByText('+ New script', { exact: true }).click();
     await drawer(page).getByRole('button', { name: 'Global script', exact: true }).click();
@@ -222,18 +233,25 @@ test('the All switch saves individual rule states without changing preset permis
         await manager.selectPreset(manager.findPreset(name));
     }, name);
     await open();
+    await expect(presetBlocked(page)).toBeVisible();
+    await expect(preset).toBeHidden();
+    await scopes(page).getByRole('button', { name: 'Global', exact: true }).click();
+    await expect(presetBlocked(page)).toBeVisible();
+    await tools(page).click();
     await expect(preset).not.toBeChecked();
     const globalOnly = await applyRules();
     expect(globalOnly).toMatch(/^A[ ·]sample \[note\]$/);
     await preset.check();
+    await expect(presetBlocked(page)).toBeHidden();
     await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'preset'));
+    await scopes(page).getByRole('button', { name: 'All', exact: true }).click();
     await expect(master).toHaveAttribute('data-mixed', '');
     await master.click();
     await expect.poll(applyRules).toBe('A   sample [note]');
     await expect(row(page, 'normalize').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
     await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
     expect((await ruleState(page)).every(rule => rule.disabled)).toBe(true);
-    await expect(preset).toBeChecked();
+    await expect(presetBlocked(page)).toBeHidden();
     await expect.poll(async () => JSON.parse(await readFile(settingsPath, 'utf8')).extension_settings.regex.every(rule => rule.disabled)).toBe(true);
     await ready(page);
     await open();
@@ -244,15 +262,19 @@ test('the All switch saves individual rule states without changing preset permis
     expect((await ruleState(page)).every(rule => !rule.disabled)).toBe(true);
     const allEnabled = globalOnly.replace('[note]', '');
     await expect.poll(applyRules).toBe(allEnabled.replace('sample', 'preset'));
+    await tools(page).click();
+    await expect(preset).toBeChecked();
     await preset.uncheck();
+    await expect(presetBlocked(page)).toBeVisible();
+    await expect(scopeSwitch(page, 'preset')).toBeChecked();
     await expect.poll(applyRules).toBe(allEnabled);
     await selectPreset('Other Regex QA');
     await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Other Regex QA');
-    await expect(preset).toBeChecked();
+    await expect(presetBlocked(page)).toBeHidden();
     await expect.poll(applyRules).toBe(allEnabled.replace('sample', 'other'));
     await selectPreset('Regex QA');
     await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Regex QA');
-    await expect(preset).not.toBeChecked();
+    await expect(presetBlocked(page)).toBeVisible();
     await expect.poll(applyRules).toBe(allEnabled);
 });
 
