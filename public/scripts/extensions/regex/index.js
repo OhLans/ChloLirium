@@ -13,6 +13,7 @@ import { t } from '../../i18n.js';
 import { accountStorage } from '../../util/AccountStorage.js';
 import { getPresetManager } from '../../preset-manager.js';
 import { createRegexDrawer } from './drawer.js';
+import { getRegexSource } from './sources.js';
 
 const scopesByType = {
     [SCRIPT_TYPES.GLOBAL]: 'global',
@@ -742,7 +743,22 @@ async function loadRegexScripts() {
         // Older Loom imports encoded the original folder in the name.
         const folder = typeof script.folder === 'string' ? script.folder.trim()
             : script.chlo_loom?.version === 1 && name.includes(' / ') ? name.split(' / ', 1)[0].trim() : '';
-        rows.push({ scope, id: script.id, name, folder, node: scriptHtml[0] });
+        const source = getRegexSource(script, extension_settings);
+        const typeLabel = source?.type === 'extension' ? t`Extension` : t`Lorebook`;
+        const sourceLabel = source ? `${typeLabel}: ${source.name}` : '';
+        const sourceNote = {
+            installed: t`Recorded by the extension installer`,
+            bundled: t`Matches a bundled rule; may have been imported manually`,
+            declared: t`Source recorded with the rule`,
+        }[source?.evidence];
+        const sourceElement = scriptHtml.find('.chlo-regex-source');
+        const storedIn = scope === 'preset' ? t`Preset: ${context.presetName}`
+            : scope === 'character' ? t`Character: ${characters?.[this_chid]?.name ?? ''}` : t`Global settings`;
+        scriptHtml.find('.chlo-regex-source-detail').text(source
+            ? `${sourceLabel} · ${sourceNote}. ${storedIn}.`
+            : scope === 'global' ? t`Global settings · original source unknown` : storedIn);
+        if (source) sourceElement.text(sourceLabel).attr('title', sourceNote).prop('hidden', false);
+        rows.push({ scope, id: script.id, name, folder, source, node: scriptHtml[0] });
     }
 
     for (const scriptType of Object.values(SCRIPT_TYPES)) {
@@ -752,7 +768,13 @@ async function loadRegexScripts() {
 
     $('#regex_scoped_toggle').prop('checked', context.characterAllowed);
     $('#regex_preset_toggle').prop('checked', context.presetAllowed);
-    $('#chlo-regex-master-toggle').prop('checked', !isRegexProcessingPaused());
+    const total = rows.length;
+    const enabled = rows.filter(row => row.node.querySelector('.disable_regex').getAttribute('aria-checked') === 'true').length;
+    $('#chlo-regex-master-toggle').prop({
+        checked: !isRegexProcessingPaused() && enabled > 0,
+        indeterminate: !isRegexProcessingPaused() && enabled > 0 && enabled < total,
+        disabled: !total,
+    });
     drawer.update(rows, context);
 }
 
@@ -2016,9 +2038,28 @@ export async function init() {
     });
 
     $('#chlo-regex-master-toggle').on('change', async function () {
-        extension_settings.chloRegexPaused = !this.checked;
-        saveSettingsDebounced();
-        if (getCurrentChatId()) await reloadCurrentChat();
+        const enabled = this.checked;
+        const context = getDrawerContext();
+        const updates = [];
+        this.disabled = true;
+        try {
+            for (const type of Object.values(SCRIPT_TYPES)) {
+                if (type === SCRIPT_TYPES.SCOPED && !context.hasCharacter) continue;
+                if (type === SCRIPT_TYPES.PRESET && !context.hasPreset) continue;
+                const scripts = getScriptsByType(type);
+                if (!scripts.some(rule => Boolean(rule.disabled) === enabled)) continue;
+                const updated = scripts.map(rule => ({ ...rule, disabled: !enabled }));
+                // Start each write before yielding so it targets the selected preset/character.
+                updates.push(saveScriptsByType(updated, type));
+            }
+            await Promise.all(updates);
+            // Keep previously persisted pauses until the user explicitly applies a new state.
+            delete extension_settings.chloRegexPaused;
+            saveSettingsDebounced();
+            if (getCurrentChatId()) await reloadCurrentChat();
+        } finally {
+            await loadRegexScripts();
+        }
     });
 
     $('#regex_preset_toggle').on('change', async function () {
@@ -2039,6 +2080,13 @@ export async function init() {
     });
 
     await loadRegexScripts();
+    const panel = document.getElementById('chlo-regex-drawer');
+    let wasOpen = false;
+    new MutationObserver(() => {
+        const open = panel.classList.contains('openDrawer');
+        if (open && !wasOpen) void loadRegexScripts();
+        wasOpen = open;
+    }).observe(panel, { attributes: true, attributeFilter: ['class'] });
     $('#regex-drawer-button').removeClass('displayNone');
 
     /**

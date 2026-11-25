@@ -114,9 +114,9 @@ test('Regex has its own rail entry and keeps the chat visible on desktop', async
     expect(position.width).toBeLessThan(originalWidth);
     expect(position.x).toBeGreaterThanOrEqual(40);
     await expect(chat).toBeVisible();
-    await expect.poll(gap).toBeGreaterThanOrEqual(7);
+    await expect.poll(gap).toBeCloseTo(0, 0);
     await chat.evaluate(node => Object.assign(node.style, { left: '376px', right: 'auto', marginInline: '0' }));
-    await expect.poll(gap).toBeGreaterThanOrEqual(7);
+    await expect.poll(gap).toBeCloseTo(0, 0);
     await drawer(page).getByRole('button', { name: 'Close Regex' }).click();
     await expect(drawer(page)).toBeHidden();
     await expect(nav).toHaveAttribute('aria-expanded', 'false');
@@ -203,10 +203,10 @@ test('the native toolbar opens the same drawer on a small screen', async ({ page
     await expect(debuggerPopup.locator('#regex_debugger_final_output')).toHaveText('A·quiet room.');
 });
 
-test('master pause preserves rule switches and preset pause affects only its own preset', async ({ page }) => {
+test('the master checkbox saves individual rule states without changing preset permissions', async ({ page }) => {
     await ready(page);
     const open = () => page.locator('[data-rn-key="regex"]').click();
-    const master = drawer(page).getByRole('switch', { name: 'All regex' });
+    const master = drawer(page).getByRole('checkbox', { name: 'All regex' });
     const preset = drawer(page).getByRole('switch', { name: 'Allow scripts from this preset' });
     const applyRules = () => page.evaluate(async () => {
         const { getRegexedString, regex_placement } = await import('/scripts/extensions/regex/engine.js');
@@ -223,24 +223,57 @@ test('master pause preserves rule switches and preset pause affects only its own
     expect(globalOnly).toMatch(/^A[ ·]sample \[note\]$/);
     await preset.check();
     await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'preset'));
-    const before = await ruleState(page);
-    await master.uncheck();
+    await expect(master).toHaveJSProperty('indeterminate', true);
+    await master.click();
     await expect.poll(applyRules).toBe('A   sample [note]');
-    expect(await ruleState(page)).toEqual(before);
-    await expect.poll(async () => JSON.parse(await readFile(settingsPath, 'utf8')).extension_settings.chloRegexPaused).toBe(true);
+    await expect(row(page, 'normalize').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect((await ruleState(page)).every(rule => rule.disabled)).toBe(true);
+    await expect(preset).toBeChecked();
+    await expect.poll(async () => JSON.parse(await readFile(settingsPath, 'utf8')).extension_settings.regex.every(rule => rule.disabled)).toBe(true);
     await ready(page);
     await open();
     await expect(master).not.toBeChecked();
+    await expect(row(page, 'preset-regex').getByRole('switch')).toHaveAttribute('aria-checked', 'false');
     await master.check();
-    await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'preset'));
+    await expect(row(page, 'markers').getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    expect((await ruleState(page)).every(rule => !rule.disabled)).toBe(true);
+    const allEnabled = globalOnly.replace('[note]', '');
+    await expect.poll(applyRules).toBe(allEnabled.replace('sample', 'preset'));
     await preset.uncheck();
-    await expect.poll(applyRules).toBe(globalOnly);
+    await expect.poll(applyRules).toBe(allEnabled);
     await selectPreset('Other Regex QA');
     await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Other Regex QA');
     await expect(preset).toBeChecked();
-    await expect.poll(applyRules).toBe(globalOnly.replace('sample', 'other'));
+    await expect.poll(applyRules).toBe(allEnabled.replace('sample', 'other'));
     await selectPreset('Regex QA');
     await expect(drawer(page).locator('.chlo-regex-preset-name')).toHaveText('Regex QA');
     await expect(preset).not.toBeChecked();
-    await expect.poll(applyRules).toBe(globalOnly);
+    await expect.poll(applyRules).toBe(allEnabled);
+});
+
+test('the drawer attributes installed and declared sources without guessing from rule names', async ({ page }) => {
+    const saved = JSON.parse(await readFile(settingsPath, 'utf8'));
+    const settings = saved.extension_settings;
+    settings.disabledExtensions.push('third-party/SillyTavern-Worldhopper');
+    settings.worldhopper = { codex: { displayScripts: { 'wh-body-lines': 'recorded-version' } } };
+    const example = settings.regex[0];
+    settings.regex.push(
+        { ...example, id: 'wh-body-lines', scriptName: 'My renamed body rules' },
+        { ...example, id: 'wh-possession-box', scriptName: 'WH - Possession' },
+        { ...example, id: 'book-regex', scriptName: 'Formatting', chlo_regex_source: { type: 'lorebook', name: 'Test Codex' } },
+        { ...example, id: 'lookalike', scriptName: 'WH - Possession' },
+    );
+    await writeFile(settingsPath, JSON.stringify(saved));
+    await ready(page);
+    await page.locator('[data-rn-key="regex"]').click();
+    const title = id => row(page, id).locator('xpath=ancestor::section[1]').locator('.chlo-regex-section-name');
+    await expect(title('wh-body-lines')).toHaveText('Worldhopper Engine');
+    await expect(row(page, 'wh-body-lines').locator('.chlo-regex-source')).toHaveText('Extension: Worldhopper Engine');
+    await expect(row(page, 'wh-possession-box').locator('.chlo-regex-source')).toHaveAttribute('title', /imported manually/);
+    await expect(title('book-regex')).toHaveText('Test Codex');
+    await expect(row(page, 'book-regex').locator('.chlo-regex-source')).toHaveText('Lorebook: Test Codex');
+    await expect(title('lookalike')).toHaveText('Ungrouped');
+    await row(page, 'lookalike').getByRole('button', { name: 'Script tools' }).click();
+    await expect(row(page, 'lookalike').locator('.chlo-regex-source-detail')).toHaveText('Global settings · original source unknown');
 });
