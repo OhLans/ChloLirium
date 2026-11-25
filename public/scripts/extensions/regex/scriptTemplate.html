@@ -2,7 +2,10 @@
     <div class="chlo-regex-row">
         <input type="checkbox" class="regex_bulk_checkbox">
         <span class="drag-handle menu-handle" title="Drag to change run order" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
-        <button type="button" class="edit_existing_regex regex_script_name" aria-expanded="false"></button>
+        <div class="chlo-regex-row-name">
+            <button type="button" class="edit_existing_regex regex_script_name" aria-expanded="false"></button>
+            <span class="chlo-regex-source" hidden></span>
+        </div>
         <span class="chlo-regex-scope-label"></span>
         <button type="button" class="chlo-regex-switch disable_regex" role="switch" aria-checked="false"></button>
         <button type="button" class="chlo-regex-icon-button chlo-regex-order-button" data-regex-action="script-up" aria-label="Move script up"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
@@ -10,6 +13,7 @@
         <button type="button" class="chlo-regex-icon-button chlo-regex-row-tools" aria-label="Script tools" aria-expanded="false"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></button>
     </div>
     <div class="chlo-regex-row-actions" hidden>
+        <p class="chlo-regex-source-detail"></p>
         <label class="chlo-regex-section-field">
             Section
             <select class="chlo-regex-section-select text_pole"></select>

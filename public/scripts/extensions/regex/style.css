@@ -23,7 +23,7 @@
     box-sizing: border-box;
     top: var(--topBarBlockSize);
     left: var(--regex-drawer-inset);
-    width: clamp(240px, calc(var(--regex-chat-edge) - var(--regex-drawer-inset) - 8px), 430px);
+    width: clamp(240px, calc(var(--regex-chat-edge) - var(--regex-drawer-inset)), 440px);
     padding: 0;
     z-index: 3000;
     overflow: hidden;
@@ -374,9 +374,13 @@
     opacity: 0.23;
 }
 
-.regex-script-label .regex_script_name {
+.chlo-regex-row-name {
     flex: 1;
     min-width: 0;
+}
+
+.regex-script-label .regex_script_name {
+    width: 100%;
     border: 0;
     border-radius: 4px;
     padding: 4px;
@@ -385,6 +389,24 @@
     line-height: 1.35;
     background: transparent;
     color: inherit;
+}
+
+.chlo-regex-source {
+    display: block;
+    padding: 0 4px 3px;
+    font-size: 0.75em;
+    opacity: 0.76;
+    overflow-wrap: anywhere;
+}
+
+.chlo-regex-source-detail {
+    margin: 0 0 5px;
+    font-size: 0.82em;
+    overflow-wrap: anywhere;
+}
+
+.chlo-regex-row:has(.chlo-regex-switch[aria-checked="false"]) .chlo-regex-row-name {
+    opacity: 0.55;
 }
 
 .chlo-regex-switch {

@@ -47,9 +47,10 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
 
     function defaultSection(row) {
         const preset = row.scope === 'preset' ? permissions.presetName : '';
-        const parts = [preset, row.folder].filter(Boolean);
+        const origin = !preset && row.source ? row.source.name : '';
+        const parts = [preset || origin, row.folder].filter(Boolean);
         return parts.length
-            ? { id: `source:${JSON.stringify([preset, row.folder])}`, name: parts.join(' / ') }
+            ? { id: `source:${JSON.stringify([preset, origin && row.source.type, origin, row.folder])}`, name: parts.join(' / ') }
             : { id: '', name: 'Ungrouped' };
     }
 
@@ -100,6 +101,7 @@ export function createRegexDrawer(root, { getLayout, saveLayout, toggleDrawer, m
             const matchesScope = scope === 'all' || scope === row.scope;
             if (matchesScope && (!query || view === 'order'
                 || row.name.toLocaleLowerCase().includes(query)
+                || row.source?.name.toLocaleLowerCase().includes(query)
                 || section.name.toLocaleLowerCase().includes(query))) visible.push(row);
             else row.node.querySelector('.regex_bulk_checkbox').checked = false;
             updateRow(row, assigned?.id, sections, fallback.name);

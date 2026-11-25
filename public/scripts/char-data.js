@@ -100,6 +100,7 @@
 * @property {number} minDepth - The minimum depth
 * @property {number} maxDepth - The maximum depth
 * @property {{version: number, mode: string}} [chlo_loom] - Imported Loom replacement semantics
+* @property {{type: 'extension'|'lorebook', name: string}} [chlo_regex_source] - Origin recorded by the installer or importer
 */
 
 /**
