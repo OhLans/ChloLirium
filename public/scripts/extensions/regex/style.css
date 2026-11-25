@@ -123,19 +123,6 @@
     margin: 0;
 }
 
-.chlo-regex-header-actions,
-.chlo-regex-switch-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.chlo-regex-switch-label {
-    min-width: 0;
-    cursor: pointer;
-    font-size: 0.88em;
-}
-
 .chlo-regex-preset-name {
     min-width: 0;
     overflow: hidden;
@@ -220,11 +207,17 @@
 
 .chlo-regex-scopes {
     display: flex;
-    gap: 4px;
+    gap: 5px 7px;
     flex-wrap: wrap;
 }
 
-.chlo-regex-scopes button,
+.chlo-regex-scope-pair {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.chlo-regex-scopes [data-regex-scope],
 .chlo-regex-back {
     padding: 4px 8px;
     min-height: 28px;
@@ -432,6 +425,21 @@
     width: 13px;
     background: currentColor;
     border-radius: 50%;
+}
+
+.chlo-regex-scope-pair .chlo-regex-switch {
+    flex: 0 0 28px;
+    height: 18px;
+}
+
+.chlo-regex-scope-pair .chlo-regex-switch::before {
+    width: 10px;
+    height: 10px;
+}
+
+.chlo-regex-scope-pair .chlo-regex-switch[data-mixed] {
+    justify-content: center;
+    background: color-mix(in srgb, var(--regex-accent) 28%, transparent);
 }
 
 .chlo-regex-blocked .chlo-regex-scope-label::after {

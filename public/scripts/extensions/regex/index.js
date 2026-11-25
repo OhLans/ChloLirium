@@ -20,8 +20,10 @@ const scopesByType = {
     [SCRIPT_TYPES.PRESET]: 'preset',
     [SCRIPT_TYPES.SCOPED]: 'character',
 };
+const scopeSwitches = '#regex_container [data-regex-bulk-scope]';
 let drawer;
 let scriptTemplatePromise;
+let savingScopeSwitch = false;
 
 function getDrawerContext() {
     const api = getCurrentPresetAPI();
@@ -758,7 +760,7 @@ async function loadRegexScripts() {
             ? `${sourceLabel} · ${sourceNote}. ${storedIn}.`
             : scope === 'global' ? t`Global settings · original source unknown` : storedIn);
         if (source) sourceElement.text(sourceLabel).attr('title', sourceNote).prop('hidden', false);
-        rows.push({ scope, id: script.id, name, folder, source, node: scriptHtml[0] });
+        rows.push({ scope, id: script.id, name, folder, source, enabled: !script.disabled, node: scriptHtml[0] });
     }
 
     for (const scriptType of Object.values(SCRIPT_TYPES)) {
@@ -768,12 +770,20 @@ async function loadRegexScripts() {
 
     $('#regex_scoped_toggle').prop('checked', context.characterAllowed);
     $('#regex_preset_toggle').prop('checked', context.presetAllowed);
-    const total = rows.length;
-    const enabled = rows.filter(row => row.node.querySelector('.disable_regex').getAttribute('aria-checked') === 'true').length;
-    $('#chlo-regex-master-toggle').prop({
-        checked: !isRegexProcessingPaused() && enabled > 0,
-        indeterminate: !isRegexProcessingPaused() && enabled > 0 && enabled < total,
-        disabled: !total,
+    $(scopeSwitches).each(function () {
+        const scope = this.getAttribute('data-regex-bulk-scope');
+        const scopedRows = scope === 'all' ? rows : rows.filter(row => row.scope === scope);
+        const enabled = scopedRows.filter(row => row.enabled).length;
+        const checked = enabled > 0 && !(scope === 'all' && isRegexProcessingPaused());
+        const mixed = checked && enabled < scopedRows.length;
+        const description = !scopedRows.length ? t`No rules in this scope`
+            : mixed ? t`Some rules enabled. Turn them all off.`
+                : checked ? t`Turn all rules in this scope off` : t`Turn all rules in this scope on`;
+        this.setAttribute('aria-checked', String(checked));
+        this.setAttribute('aria-description', description);
+        this.setAttribute('title', description);
+        this.toggleAttribute('data-mixed', mixed);
+        $(this).prop('disabled', savingScopeSwitch || !scopedRows.length);
     });
     drawer.update(rows, context);
 }
@@ -2037,13 +2047,17 @@ export async function init() {
         if (getCurrentChatId()) reloadCurrentChat();
     });
 
-    $('#chlo-regex-master-toggle').on('change', async function () {
-        const enabled = this.checked;
+    $(scopeSwitches).on('click', async function () {
+        if (savingScopeSwitch) return;
+        const scope = this.getAttribute('data-regex-bulk-scope');
+        const enabled = this.getAttribute('aria-checked') !== 'true';
         const context = getDrawerContext();
         const updates = [];
-        this.disabled = true;
+        savingScopeSwitch = true;
+        $(scopeSwitches).prop('disabled', true);
         try {
             for (const type of Object.values(SCRIPT_TYPES)) {
+                if (scope !== 'all' && scope !== scopesByType[type]) continue;
                 if (type === SCRIPT_TYPES.SCOPED && !context.hasCharacter) continue;
                 if (type === SCRIPT_TYPES.PRESET && !context.hasPreset) continue;
                 const scripts = getScriptsByType(type);
@@ -2052,12 +2066,18 @@ export async function init() {
                 // Start each write before yielding so it targets the selected preset/character.
                 updates.push(saveScriptsByType(updated, type));
             }
-            await Promise.all(updates);
-            // Keep previously persisted pauses until the user explicitly applies a new state.
-            delete extension_settings.chloRegexPaused;
+            const results = await Promise.allSettled(updates);
+            const failed = results.find(result => result.status === 'rejected');
+            if (failed) throw failed.reason;
+            // A scope-specific edit must not lift a saved pause for unrelated rules.
+            if (scope === 'all') delete extension_settings.chloRegexPaused;
             saveSettingsDebounced();
             if (getCurrentChatId()) await reloadCurrentChat();
+        } catch (error) {
+            console.error('Could not update regex rules', error);
+            toastr.error(t`Could not update regex rules.`);
         } finally {
+            savingScopeSwitch = false;
             await loadRegexScripts();
         }
     });
