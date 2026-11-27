@@ -5,12 +5,9 @@ import { getContext } from '../context.js';
  */
 
 // Global settings and constants
-import { EXTENSION_NAME, THEME_VERSION } from './src/config/theme-info.js';
+import { THEME_VERSION } from './src/config/theme-info.js';
 export { THEME_VERSION } from './src/config/theme-info.js';
 
-// Import required functions for drag functionality
-import { dragElement } from '../../RossAscends-mods.js';
-import { loadMovingUIState } from '../../power-user.js';
 import { t } from '../../i18n.js';
 import { tabMappings, themeCustomSettings } from './src/config/theme-settings.js';
 import { settingsKey, getSettings as getExtensionSettings, saveSettings as saveExtensionSettings } from './src/services/settings-service.js';
@@ -52,7 +49,7 @@ export function applyAllThemeSettings(contextOverride) {
 
 /**
  * Initialize native appearance controls and theme events
- * Includes settings panel, chat style, color picker, and sidebar button
+ * Includes settings panel, chat style and color picker
  */
 function initThemeUI() {
     configurePresetManager({
@@ -101,13 +98,8 @@ function initThemeUI() {
     // Add theme buttons hint
     addThemeButtonsHint();
 
-    // Initialize sidebar button, popout, and message interactions
-    initControls({
-        settingsKey,
-        t,
-        dragElement,
-        loadMovingUIState,
-    });
+    // Initialize theme-specific message interactions
+    initControls();
 
     // Initialize slash commands (only when enabled)
     initializeSlashCommands();
@@ -500,13 +492,13 @@ function renderThemeSettings() {
     const inlineDrawerToggle = document.createElement('div');
     inlineDrawerToggle.classList.add('inline-drawer-toggle', 'inline-drawer-header');
 
-    const extensionNameElement = document.createElement('b');
-    extensionNameElement.textContent = EXTENSION_NAME;
+    const appearanceLabel = document.createElement('b');
+    appearanceLabel.textContent = t`Appearance details`;
 
     const inlineDrawerIcon = document.createElement('div');
     inlineDrawerIcon.classList.add('inline-drawer-icon', 'fa-solid', 'fa-circle-chevron-down', 'down');
 
-    inlineDrawerToggle.append(extensionNameElement, inlineDrawerIcon);
+    inlineDrawerToggle.append(appearanceLabel, inlineDrawerIcon);
 
     // Create settings content area
     const inlineDrawerContent = document.createElement('div');
@@ -550,7 +542,7 @@ function renderThemeSettings() {
     });
 
     const enabledCheckboxText = document.createElement('span');
-    enabledCheckboxText.textContent = t`Enable Moonlit Echoes Theme`;
+    enabledCheckboxText.textContent = t`Enable extended appearance`;
 
     enabledCheckboxLabel.append(enabledCheckbox, enabledCheckboxText);
     inlineDrawerContent.append(enabledCheckboxLabel);

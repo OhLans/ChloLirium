@@ -31,7 +31,7 @@ export function initChloLirium() {
         await loadInterfaceLocale();
         // Theme definitions translate their labels at module evaluation. Import
         // after core localization is ready, avoiding the core module cycles.
-        const [theme, tabs, courtyard, identity, emoji, persona, presets] = await Promise.all([
+        const [theme, tabs, courtyard, identity, emoji, persona, presets, settings] = await Promise.all([
             import('./moonlit-echoes/index.js'),
             import('./chat-completion-tabs/index.js'),
             import('./courtyard/index.js'),
@@ -39,6 +39,7 @@ export function initChloLirium() {
             import('./emoji-picker/index.js'),
             import('./quick-persona/index.js'),
             import('./presets/index.js'),
+            import('./user-settings/index.js'),
         ]);
         await theme.initMoonlitTheme();
         presets.initPresetPanel();
@@ -47,6 +48,7 @@ export function initChloLirium() {
         identity.initIdentityControls();
         emoji.initEmojiPicker();
         persona.initQuickPersona();
+        settings.initUserSettings();
     })();
     return initialization;
 }
