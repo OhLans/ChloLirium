@@ -423,3 +423,33 @@ body.reduced-motion #user-settings-block.chlo-user-settings { transition: none; 
 @media (max-width: 380px) {
     .chlo-appearance-preview { display: none; }
 }
+
+.chlo-preference-page .chlo-appearance-group { gap: 5px; }
+
+.chlo-preference-page .checkbox_label { min-height: 32px; }
+.chlo-preference-page .checkbox_label small { font-size: .92em; }
+
+.chlo-preference-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chlo-preference-field {
+    display: grid;
+    gap: 4px;
+    margin-block: 4px;
+}
+
+.chlo-preference-field > input,
+.chlo-preference-field > textarea { width: 100%; }
+
+.chlo-preference-subheading {
+    margin: 8px 0 2px;
+    font-size: .9em;
+}
+
+.chlo-preference-page [role="button"]:focus-visible {
+    outline: 2px solid var(--settings-accent);
+    outline-offset: 2px;
+}

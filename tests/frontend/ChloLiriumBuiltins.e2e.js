@@ -67,7 +67,7 @@ test.beforeEach(async ({ page }) => {
     await page.waitForFunction(async () => (await import('/scripts/events.js')).eventSource.autoFireLastArgs.has('app_ready'));
     await page.evaluate(() => document.querySelectorAll('dialog[open] .popup-button-ok').forEach(button => button.click()));
     await page.locator('#rn-left-rail').waitFor();
-    await page.locator('#SillyTavernMoonlitEchoesTheme-drawer').waitFor({ state: 'attached' });
+    await page.locator('#cts-customTopBarColor-text').waitFor({ state: 'attached' });
 });
 
 test.afterEach(async ({ page }) => {
@@ -95,9 +95,9 @@ test('core features load with all old extension boxes unchecked and retain setti
     expect(result.rawCss).toBe('1');
     await expect(page.locator('#quickPersona')).toHaveCount(1);
     await expect(page.locator('#addEmojiButton')).toHaveCount(1);
-    await expect(page.locator('#user-settings-block #SillyTavernMoonlitEchoesTheme-drawer')).toHaveCount(1);
+    await expect(page.locator('#user-settings-block #cts-customTopBarColor-text')).toHaveCount(1);
     await expect(page.locator('#openai_api-presets #ChatCompletionTabs-enabled')).toHaveCount(1);
-    await expect(page.locator('#extensions_settings2 #SillyTavernMoonlitEchoesTheme-drawer')).toHaveCount(0);
+    await expect(page.locator('#extensions_settings2 #cts-customTopBarColor-text')).toHaveCount(0);
     const native = await page.evaluate(async () => {
         const { initChloLirium } = await import('/scripts/chlolirium/index.js');
         await initChloLirium();
@@ -131,7 +131,7 @@ test('all native interface features work when the entire extension system is dis
     await page.locator('#rn-left-rail').waitFor();
     await expect(page.locator('#quickPersona')).toHaveCount(1);
     await expect(page.locator('#openai-tab-btn-prompts')).toBeAttached();
-    await expect(page.locator('#user-settings-block #SillyTavernMoonlitEchoesTheme-drawer')).toBeAttached();
+    await expect(page.locator('#user-settings-block #cts-customTopBarColor-text')).toBeAttached();
     await expect(page.locator('#persona-management-button > .stis--identity-toggle')).toHaveCount(1);
     expect(await page.evaluate(async () => (await import('/scripts/extensions.js')).extensionNames)).toEqual([]);
     await page.locator('#quickPersona').click();
@@ -140,27 +140,67 @@ test('all native interface features work when the entire extension system is dis
     await expect(page.locator('em-emoji-picker').locator('input[type="search"]')).toBeVisible();
 });
 
-test('native settings are accessible, theme popout clears the rail, and extension management has no integrated feature entries', async ({ page }) => {
+test('native settings stay inside the left drawer and extensions omit integrated features', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.locator('[data-rn-key="usersettings"]').click();
-    await expect(page.locator('#user-settings-block')).toHaveClass(/openDrawer/);
-    await expect(page.locator('#moonlit-theme-buttons-hint')).toBeVisible();
-    await page.locator('#moonlit-theme-buttons-hint').click();
-    const popout = page.locator('#moonlit_echoes_popout');
-    await expect(popout).toBeVisible();
+    const drawer = page.locator('#user-settings-block');
+    await expect(drawer).toHaveClass(/openDrawer/);
+    await drawer.getByRole('button', { name: /^Interface Theme/ }).click();
+    await drawer.getByRole('button', { name: /^Theme & Colors/ }).click();
+    await drawer.getByText('Top bar', { exact: true }).click();
+    await expect(drawer.locator('#cts-customTopBarColor-text')).toBeVisible();
     const rail = await page.locator('#rn-left-rail').boundingBox();
-    const box = await popout.boundingBox();
+    const box = await drawer.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(rail.x + rail.width);
-    await expect(popout.locator('#cts-customTopBarColor-text')).toHaveCount(1);
-    await popout.locator('.dragClose').click();
-    await expect(popout).toHaveCount(0);
-    await expect(page.locator('#user-settings-block #cts-customTopBarColor-text')).toHaveCount(1);
     await page.locator('[data-rn-key="extensions"]').click();
     await page.locator('#extensions_details').click();
     await expect(page.locator('.extensions_info')).toBeVisible();
     const names = await page.locator('.extensions_info .extension_block').allTextContents();
     expect(names.length).toBeGreaterThan(0);
     expect(names.some(name => /Moonlit|Identity Switch|Chat Completion Tabs|Emoji Picker|Quick Persona/.test(name))).toBe(false);
+});
+
+test('settings overviews route to working controls and search returns to its results', async ({ page }) => {
+    const drawer = page.locator('#user-settings-block');
+    const back = drawer.getByRole('button', { name: 'Back', exact: true });
+    await page.locator('[data-rn-key="usersettings"]').click();
+
+    await drawer.getByRole('button', { name: /^Chat & Messages/ }).click();
+    await expect(drawer.locator('[data-settings-page="chat"]').getByRole('button')).toHaveCount(4);
+    await expect(drawer.getByLabel('Enter to send')).toBeHidden();
+    await drawer.getByRole('button', { name: /^Composer/ }).click();
+    await drawer.getByLabel('Enter to send').selectOption('-1');
+    await expect.poll(async () => JSON.parse(await readFile(path.join(dataRoot, 'default-user/settings.json'), 'utf8')).power_user.send_on_enter).toBe(-1);
+    await back.click();
+    await drawer.getByRole('button', { name: /^Streaming/ }).click();
+    const smooth = drawer.getByLabel('Smooth Streaming', { exact: true });
+    await smooth.check();
+    await expect(drawer.getByLabel('Smooth streaming speed')).toBeVisible();
+    await smooth.uncheck();
+    await expect(drawer.getByLabel('Smooth streaming speed')).toBeHidden();
+
+    await back.click();
+    await back.click();
+    await drawer.getByRole('button', { name: /^General/ }).click();
+    await drawer.getByRole('button', { name: /^Imports/ }).click();
+    await expect(drawer.getByLabel('Import card tags')).toBeVisible();
+    await expect(drawer.getByLabel('Ask before importing a card’s lorebook')).toBeVisible();
+    await back.click();
+    await back.click();
+
+    const search = drawer.getByRole('searchbox', { name: 'Search settings' });
+    await search.fill('Strict_escaping');
+    await drawer.getByRole('button', { name: /^STRICT_ESCAPING/ }).click();
+    await expect(drawer.getByRole('heading', { name: 'Macros & Scripts' })).toBeVisible();
+    await expect(drawer.getByLabel('STRICT_ESCAPING')).toBeFocused();
+    await back.click();
+    await expect(search).toHaveValue('Strict_escaping');
+
+    await search.fill('Auto-swipe');
+    await drawer.getByRole('button', { name: /^Enable auto-swipe/ }).click();
+    await expect(drawer.getByRole('heading', { name: 'Auto-replies' })).toBeVisible();
+    await expect(drawer.getByLabel('Minimum reply length (characters)')).toBeVisible();
+    await expect(drawer.getByLabel('Enable auto-swipe')).toBeFocused();
 });
 
 test('native portrait preferences update immediately and persist without extension switches', async ({ page }) => {
