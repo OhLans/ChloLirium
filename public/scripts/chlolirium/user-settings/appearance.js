@@ -1,6 +1,6 @@
 import { eventSource, event_types } from '../../../script.js';
 import { power_user } from '../../power-user.js';
-import { button, element, icon } from './components.js';
+import { byId, button, check, element, group, icon, labelInput, move, nativeRange, selectRow } from './components.js';
 import { themeDisplayName } from './theme-data.js';
 
 export const appearancePages = [
@@ -10,23 +10,6 @@ export const appearancePages = [
     ['appearance-advanced', 'Advanced Appearance', 'Mobile, fine tuning, and CSS', 'sliders'],
     ['appearance-css', 'CSS & Snippets'],
 ];
-
-const byId = id => document.getElementById(id);
-
-function move(to, ...nodes) {
-    for (const node of nodes) if (node) to.append(node);
-}
-
-function check(id) {
-    return byId(id)?.closest('label') ?? byId(id)?.parentElement;
-}
-
-function group(root, title) {
-    const section = element('section', 'chlo-appearance-group');
-    section.append(element('h4', '', title));
-    root.append(section);
-    return section;
-}
 
 function fold(root, title, className = '') {
     const details = element('details', `chlo-appearance-fold ${className}`);
@@ -52,12 +35,6 @@ export function appearancePreview() {
     return palette;
 }
 
-function labelInput(input, name) {
-    if (!input) return;
-    input.dataset.settingLabel = name;
-    input.setAttribute('aria-label', name);
-}
-
 function compact(row, title = row.dataset.settingName) {
     const original = row.dataset.settingName;
     const label = row.querySelector('label');
@@ -70,31 +47,6 @@ function compact(row, title = row.dataset.settingName) {
         for (const number of row.querySelectorAll('input[type=number]')) number.setAttribute('aria-label', `${title} value`);
     }
     return row;
-}
-
-function selectRow(root, id, title) {
-    const input = byId(id);
-    if (!input) return;
-    const row = element('div', 'chlo-appearance-choice');
-    const label = element('label', '', title);
-    label.htmlFor = id;
-    labelInput(input, title);
-    row.append(label, input);
-    root.append(row);
-}
-
-function nativeRange(root, id, title) {
-    const slider = byId(id);
-    const value = byId(`${id}_counter`);
-    if (!slider || !value) return;
-    const label = element('label', '', title);
-    const row = element('div', 'chlo-appearance-range');
-    label.htmlFor = id;
-    slider.dataset.settingAliases = slider.parentElement.querySelector('small')?.textContent.trim() ?? '';
-    labelInput(slider, title);
-    value.setAttribute('aria-label', `${title} value`);
-    row.append(label, slider, value);
-    root.append(row);
 }
 
 function friendlyValue(root, row, title, choices) {

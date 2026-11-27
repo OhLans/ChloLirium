@@ -1,11 +1,10 @@
 import { eventSource, event_types } from '../../../script.js';
 import { power_user } from '../../power-user.js';
 import { appearancePages, populateAppearance } from './appearance.js';
-import { button, element, icon } from './components.js';
+import { byId, button, element, icon } from './components.js';
+import { populatePreferences, preferencePages } from './preferences.js';
 import { initCssSnippets } from './snippets.js';
 import { themeDisplayName } from './theme-data.js';
-
-const byId = id => document.getElementById(id);
 
 const categories = [
     ['interface', 'Interface', 'Theme, avatars, layout, CSS', 'desktop'],
@@ -13,61 +12,6 @@ const categories = [
     ['general', 'General', 'Language, account, imports', 'user'],
     ['advanced', 'Advanced', 'Macros, scripts, diagnostics', 'code'],
 ];
-
-function section(title) {
-    const group = element('section', 'chlo-settings-section');
-    group.append(element('h4', '', title));
-    return group;
-}
-
-function appendExisting(container, ...nodes) {
-    nodes.filter(Boolean).forEach(node => container.append(node));
-}
-
-function labeledControl(id) {
-    const setting = byId(id);
-    return setting?.closest('label') ?? document.querySelector(`label[for="${id}"]`) ?? setting?.parentElement;
-}
-
-function regroupSettings(pages) {
-    const { chat, general, advanced } = pages;
-    const misc = document.querySelector('[name="MiscellaneousToggles"]');
-    const chatControls = document.querySelector('[name="ChatMessageHandlingToggles"]');
-    const character = document.querySelector('[name="CharacterHandlingToggles"]');
-
-    const account = section('Account and language');
-    appendExisting(account, byId('account_controls'), byId('UI-language-block'), byId('version_display'));
-    appendExisting(general, account, character);
-    appendExisting(character, labeledControl('world_import_dialog'));
-
-    appendExisting(chat, chatControls);
-    const writing = section('Composer and streaming');
-    for (const id of ['smooth_streaming', 'smooth_streaming_no_think', 'enable_auto_select_input', 'enable_md_hotkeys', 'restore_user_input', 'click_to_edit']) {
-        appendExisting(writing, labeledControl(id));
-    }
-    appendExisting(writing, byId('smooth_streaming_speed_control'));
-    appendExisting(chat, writing);
-
-    const diagnostics = section('Diagnostics and scripting');
-    for (const id of ['experimental_macro_engine', 'console_log_prompts', 'request_token_probabilities', 'relaxed_api_urls', 'enableLabMode']) {
-        appendExisting(diagnostics, labeledControl(id));
-    }
-    const autocomplete = document.querySelector('[name="AutoCompleteToggle"]');
-    const autocompleteLook = section('Autocomplete appearance');
-    for (const id of ['stscript_autocomplete_style', 'stscript_autocomplete_font_scale', 'stscript_autocomplete_width_left']) {
-        const control = byId(id);
-        const row = id.endsWith('_left') ? control?.closest('.doubleRangeContainer')?.parentElement : control?.closest('[title]');
-        if (row && autocomplete?.contains(row) && row !== autocomplete) appendExisting(autocompleteLook, row);
-    }
-    appendExisting(byId('chlo-appearance-more') ?? pages['appearance-advanced'], autocompleteLook);
-    misc?.querySelector('h4')?.remove();
-    appendExisting(diagnostics, misc);
-    appendExisting(advanced, diagnostics, autocomplete, document.querySelector('[name="STscriptToggles"]'));
-
-    for (const id of ['fast_ui_mode', 'noShadowsmode', 'enableZenSliders', 'zoomed_avatar_magnification']) {
-        labeledControl(id)?.classList.add('chlo-settings-retired');
-    }
-}
 
 function controlName(node) {
     if (node.dataset.settingLabel) return node.dataset.settingLabel;
@@ -85,6 +29,14 @@ function expandParents(node, page) {
             parent.parentElement.querySelector(':scope > .inline-drawer-toggle')?.click();
         }
     }
+}
+
+function isSearchable(node, page) {
+    for (let parent = node; parent && parent !== page; parent = parent.parentElement) {
+        if (parent.hidden || parent.classList.contains('displayNone')) return false;
+        if (parent.style.display === 'none' && !parent.classList.contains('inline-drawer-content')) return false;
+    }
+    return !node.hasAttribute('data-for') && node.dataset.settingsSearch !== 'ignore';
 }
 
 export function initUserSettings() {
@@ -112,10 +64,11 @@ export function initUserSettings() {
     const scroll = element('div', 'chlo-settings-scroll');
     const home = element('div', 'chlo-settings-home');
     const results = element('div', 'chlo-settings-results');
-    const allPages = [...categories, ...appearancePages, ['snippets', 'CSS Snippets']];
+    const allPages = [...categories, ...appearancePages, ...preferencePages, ['snippets', 'CSS Snippets']];
     const pages = Object.fromEntries(allPages.map(([id]) => [id, element('div', 'chlo-settings-page')]));
     for (const [id, page] of Object.entries(pages)) page.dataset.settingsPage = id;
-    for (const [id] of appearancePages) pages[id].classList.add('chlo-appearance-page');
+    for (const [id] of [...appearancePages, ...preferencePages]) pages[id].classList.add('chlo-appearance-page');
+    for (const [id] of preferencePages) pages[id].classList.add('chlo-preference-page');
     pages.snippets.classList.add('chlo-snippets');
     const themeLabel = element('span', 'chlo-settings-badge');
     const names = Object.fromEntries(allPages.map(([id, name]) => [id, name]));
@@ -185,8 +138,7 @@ export function initUserSettings() {
                 results.append(navRow(names[page], () => navigate(page)));
             }
             for (const node of root.querySelectorAll('input:not([type=hidden]):not([type=file]), select, textarea, button, summary, [id].menu_button')) {
-                const hidden = node.closest('.chlo-settings-retired, [hidden], .displayNone');
-                if ((hidden && hidden !== root) || node.hasAttribute('data-for') || node.dataset.settingsSearch === 'ignore') continue;
+                if (!isSearchable(node, root)) continue;
                 const name = controlName(node) || (node.tagName === 'SUMMARY' ? node.textContent.trim() : '');
                 const keywords = [name, node.dataset.settingAliases].filter(Boolean).join(' ').toLowerCase();
                 if (!name || seen.has(name) || !keywords.includes(term)) continue;
@@ -204,7 +156,7 @@ export function initUserSettings() {
     bounds.append(top, searchRow, scroll);
     drawer.append(bounds);
     populateAppearance(pages, navRow, navigate);
-    regroupSettings(pages);
+    populatePreferences(pages, navRow, navigate);
     initCssSnippets(pages.snippets, () => {
         query.value = '';
         showDrawer();
