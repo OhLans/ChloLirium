@@ -17,8 +17,3 @@
     cursor: pointer;
     padding: 8px 0;
 }
-
-body.rivelle-navigator-enabled #moonlit_echoes_popout {
-    left: var(--rn-rail);
-    max-width: calc(100dvw - var(--rn-rail));
-}

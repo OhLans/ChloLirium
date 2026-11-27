@@ -1,10 +1,4 @@
 import { getContext } from '../context.js';
-/**
- * Moonlit Echoes Theme for SillyTavern
- * A beautiful theme with extensive customization options
- */
-
-// Global settings and constants
 import { THEME_VERSION } from './src/config/theme-info.js';
 export { THEME_VERSION } from './src/config/theme-info.js';
 
@@ -27,7 +21,6 @@ import {
 } from './src/ui/settings-factory.js';
 import { applyAllThemeSettings as applyAllThemeSettingsCore } from './src/core/theme-applier.js';
 import { initAvatarInjector, initFormSheldHeightMonitor } from './src/core/observers.js';
-import { addThemeButtonsHint } from './src/services/hints.js';
 
 // Track if custom chat styles have been added
 let customChatStylesAdded = false;
@@ -66,17 +59,8 @@ function initThemeUI() {
         removeLegacy: removeLegacyAppearance,
     });
 
-    // Add creator information
-    addThemeCreatorInfo();
-
     // Add modern compact styles
     addModernCompactStyles();
-
-    // Add theme version information
-    addThemeVersionInfo();
-
-    // Add theme buttons hint
-    addThemeButtonsHint();
 
     // Initialize theme-specific message interactions
     initControls();
@@ -84,215 +68,6 @@ function initThemeUI() {
     // Initialize slash commands (only when enabled)
     initializeSlashCommands();
 }
-
-/**
- * Add thumbnail tip
- * Add thumbnail setting tip in the settings panel
- */
-function addThumbnailTip(container) {
-    // Check if tip already added
-    if (document.getElementById('moonlit-thumbnail-tip')) return;
-
-    // Create tip container
-    const tipContainer = document.createElement('div');
-    tipContainer.id = 'moonlit-thumbnail-tip';
-    tipContainer.classList.add('moonlit-tip-container');
-    tipContainer.style.borderRadius = '5px';
-    tipContainer.style.overflow = 'hidden';
-
-    // Create tip header block
-    const tipHeader = document.createElement('div');
-    tipHeader.classList.add('moonlit-tip-header');
-    tipHeader.style.display = 'flex'; // Add flex display
-    tipHeader.style.alignItems = 'center'; // Center align items vertically
-
-    // Add small icon with better alignment
-    const tipIcon = document.createElement('i');
-    tipIcon.classList.add('fa', 'fa-info-circle');
-    tipIcon.style.marginRight = '8px';
-    tipIcon.style.display = 'flex'; // Make icon a flex container
-    tipIcon.style.alignItems = 'center'; // Align icon content vertically
-    tipIcon.style.justifyContent = 'center'; // Center icon content horizontally
-    tipIcon.style.width = '16px'; // Fixed width
-    tipIcon.style.height = '16px'; // Fixed height
-
-    // Add tip title text
-    const tipTitle = document.createElement('span');
-    tipTitle.textContent = t`Blurry or thumbnail-sized character images in chat?`;
-    tipTitle.style.fontWeight = 'normal';
-
-    // Add small expand icon with consistent sizing
-    const toggleIcon = document.createElement('i');
-    toggleIcon.classList.add('fa', 'fa-chevron-down');
-    toggleIcon.style.marginLeft = 'auto';
-    toggleIcon.style.fontSize = '0.85em';
-    toggleIcon.style.opacity = '0.8';
-    toggleIcon.style.transition = 'transform 0.3s';
-    toggleIcon.style.display = 'flex'; // Make icon a flex container
-    toggleIcon.style.alignItems = 'center'; // Align icon content vertically
-    toggleIcon.style.width = '16px'; // Fixed width for consistency
-    toggleIcon.style.justifyContent = 'center'; // Center horizontally
-
-    // Assemble title
-    tipHeader.appendChild(tipIcon);
-    tipHeader.appendChild(tipTitle);
-    tipHeader.appendChild(toggleIcon);
-    tipContainer.appendChild(tipHeader);
-
-    // Create tip content
-    const tipContent = document.createElement('div');
-    tipContent.classList.add('moonlit-tip-content');
-    tipContent.style.padding = '0';
-    tipContent.style.maxHeight = '0';
-    tipContent.style.overflow = 'hidden';
-    tipContent.style.transition = 'all 0.3s ease';
-
-    // Set tip content, more concise
-    tipContent.innerHTML = `
-        <div style="line-height: 1.4;">
-            <span data-i18n="Please refer to the">Please refer to the</span> <a href="https://github.com/RivelleDays/SillyTavern-MoonlitEchoesTheme" target="_blank">Moonlit Echoes Theme GitHub README</a> <span data-i18n="and complete the necessary setup.">and complete the necessary setup.</span>
-            </div>
-        </div>
-    `;
-
-    tipContainer.appendChild(tipContent);
-
-    // Add click event
-    tipHeader.addEventListener('click', () => {
-        const isExpanded = tipContent.style.maxHeight !== '0px' && tipContent.style.maxHeight !== '0';
-
-        if (isExpanded) {
-            // Collapse
-            tipContent.style.maxHeight = '0';
-            tipContent.style.padding = '0 10px';
-            toggleIcon.style.transform = 'rotate(0deg)';
-        } else {
-            // Expand
-            tipContent.style.maxHeight = '1000px';
-            tipContent.style.padding = '10px';
-            toggleIcon.style.transform = 'rotate(180deg)';
-        }
-    });
-
-    // Add to container
-    container.appendChild(tipContainer);
-}
-
-/**
- * Add slash commands tip
- * Add a tip about available slash commands in the settings panel
- */
-function addSlashCommandsTip(container) {
-    // Check if tip already added
-    if (document.getElementById('moonlit-slashcmd-tip')) return;
-
-    // Create tip container
-    const tipContainer = document.createElement('div');
-    tipContainer.id = 'moonlit-slashcmd-tip';
-    tipContainer.classList.add('moonlit-tip-container');
-    tipContainer.style.borderRadius = '5px';
-    tipContainer.style.overflow = 'hidden';
-
-    // Create tip header block
-    const tipHeader = document.createElement('div');
-    tipHeader.classList.add('moonlit-tip-header');
-    tipHeader.style.display = 'flex'; // Add flex display
-    tipHeader.style.alignItems = 'center'; // Center align items vertically
-
-    // Add small icon with better alignment
-    const tipIcon = document.createElement('i');
-    tipIcon.classList.add('fa', 'fa-terminal');
-    tipIcon.style.marginRight = '8px';
-    tipIcon.style.display = 'flex'; // Make icon a flex container
-    tipIcon.style.alignItems = 'center'; // Align icon content vertically
-    tipIcon.style.justifyContent = 'center'; // Center icon content horizontally
-    tipIcon.style.width = '16px'; // Fixed width
-    tipIcon.style.height = '16px'; // Fixed height
-
-    // Add tip title text with a more concise title
-    const tipTitle = document.createElement('span');
-    tipTitle.textContent = t`Chat Style Slash Commands`;
-    tipTitle.setAttribute('data-i18n', 'Chat Style Slash Commands');
-    tipTitle.style.fontWeight = 'normal';
-
-    // Add small expand icon with consistent sizing
-    const toggleIcon = document.createElement('i');
-    toggleIcon.classList.add('fa', 'fa-chevron-down');
-    toggleIcon.style.marginLeft = 'auto';
-    toggleIcon.style.fontSize = '0.85em';
-    toggleIcon.style.opacity = '0.8';
-    toggleIcon.style.transition = 'transform 0.3s';
-    toggleIcon.style.display = 'flex'; // Make icon a flex container
-    toggleIcon.style.alignItems = 'center'; // Align icon content vertically
-    toggleIcon.style.width = '16px'; // Fixed width for consistency
-    toggleIcon.style.justifyContent = 'center'; // Center horizontally
-
-    // Assemble title
-    tipHeader.appendChild(tipIcon);
-    tipHeader.appendChild(tipTitle);
-    tipHeader.appendChild(toggleIcon);
-    tipContainer.appendChild(tipHeader);
-
-    // Create tip content
-    const tipContent = document.createElement('div');
-    tipContent.classList.add('moonlit-tip-content');
-    tipContent.style.padding = '0';
-    tipContent.style.maxHeight = '0';
-    tipContent.style.overflow = 'hidden';
-    tipContent.style.transition = 'all 0.3s ease';
-
-    // Set tip content with slash command info and increased list item spacing
-    tipContent.innerHTML = `
-    <div style="line-height: 1.5;">
-        <span style="font-weight:500;" data-i18n="Moonlit Echoes Styles:">Moonlit Echoes Styles:</span>
-        <ul style="margin-top: 5px; margin-bottom: 10px; padding-left: 20px;">
-            <li style="margin-bottom: 8px;"><code>/echostyle</code> - <span data-i18n="Switch to Echo style">Switch to Echo style</span></li>
-            <li style="margin-bottom: 8px;"><code>/whisperstyle</code> - <span data-i18n="Switch to Whisper style">Switch to Whisper style</span></li>
-            <li style="margin-bottom: 8px;"><code>/hushstyle</code> - <span data-i18n="Switch to Hush style">Switch to Hush style</span></li>
-            <li style="margin-bottom: 8px;"><code>/ripplestyle</code> - <span data-i18n="Switch to Ripple style">Switch to Ripple style</span></li>
-            <li><code>/tidestyle</code> - <span data-i18n="Switch to Tide style">Switch to Tide style</span></li>
-        </ul>
-
-        <span style="font-weight:500;" data-i18n="SillyTavern Safe Switch Commands:">SillyTavern Safe Switch Commands:</span>
-        <ul style="margin-top: 5px; margin-bottom: 10px; padding-left: 20px;">
-            <li style="margin-bottom: 8px;"><code>/moonlit-flat</code> - <span data-i18n="Switch to Flat style">Switch to Flat style</span></li>
-            <li style="margin-bottom: 8px;"><code>/moonlit-bubble</code> - <span data-i18n="Switch to Bubble style">Switch to Bubble style</span></li>
-            <li><code>/moonlit-document</code> - <span data-i18n="Switch to Document style">Switch to Document style</span></li>
-        </ul>
-
-        <div style="margin-top: 8px; margin-bottom: 5px; text-align: center;">
-            <span data-i18n="For more commands, see">For more commands, see</span>
-            <button class="menu_button menu_button_icon inline-flex interactable" onclick="window.open('https://docs.sillytavern.app/usage/st-script/', '_blank')" tabindex="0" style="margin-left: 5px; font-size: 0.9em;">
-                <i class="fa-solid fa-terminal"></i>
-                <span data-i18n="STscript Reference">STscript Reference</span>
-            </button>
-        </div>
-    </div>
-`;
-
-    tipContainer.appendChild(tipContent);
-
-    // Add click event
-    tipHeader.addEventListener('click', () => {
-        const isExpanded = tipContent.style.maxHeight !== '0px' && tipContent.style.maxHeight !== '0';
-
-        if (isExpanded) {
-            // Collapse
-            tipContent.style.maxHeight = '0';
-            tipContent.style.padding = '0 10px';
-            toggleIcon.style.transform = 'rotate(0deg)';
-        } else {
-            // Expand
-            tipContent.style.maxHeight = '1000px';
-            tipContent.style.padding = '10px';
-            toggleIcon.style.transform = 'rotate(180deg)';
-        }
-    });
-
-    // Add to container
-    container.appendChild(tipContainer);
-}
-
 
 /** The old appearance catalog remains readable for existing themes and scripts. */
 function getLegacyAppearance(name) {
@@ -380,19 +155,12 @@ export function toggleCss(shouldLoad) {
             document.head.append(linkExt);
         }
 
-        // Ensure hint is visible
-        addThemeButtonsHint();
-
         // Re-apply all checkbox styles if they were enabled
         updateAllCheckboxStyles(true);
     } else {
         // Remove CSS
         if (existingLinkStyle) existingLinkStyle.remove();
         if (existingLinkExt) existingLinkExt.remove();
-
-        // Remove hint
-        const existingHint = document.getElementById('moonlit-theme-buttons-hint');
-        if (existingHint) existingHint.remove();
 
         // Clear all checkbox styles
         clearAllCheckboxStyles();
@@ -465,8 +233,7 @@ function getBaseUrl() {
 }
 
 /**
- * Render native appearance settings with the Moonlit tabbed interface
- * Create UI elements and set up event handling
+ * Render the native appearance controls and wire up their settings.
  */
 function renderThemeSettings() {
     const context = getContext();
@@ -488,11 +255,14 @@ function renderThemeSettings() {
     settingsContainer.append(inlineDrawer);
 
     // Create drawer title
-    const inlineDrawerToggle = document.createElement('div');
+    const inlineDrawerToggle = document.createElement('button');
+    inlineDrawerToggle.type = 'button';
+    inlineDrawerToggle.setAttribute('aria-expanded', 'false');
+    inlineDrawerToggle.setAttribute('aria-controls', 'chlo-appearance-controls');
     inlineDrawerToggle.classList.add('inline-drawer-toggle', 'inline-drawer-header');
 
     const appearanceLabel = document.createElement('b');
-    appearanceLabel.textContent = t`Appearance details`;
+    appearanceLabel.textContent = t`Appearance`;
 
     const inlineDrawerIcon = document.createElement('div');
     inlineDrawerIcon.classList.add('inline-drawer-icon', 'fa-solid', 'fa-circle-chevron-down', 'down');
@@ -501,6 +271,7 @@ function renderThemeSettings() {
 
     // Create settings content area
     const inlineDrawerContent = document.createElement('div');
+    inlineDrawerContent.id = 'chlo-appearance-controls';
     inlineDrawerContent.classList.add('inline-drawer-content');
 
     // Add to drawer
@@ -508,9 +279,6 @@ function renderThemeSettings() {
 
     // Get settings
     const settings = getExtensionSettings(context);
-
-    // Add creator
-    addThemeCreatorInfo(inlineDrawerContent);
 
     // Create enable switch
     const enabledCheckboxLabel = document.createElement('label');
@@ -525,9 +293,6 @@ function renderThemeSettings() {
     enabledCheckbox.addEventListener('change', () => {
         settings.enabled = enabledCheckbox.checked;
         toggleCss(settings.enabled);
-
-        // Update hint display when enable status changes
-        addThemeButtonsHint();
 
         // Update custom chat styles when enabled status changes
         updateCustomChatStyles();
@@ -568,32 +333,12 @@ function renderThemeSettings() {
     originalAvatarLabel.append(originalAvatarCheckbox, originalAvatarText);
     inlineDrawerContent.append(originalAvatarLabel);
 
-    // Add spacer for visual spacing
-    const spacer = document.createElement('div');
-    spacer.style.height = '15px';
-    inlineDrawerContent.append(spacer);
-
-    // Add tips
-    addThumbnailTip(inlineDrawerContent);
-    addSlashCommandsTip(inlineDrawerContent);
-
-    // Add spacer for visual spacing
-    const spacer2 = document.createElement('div');
-    spacer2.style.height = '10px';
-    inlineDrawerContent.append(spacer2);
-
     // Create tabbed settings UI
     createTabbedSettingsUI(inlineDrawerContent, settings);
 
-    // Add version information
-    addThemeVersionInfo(inlineDrawerContent);
-
-    // Initialize drawer toggle functionality
+    // The shared drawer handler animates the content and updates the icon.
     inlineDrawerToggle.addEventListener('click', function () {
-        this.classList.toggle('open');
-        inlineDrawerIcon.classList.toggle('down');
-        inlineDrawerIcon.classList.toggle('up');
-        inlineDrawerContent.classList.toggle('open');
+        this.setAttribute('aria-expanded', String(this.getAttribute('aria-expanded') !== 'true'));
     });
 }
 
@@ -644,77 +389,6 @@ export function removeCustomChatStyles() {
 * @param {HTMLElement} container - Container to add preset manager
 * @param {Object} settings - Current settings object
 */
-/**
- * Add theme creator information to settings panel
- * @param {HTMLElement} [container] - Optional container, uses default settings container if not provided
- */
-function addThemeCreatorInfo(container) {
-    // Check if creator info already added
-    if (document.getElementById('moonlit-echoes-creator')) return;
-
-    // If no container passed, use default settings container
-    if (!container) {
-        container = document.querySelector('.settings-container');
-    }
-
-    // Check if container exists
-    if (!container) return;
-
-    // Create creator info container
-    const creatorContainer = document.createElement('div');
-    creatorContainer.classList.add('moonlit-echoes', 'flex-container', 'flexFlowColumn');
-    creatorContainer.style.marginTop = '5px';
-    creatorContainer.style.marginBottom = '15px';
-    creatorContainer.style.textAlign = 'center';
-
-    // Set HTML content
-    creatorContainer.innerHTML = `
-        <small id="moonlit-echoes-creator">
-            <span>Created with Heartfelt Passion by</span>
-            <a href="https://github.com/RivelleDays" target="_blank" rel="noopener noreferrer">Rivelle</a><br>
-            <span>Dedicated to All 可愛 (Kind & Wonderful) People</span>
-        </small>
-    `;
-
-    // Add to settings panel container
-    container.appendChild(creatorContainer);
-}
-
-
-/**
-* Add theme version information to settings panel
-* @param {HTMLElement} container - Container to add version info
-*/
-function addThemeVersionInfo(container) {
-// Check if version info already added
-    if (document.getElementById('moonlit-echoes-version')) return;
-
-    // Check if container exists
-    if (!container) return;
-
-    // Create version info container
-    const versionContainer = document.createElement('div');
-    versionContainer.classList.add('moonlit-echoes', 'flex-container', 'flexFlowColumn');
-    versionContainer.style.marginTop = '5px';
-    versionContainer.style.marginBottom = '15px';
-    versionContainer.style.textAlign = 'center';
-
-    // Set HTML content
-    versionContainer.innerHTML = `
-    <small class="flex-container justifyCenter alignitemscenter">
-        <span data-i18n="Moonlit Echoes Theme Version">Moonlit Echoes Theme Version</span>
-        <a id="moonlit-echoes-version"
-            href="https://github.com/RivelleDays/SillyTavern-MoonlitEchoesTheme"
-            target="_blank"
-            rel="noopener noreferrer"
-            style="margin-left: 5px;">${THEME_VERSION}</a>
-    </small>
-`;
-
-    // Add to provided container
-    container.appendChild(versionContainer);
-}
-
 /**
  * Initialize chat appearance switcher - only when theme is enabled
  * Handle switching between different chat styles

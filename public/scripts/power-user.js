@@ -1,4 +1,4 @@
-import { appearanceOnlyKey, readThemeImport, resolveThemeAppearance, themeAppearanceKey } from './chlolirium/user-settings/theme-data.js';
+import { appearanceOnlyKey, readThemeImport, resolveThemeAppearance, themeAppearanceKey, themeDisplayName } from './chlolirium/user-settings/theme-data.js';
 import { Fuse, Handlebars } from '../lib.js';
 
 import {
@@ -367,7 +367,7 @@ export function refreshLegacyThemeOptions() {
         theme[appearanceOnlyKey] = true;
         themes.push(theme);
         legacyAppearanceOptions.add(name);
-        $('#themes').append(new Option(name, name));
+        $('#themes').append(new Option(themeDisplayName(name), name));
     }
     if (themes.some(theme => theme.name === power_user.theme)) $('#themes').val(power_user.theme);
 }
@@ -1808,7 +1808,7 @@ export async function loadPowerUserSettings(settings, data) {
     for (const theme of themes) {
         const option = document.createElement('option');
         option.value = theme.name;
-        option.innerText = theme.name;
+        option.textContent = themeDisplayName(theme.name);
         option.selected = theme.name == power_user.theme;
         $('#themes').append(option);
     }
@@ -2415,7 +2415,7 @@ async function deleteTheme() {
         return;
     }
 
-    const template = $(await renderTemplateAsync('themeDelete', { themeName }));
+    const template = $(await renderTemplateAsync('themeDelete', { themeName: themeDisplayName(themeName) }));
     const confirm = await callGenericPopup(template, POPUP_TYPE.CONFIRM);
 
     if (!confirm) {
@@ -2451,7 +2451,7 @@ async function deleteTheme() {
 
 /** Export both appearance layers without changing the saved theme. */
 function exportTheme() {
-    const theme = getThemeObject(power_user.theme || 'UI Theme');
+    const theme = getThemeObject(themeDisplayName(power_user.theme) || 'UI Theme');
     download(JSON.stringify(theme, null, 4), `${theme.name}.json`, 'application/json');
 }
 
@@ -2493,7 +2493,7 @@ async function importTheme(file) {
         if (incoming.appearance && parsed[appearanceOnlyKey] === true) theme[appearanceOnlyKey] = true;
     }
     await saveTheme(name, theme, { select: false });
-    toastr.success(name, 'Theme imported');
+    toastr.success(themeDisplayName(name), 'Theme imported');
 }
 
 /**
@@ -2505,7 +2505,7 @@ async function importTheme(file) {
  */
 async function saveTheme(name = undefined, theme = undefined, { select = true } = {}) {
     if (typeof name !== 'string') {
-        const newName = await callGenericPopup('Enter a theme preset name:', POPUP_TYPE.INPUT, power_user.theme);
+        const newName = await callGenericPopup('Enter a theme preset name:', POPUP_TYPE.INPUT, themeDisplayName(power_user.theme));
 
         if (!newName) {
             return;
@@ -2535,7 +2535,7 @@ async function saveTheme(name = undefined, theme = undefined, { select = true } 
     legacyAppearanceOptions.delete(name);
     if (themeIndex === -1) {
         themes.push(theme);
-        $('#themes').append(new Option(name, name));
+        $('#themes').append(new Option(themeDisplayName(name), name));
     } else {
         themes[themeIndex] = theme;
     }
@@ -2995,10 +2995,13 @@ async function setThemeCallback(_, themeName) {
 
     const results = fuse.search(themeName);
     console.debug('Theme fuzzy search results for ' + themeName, results);
-    const theme = results[0]?.item;
+    const requested = themeName.trim().toLowerCase();
+    const theme = themes.find(item => item.name.toLowerCase() === requested)
+        ?? themes.find(item => themeDisplayName(item.name).toLowerCase() === requested)
+        ?? results[0]?.item;
 
     if (!theme) {
-        toastr.warning(`Could not find theme with name: ${themeName}`);
+        toastr.warning(`Could not find theme with name: ${themeDisplayName(themeName)}`);
         return;
     }
 
@@ -4271,7 +4274,7 @@ jQuery(() => {
             SlashCommandArgument.fromProps({
                 description: 'theme name',
                 typeList: [ARGUMENT_TYPE.STRING],
-                enumProvider: () => themes.map(theme => new SlashCommandEnumValue(theme.name)),
+                enumProvider: () => [...new Set(themes.map(theme => themeDisplayName(theme.name)))].map(name => new SlashCommandEnumValue(name)),
             }),
         ],
         helpString: `

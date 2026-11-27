@@ -1,6 +1,11 @@
 export const themeAppearanceKey = 'chlo_appearance';
 export const appearanceOnlyKey = 'chlo_appearance_only';
 
+/** Keep saved keys stable for snippets and existing theme files. */
+export function themeDisplayName(name = '') {
+    return String(name ?? '').replace(/\s*[-–—]\s*by Rivelle\s*$/i, '').trim();
+}
+
 export function isThemeObject(value) {
     return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -30,7 +35,7 @@ export function resolveThemeAppearance(theme, legacy) {
 export function readThemeImport(data) {
     if (!isThemeObject(data)) throw new Error('Choose a UI theme JSON file.');
     if (data.moonlitEchoesPreset === true) {
-        if (typeof data.presetName !== 'string' || !isThemeObject(data.settings)) throw new Error('Invalid Moonlit appearance preset.');
+        if (typeof data.presetName !== 'string' || !isThemeObject(data.settings)) throw new Error('Invalid legacy appearance preset.');
         return { name: data.presetName.replace(/^\[Moonlit\]\s*/i, '').trim(), appearance: data.settings, legacyAppearance: true };
     }
     if (typeof data.name !== 'string') throw new Error('Missing theme name.');

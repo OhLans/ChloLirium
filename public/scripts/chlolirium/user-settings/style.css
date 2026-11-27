@@ -242,18 +242,36 @@ body {
 
 body.reduced-motion #user-settings-block.chlo-user-settings { transition: none; }
 
-#user-settings-block .moonlit-tip-container {
-    margin: 10px 0;
-    border: 1px solid var(--settings-line);
-    border-radius: 5px;
-    overflow: hidden;
-    font-size: .9em !important;
+/* The former theme column is now a compact group above Layout and text. */
+#user-settings-block .chlo-settings-page #UI-Theme-Block,
+#user-settings-block .chlo-settings-page #UI-presets-block {
+    margin: 0;
+    gap: 8px;
 }
 
-#user-settings-block .moonlit-tip-header {
-    display: flex;
-    align-items: center;
-    padding: 6px 10px;
+#user-settings-block #UI-presets-block > h4,
+#user-settings-block .chlo-settings-page > .chlo-settings-section > h4 {
+    margin: 0 0 8px;
+    min-height: 0;
+    padding-bottom: 7px;
+}
+
+#user-settings-block #chlo-theme-settings button.inline-drawer-toggle {
+    width: 100%;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    padding: 8px 10px;
+    border: 1px solid var(--settings-line);
+    border-radius: 8px;
     background: var(--settings-surface);
-    cursor: pointer;
+}
+
+#user-settings-block #chlo-theme-settings button.inline-drawer-toggle:hover {
+    background: color-mix(in srgb, var(--settings-accent) 16%, transparent);
+}
+
+#user-settings-block #chlo-theme-settings button.inline-drawer-toggle:focus-visible {
+    outline: 2px solid var(--settings-accent);
+    outline-offset: 2px;
 }
