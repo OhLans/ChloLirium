@@ -5,16 +5,14 @@ export { THEME_VERSION } from './src/config/theme-info.js';
 import { t } from '../../i18n.js';
 import { power_user, refreshLegacyThemeOptions, registerThemeAppearance } from '../../power-user.js';
 import { appearanceSnapshot, withoutLegacyAppearanceToggle } from '../user-settings/theme-data.js';
-import { tabMappings, themeCustomSettings } from './src/config/theme-settings.js';
+import { themeCustomSettings } from './src/config/theme-settings.js';
 import { settingsKey, getSettings as getExtensionSettings, saveSettings as saveExtensionSettings } from './src/services/settings-service.js';
 import { initializeSlashCommands } from './src/services/slash-commands.js';
 import { initThemeSettings } from './src/bootstrap/init-theme.js';
 import { registerChatDisplaySelect } from './src/services/chat-controls.js';
 import { initControls } from './src/ui/controls.js';
-import { configureSettingsTabs, createTabbedSettingsUI } from './src/ui/settings-tabs.js';
 import {
     configureSettingsFactory,
-    createCustomSettingsUI,
     createSettingItem,
     updateSettingsUI,
 } from './src/ui/settings-factory.js';
@@ -33,13 +31,6 @@ function applyAppearanceStyles(settings) {
  * Includes settings panel, chat style and color picker
  */
 function initThemeUI() {
-    configureSettingsTabs({
-        t,
-        tabMappings,
-        themeCustomSettings,
-        createSettingItem,
-    });
-
     // Account settings hold live edits that may not have been saved as a theme.
     applyAppearanceStyles(getExtensionSettings());
     renderThemeSettings();
@@ -120,42 +111,6 @@ function renderThemeSettings() {
         return;
     }
 
-    // Find existing settings drawer to avoid duplication
-    let existingDrawer = settingsContainer.querySelector(`#${settingsKey}-drawer`);
-    if (existingDrawer) {
-        return; // Don't recreate if exists
-    }
-
-    // Create settings drawer
-    const inlineDrawer = document.createElement('div');
-    inlineDrawer.id = `${settingsKey}-drawer`;
-    inlineDrawer.classList.add('inline-drawer');
-    settingsContainer.append(inlineDrawer);
-
-    // Create drawer title
-    const inlineDrawerToggle = document.createElement('button');
-    inlineDrawerToggle.type = 'button';
-    inlineDrawerToggle.setAttribute('aria-expanded', 'false');
-    inlineDrawerToggle.setAttribute('aria-controls', 'chlo-appearance-controls');
-    inlineDrawerToggle.classList.add('inline-drawer-toggle', 'inline-drawer-header');
-
-    const appearanceLabel = document.createElement('b');
-    appearanceLabel.textContent = t`Appearance`;
-
-    const inlineDrawerIcon = document.createElement('div');
-    inlineDrawerIcon.classList.add('inline-drawer-icon', 'fa-solid', 'fa-circle-chevron-down', 'down');
-
-    inlineDrawerToggle.append(appearanceLabel, inlineDrawerIcon);
-
-    // Create settings content area
-    const inlineDrawerContent = document.createElement('div');
-    inlineDrawerContent.id = 'chlo-appearance-controls';
-    inlineDrawerContent.classList.add('inline-drawer-content');
-
-    // Add to drawer
-    inlineDrawer.append(inlineDrawerToggle, inlineDrawerContent);
-
-    // Get settings
     const settings = getExtensionSettings(context);
 
     // Toggle using original avatar images instead of thumbnails
@@ -178,15 +133,21 @@ function renderThemeSettings() {
     originalAvatarText.textContent = t`Use original character avatars in chat messages`;
 
     originalAvatarLabel.append(originalAvatarCheckbox, originalAvatarText);
-    inlineDrawerContent.append(originalAvatarLabel);
+    settingsContainer.append(originalAvatarLabel);
+    for (const setting of themeCustomSettings) appendAppearanceControl(settingsContainer, setting, settings);
+}
 
-    // Create tabbed settings UI
-    createTabbedSettingsUI(inlineDrawerContent, settings);
-
-    // The shared drawer handler animates the content and updates the icon.
-    inlineDrawerToggle.addEventListener('click', function () {
-        this.setAttribute('aria-expanded', String(this.getAttribute('aria-expanded') !== 'true'));
-    });
+function appendAppearanceControl(container, setting, settings) {
+    const row = document.createElement('div');
+    row.className = 'theme-setting-item';
+    row.dataset.appearanceSetting = setting.varId;
+    row.dataset.appearanceCategory = setting.category ?? '';
+    row.dataset.appearanceType = setting.type;
+    row.dataset.settingName = setting.displayText;
+    if (setting.description) row.title = setting.description;
+    createSettingItem(row, setting, settings);
+    container.append(row);
+    return row;
 }
 
 /** Register the built-in chat layouts and restore the saved layout. */
@@ -285,12 +246,10 @@ export function addCustomSetting(settingConfig) {
     applyThemeSetting(settingConfig.varId, settings[settingConfig.varId]);
     saveExtensionSettings(context);
 
-    // Re-render settings panel
-    const settingsContainer = document.querySelector(`#${settingsKey}-drawer .inline-drawer-content`);
+    const settingsContainer = document.getElementById('chlo-theme-settings');
     if (settingsContainer) {
-        // Keep the original-avatar preference when adding custom controls.
-        settingsContainer.querySelectorAll(':scope > .moonlit-tabs, :scope > .theme-setting-category').forEach(node => node.remove());
-        createCustomSettingsUI(settingsContainer, settings);
+        const row = appendAppearanceControl(settingsContainer, settingConfig, settings);
+        settingsContainer.dispatchEvent(new CustomEvent('chlo:appearance-control-added', { detail: row }));
     }
 }
 
