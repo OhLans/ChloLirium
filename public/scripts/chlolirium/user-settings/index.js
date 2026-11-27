@@ -1,10 +1,10 @@
+import { eventSource, event_types } from '../../../script.js';
 import { power_user } from '../../power-user.js';
-import { accountStorage } from '../../util/AccountStorage.js';
+import { appearancePages, populateAppearance } from './appearance.js';
 import { button, element, icon } from './components.js';
 import { initCssSnippets } from './snippets.js';
 import { themeDisplayName } from './theme-data.js';
 
-const recentKey = 'chlo-user-settings-recent';
 const byId = id => document.getElementById(id);
 
 const categories = [
@@ -30,37 +30,10 @@ function labeledControl(id) {
 }
 
 function regroupSettings(pages) {
-    const { interface: appearance, chat, general, advanced } = pages;
-    const theme = byId('UI-Theme-Block');
+    const { chat, general, advanced } = pages;
     const misc = document.querySelector('[name="MiscellaneousToggles"]');
     const chatControls = document.querySelector('[name="ChatMessageHandlingToggles"]');
     const character = document.querySelector('[name="CharacterHandlingToggles"]');
-
-    // Move the actual controls, keeping existing selectors, state and event handlers.
-    const display = section('Chat and message appearance');
-    const portraits = section('Avatars and navigation');
-    const layout = section('Layout and text');
-    const accessibility = section('Accessibility');
-    const notifications = section('Notifications and sound');
-    const editor = section('Custom CSS');
-    appendExisting(appearance, theme, layout, portraits, display, accessibility, notifications, editor);
-    const avatarDisplay = theme.querySelector('[name="AvatarAndChatDisplay"]');
-    const themeColors = byId('color-picker-block')?.closest('.inline-drawer');
-    for (const id of ['avatar_style', 'hideChatAvatarsEnabled', 'hotswapEnabled', 'aux_field', 'show_card_avatar_urls', 'bogus_folders', 'background_thumbnails_animation']) {
-        const node = labeledControl(id);
-        appendExisting(portraits, node?.tagName === 'LABEL' && byId(id)?.tagName === 'SELECT' ? node.parentElement : node);
-    }
-    appendExisting(portraits, byId('chlo-identity-settings'));
-    appendExisting(layout, theme.querySelector('[name="FontBlurChatWidthBlock"]'), byId('movingUIModeCheckBlock')?.parentElement, byId('MovingUI-presets-block'));
-    for (const id of ['waifuMode', 'expandMessageActions', 'messageTimerEnabled', 'messageTimestampsEnabled', 'messageModelIconEnabled', 'mesIDDisplayEnabled', 'messageTokensEnabled', 'compact_input_area', 'show_swipe_num_all_messages', 'quick_continue', 'quick_impersonate', 'show_group_chat_queue', 'stream_fade_in']) {
-        appendExisting(display, labeledControl(id));
-    }
-    for (const id of ['chat_display', 'media_display']) appendExisting(display, byId(id)?.parentElement);
-    // Notification position lives in this row along with any newly added presentation controls.
-    appendExisting(notifications, avatarDisplay, labeledControl('play_message_sound'), labeledControl('play_sound_unfocused'));
-    appendExisting(accessibility, labeledControl('reduced_motion'));
-    appendExisting(editor, byId('CustomCSS-block'));
-    editor.firstElementChild.hidden = true;
 
     const account = section('Account and language');
     appendExisting(account, byId('account_controls'), byId('UI-language-block'), byId('version_display'));
@@ -86,7 +59,7 @@ function regroupSettings(pages) {
         const row = id.endsWith('_left') ? control?.closest('.doubleRangeContainer')?.parentElement : control?.closest('[title]');
         if (row && autocomplete?.contains(row) && row !== autocomplete) appendExisting(autocompleteLook, row);
     }
-    appendExisting(appearance, autocompleteLook);
+    appendExisting(byId('chlo-appearance-more') ?? pages['appearance-advanced'], autocompleteLook);
     misc?.querySelector('h4')?.remove();
     appendExisting(diagnostics, misc);
     appendExisting(advanced, diagnostics, autocomplete, document.querySelector('[name="STscriptToggles"]'));
@@ -94,11 +67,6 @@ function regroupSettings(pages) {
     for (const id of ['fast_ui_mode', 'noShadowsmode', 'enableZenSliders', 'zoomed_avatar_magnification']) {
         labeledControl(id)?.classList.add('chlo-settings-retired');
     }
-    // Native controls have moved into their own sections. Keep compatibility
-    // inputs in the DOM, but collapse their old layout wrappers and separators.
-    const previousThemeLayout = theme.querySelector('[name="themeElements"]');
-    if (themeColors) previousThemeLayout.before(themeColors);
-    previousThemeLayout.hidden = true;
 }
 
 function controlName(node) {
@@ -129,7 +97,7 @@ export function initUserSettings() {
 
     const bounds = element('div', 'chlo-settings-shell');
     const top = element('header', 'chlo-settings-header');
-    const back = button('Back', () => openPage(current === 'snippets' ? 'interface' : query.value ? 'search' : 'home'), 'arrow-left');
+    const back = button('Back', () => openPage(trail.pop() ?? 'home'), 'arrow-left');
     const heading = element('h3', '', 'User Settings');
     heading.id = 'chlo-settings-heading';
     heading.tabIndex = -1;
@@ -144,15 +112,14 @@ export function initUserSettings() {
     const scroll = element('div', 'chlo-settings-scroll');
     const home = element('div', 'chlo-settings-home');
     const results = element('div', 'chlo-settings-results');
-    const pages = Object.fromEntries(categories.map(([id]) => [id, element('div', 'chlo-settings-page')]));
-    pages.snippets = element('div', 'chlo-settings-page chlo-snippets');
-    const recentList = section('Recently used');
+    const allPages = [...categories, ...appearancePages, ['snippets', 'CSS Snippets']];
+    const pages = Object.fromEntries(allPages.map(([id]) => [id, element('div', 'chlo-settings-page')]));
+    for (const [id, page] of Object.entries(pages)) page.dataset.settingsPage = id;
+    for (const [id] of appearancePages) pages[id].classList.add('chlo-appearance-page');
+    pages.snippets.classList.add('chlo-snippets');
     const themeLabel = element('span', 'chlo-settings-badge');
-    const names = Object.fromEntries(categories.map(([id, name]) => [id, name]));
-    names.snippets = 'CSS Snippets';
-    let recent = [];
-    try { recent = JSON.parse(accountStorage.getItem(recentKey) ?? '[]'); } catch { /* Start with an empty list. */ }
-    if (!Array.isArray(recent)) recent = [];
+    const names = Object.fromEntries(allPages.map(([id, name]) => [id, name]));
+    const trail = [];
     let current = 'home';
     let wasOpen = false;
 
@@ -170,13 +137,18 @@ export function initUserSettings() {
         for (const [key, page] of Object.entries(pages)) page.hidden = key !== id;
         themeLabel.textContent = themeDisplayName(power_user.theme) || 'Themes';
         scroll.scrollTop = 0;
-        if (id === 'home') renderRecent();
         if (focus) heading.focus({ preventScroll: true });
     }
 
+    function navigate(id, options) {
+        if (current !== id) trail.push(current);
+        openPage(id, options);
+    }
+
     function reveal(node, page) {
-        openPage(page, { focus: false });
+        navigate(page, { focus: false });
         expandParents(node, pages[page]);
+        if (node.tagName === 'SUMMARY' && node.parentElement.tagName === 'DETAILS') node.parentElement.open = true;
         node.focus({ preventScroll: true });
         node.scrollIntoView({ block: 'nearest' });
     }
@@ -195,36 +167,14 @@ export function initUserSettings() {
         return row;
     }
 
-    const pinned = [
-        { id: 'chat_width_slider', name: 'Chat Width', page: 'interface' },
-        { id: 'font_scale', name: 'Font Scale', page: 'interface' },
-    ];
-
-    for (const { id, name } of [...pinned,
-        { id: 'toastr_position', name: 'Notification position' },
-        { id: 'avatar_style', name: 'Avatar shape' },
-        { id: 'chat_display', name: 'Chat style' },
-        { id: 'media_display', name: 'Media style' },
-        { id: 'themes', name: 'Theme' },
-        { id: 'ui_language_select', name: 'Language' },
-        { id: 'customCSS', name: 'Custom CSS' },
-    ]) {
+    for (const [id, name] of [['ui_language_select', 'Language'], ['customCSS', 'Custom CSS']]) {
         const node = byId(id);
         if (node) node.dataset.settingLabel = name;
     }
 
-    function renderRecent() {
-        recentList.replaceChildren(element('h4', '', 'Recently used'));
-        const entries = recent.length ? recent : pinned;
-        for (const { id, name, page } of entries) {
-            const node = byId(id);
-            if (!node || !pages[page]?.contains(node)) continue;
-            recentList.append(navRow(name, () => reveal(node, page)));
-        }
-    }
-
     function renderSearch() {
         const term = query.value.trim().toLowerCase();
+        trail.length = 0;
         if (!term) { openPage('home', { focus: false }); return; }
         openPage('search', { focus: false });
         results.replaceChildren();
@@ -232,15 +182,19 @@ export function initUserSettings() {
         for (const [page, root] of Object.entries(pages)) {
             if (page === 'snippets') continue;
             if (names[page].toLowerCase().includes(term)) {
-                results.append(navRow(names[page], () => openPage(page)));
+                results.append(navRow(names[page], () => navigate(page)));
             }
             for (const node of root.querySelectorAll('input:not([type=hidden]):not([type=file]), select, textarea, button, summary, [id].menu_button')) {
                 const hidden = node.closest('.chlo-settings-retired, [hidden], .displayNone');
-                if (hidden && hidden !== root || node.hasAttribute('data-for')) continue;
+                if ((hidden && hidden !== root) || node.hasAttribute('data-for') || node.dataset.settingsSearch === 'ignore') continue;
                 const name = controlName(node) || (node.tagName === 'SUMMARY' ? node.textContent.trim() : '');
-                if (!name || seen.has(name) || !name.toLowerCase().includes(term)) continue;
+                const keywords = [name, node.dataset.settingAliases].filter(Boolean).join(' ').toLowerCase();
+                if (!name || seen.has(name) || !keywords.includes(term)) continue;
                 seen.add(name);
-                results.append(navRow(name, () => node.id === 'chlo-css-snippets-link' ? node.click() : reveal(node, page), names[page]));
+                results.append(navRow(name, () => {
+                    if (node.id === 'chlo-css-snippets-link') navigate('snippets');
+                    else reveal(node, page);
+                }, names[page]));
             }
         }
         if (!results.childElementCount) results.append(element('p', 'chlo-settings-empty', 'No matching settings.'));
@@ -249,34 +203,23 @@ export function initUserSettings() {
     scroll.append(home, results, ...Object.values(pages));
     bounds.append(top, searchRow, scroll);
     drawer.append(bounds);
+    populateAppearance(pages, navRow, navigate);
     regroupSettings(pages);
-    const snippetsLink = navRow('CSS Snippets', () => openPage('snippets'), 'Manage reusable CSS rules', 'code');
-    snippetsLink.id = 'chlo-css-snippets-link';
-    snippetsLink.dataset.settingLabel = 'CSS Snippets';
-    byId('CustomCSS-block')?.before(snippetsLink);
     initCssSnippets(pages.snippets, () => {
         query.value = '';
         showDrawer();
+        trail.splice(0, trail.length, 'home', 'interface', 'appearance-advanced', 'appearance-css');
         openPage('snippets');
     });
 
-    for (const [key, page] of Object.entries(pages)) {
-        page.addEventListener('change', event => {
-            const node = event.target;
-            if (!node.id || !node.matches('input, select, textarea') || ['file', 'hidden'].includes(node.type)) return;
-            const id = node.dataset.for || node.id;
-            const name = controlName(byId(id) ?? node);
-            if (!name) return;
-            recent = [{ id, name, page: key }, ...recent.filter(item => item.id !== id)].slice(0, 4);
-            accountStorage.setItem(recentKey, JSON.stringify(recent));
-        });
-    }
+    eventSource.on(event_types.UI_THEME_CHANGED, () => {
+        themeLabel.textContent = themeDisplayName(power_user.theme) || 'Themes';
+    });
     for (const [key, name, detail, glyph] of categories) {
-        const row = navRow(name, () => openPage(key), detail, glyph, key === 'interface' ? themeLabel : null);
+        const row = navRow(name, () => navigate(key), detail, glyph, key === 'interface' ? themeLabel : null);
         if (key === 'interface') row.classList.add('chlo-settings-category-primary');
         home.append(row);
     }
-    home.append(recentList);
     query.addEventListener('input', renderSearch);
     drawer.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
@@ -291,6 +234,7 @@ export function initUserSettings() {
         railToggle?.setAttribute('aria-expanded', String(open));
         if (!open && wasOpen) {
             query.value = '';
+            trail.length = 0;
             openPage('home', { focus: false });
         }
         wasOpen = open;
