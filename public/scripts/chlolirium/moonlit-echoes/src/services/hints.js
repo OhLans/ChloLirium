@@ -1,5 +1,4 @@
 import { getSettings } from './settings-service.js';
-import { toggleSettingsPopout } from '../ui/controls.js';
 import { t } from '../../../../i18n.js';
 
 export function addThemeButtonsHint() {
@@ -15,7 +14,7 @@ export function addThemeButtonsHint() {
     hint.id = 'moonlit-theme-buttons-hint';
     hint.type = 'button';
     hint.className = 'menu_button menu_button_icon';
-    hint.textContent = t`Customize Moonlit appearance`;
-    hint.addEventListener('click', toggleSettingsPopout);
+    hint.textContent = t`Customize appearance`;
+    hint.addEventListener('click', () => document.dispatchEvent(new Event('chlo:open-appearance')));
     container.append(hint);
 }

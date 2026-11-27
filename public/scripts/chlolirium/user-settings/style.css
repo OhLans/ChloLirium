@@ -1,0 +1,259 @@
+body {
+    --chlo-settings-inset: 0px;
+    --chlo-settings-chat-edge: calc((100dvw - var(--sheldWidth)) / 2);
+    --chlo-settings-width: clamp(310px, calc(var(--chlo-settings-chat-edge) - var(--chlo-settings-inset)), 485px);
+}
+
+#user-settings-block.chlo-user-settings {
+    --settings-accent: var(--customThemeColor, var(--SmartThemeQuoteColor, #bb9b9b));
+    --settings-line: color-mix(in srgb, var(--SmartThemeBodyColor) 19%, transparent);
+    --settings-surface: color-mix(in srgb, var(--SmartThemeBodyColor) 6%, transparent);
+    box-sizing: border-box;
+    position: fixed;
+    inset: var(--topBarBlockSize) auto auto var(--chlo-settings-inset);
+    width: var(--chlo-settings-width);
+    height: calc(100dvh - var(--topBarBlockSize));
+    max-height: calc(100dvh - var(--topBarBlockSize)) !important;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 0;
+    border-block: 0;
+    border-inline-start: 0;
+    z-index: 3000;
+    transition-property: transform, display;
+    transition-duration: var(--animation-duration, 180ms);
+    transform: translateX(-100%);
+}
+
+#user-settings-block.chlo-user-settings.openDrawer {
+    display: flex;
+    transform: translateX(0);
+    animation: none;
+
+    @starting-style {
+        transform: translateX(-100%);
+    }
+}
+
+#user-settings-block.chlo-user-settings > :not(.chlo-settings-shell),
+#user-settings-block.chlo-user-settings [hidden],
+#user-settings-block .chlo-settings-retired {
+    display: none !important;
+}
+
+.chlo-settings-shell {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chlo-settings-header,
+.chlo-settings-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.chlo-settings-header {
+    padding: 16px 16px 12px;
+}
+
+.chlo-settings-header h3 {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    font-size: 1.25em;
+    text-wrap: balance;
+}
+
+.chlo-settings-header h3:focus { outline: none; }
+
+.chlo-settings-search-row {
+    margin: 0 16px 12px;
+    padding: 0 12px;
+    border: 1px solid var(--settings-line);
+    border-radius: 9px;
+    background: var(--settings-surface);
+}
+
+.chlo-settings-search-row input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    padding: 10px 0;
+    outline: none;
+}
+
+.chlo-settings-search-row:focus-within { border-color: var(--settings-accent); }
+
+.chlo-settings-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    padding: 4px 16px 20px;
+    scrollbar-gutter: stable;
+}
+
+.chlo-settings-home,
+.chlo-settings-page,
+.chlo-settings-results,
+.chlo-snippet-list,
+.chlo-snippet-editor {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.chlo-settings-button {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 30px;
+    border: 1px solid var(--settings-line);
+    border-radius: 7px;
+    padding: 5px 9px;
+    color: inherit;
+    font: inherit;
+    background: var(--settings-surface);
+    cursor: pointer;
+}
+
+.chlo-settings-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--settings-accent) 16%, transparent);
+}
+
+.chlo-settings-button:focus-visible {
+    outline: 2px solid var(--settings-accent);
+    outline-offset: 2px;
+}
+
+.chlo-settings-button:disabled { opacity: .5; cursor: default; }
+.chlo-settings-header .chlo-settings-button { border-color: transparent; background: none; }
+
+.chlo-settings-category,
+.chlo-settings-link {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 11px;
+    text-align: start;
+}
+
+.chlo-settings-category {
+    min-height: 67px;
+    padding: 11px 12px;
+    border-radius: 11px;
+}
+
+.chlo-settings-category > i:first-child { width: 22px; text-align: center; font-size: 19px; opacity: .84; }
+.chlo-settings-category > i:last-child, .chlo-settings-link > i { margin-inline-start: auto; opacity: .7; font-size: .8em; }
+.chlo-settings-category-copy { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.chlo-settings-category-copy strong { font-size: 1.13em; overflow-wrap: anywhere; }
+.chlo-settings-category-copy small { font-size: .88em; opacity: .8; }
+
+.chlo-settings-category-primary {
+    background: color-mix(in srgb, var(--settings-accent) 17%, transparent);
+    border-color: color-mix(in srgb, var(--settings-accent) 54%, transparent);
+}
+
+.chlo-settings-badge {
+    color: inherit;
+    opacity: .84;
+    font-size: .76em;
+    border: 1px solid var(--settings-line);
+    border-radius: 6px;
+    padding: 4px 6px;
+    max-width: 28%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chlo-settings-home .chlo-settings-section { margin-top: 10px; border-top: 1px solid var(--settings-line); }
+.chlo-settings-link { padding: 7px 6px; background: none; border: 0; border-bottom: 1px solid var(--settings-line); border-radius: 0; }
+.chlo-settings-link strong { font-size: .94em; font-weight: 500; }
+.chlo-settings-page > *, .chlo-settings-page input, .chlo-settings-page select, .chlo-settings-page textarea { min-width: 0; }
+.chlo-settings-page .flex-container { max-width: 100%; }
+.chlo-settings-page #CustomCSS-block { margin-top: 8px; }
+.chlo-settings-page #themes { flex: 1; }
+.chlo-settings-page textarea { max-width: 100%; }
+.chlo-settings-empty { opacity: .75; padding: 8px 0; }
+
+.chlo-snippet-actions, .chlo-snippet-links, .chlo-snippet-scopes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chlo-snippet-row {
+    border: 1px solid var(--settings-line);
+    border-radius: 8px;
+    background: var(--settings-surface);
+}
+
+.chlo-snippet-row-head { display: flex; align-items: center; gap: 5px; padding: 4px 6px; }
+.chlo-snippet-title { flex: 1; overflow-wrap: anywhere; text-align: start; background: none; border-color: transparent; }
+.chlo-snippet-drag { padding: 6px 3px; cursor: grab; opacity: .64; }
+.chlo-snippet-state { font-size: .78em; opacity: .65; }
+.chlo-snippet-state[data-applied="true"] { opacity: 1; }
+.chlo-snippet-editor { padding: 8px; border-top: 1px solid var(--settings-line); }
+.chlo-snippet-editor textarea { resize: vertical; min-height: 100px; }
+.chlo-snippet-checkbox { min-height: 30px; padding: 0 6px; }
+.chlo-snippet-links button { overflow-wrap: anywhere; }
+.chlo-snippet-uninstall:not(:empty) { padding-top: 10px; border-top: 1px solid var(--settings-line); }
+
+@media (min-width: 1050px) {
+    body.rivelle-navigator-enabled:not(.rn-collapsed) { --chlo-settings-inset: var(--rn-rail, 48px); }
+    body.rivelle-navigator-enabled #rn-left-rail [data-rn-key="usersettings"].active {
+        color: var(--rn-text);
+        background-color: color-mix(in srgb, var(--rn-accent) 26%, transparent);
+    }
+}
+
+@media (min-width: 1001px) {
+    body:not(.movingUI):has(#user-settings-block.chlo-user-settings.openDrawer) #sheld {
+        left: max(var(--chlo-settings-chat-edge), calc(var(--chlo-settings-inset) + var(--chlo-settings-width)));
+        right: auto;
+        width: min(var(--sheldWidth), calc(100dvw - var(--chlo-settings-inset) - var(--chlo-settings-width)));
+        margin-inline: 0;
+    }
+}
+
+@media (max-width: 1000px) {
+    #user-settings-block.chlo-user-settings { width: 100dvw; }
+}
+
+@media (max-width: 380px) {
+    .chlo-settings-badge { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #user-settings-block.chlo-user-settings { transition: none; }
+}
+
+body.reduced-motion #user-settings-block.chlo-user-settings { transition: none; }
+
+#user-settings-block .moonlit-tip-container {
+    margin: 10px 0;
+    border: 1px solid var(--settings-line);
+    border-radius: 5px;
+    overflow: hidden;
+    font-size: .9em !important;
+}
+
+#user-settings-block .moonlit-tip-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--settings-surface);
+    cursor: pointer;
+}

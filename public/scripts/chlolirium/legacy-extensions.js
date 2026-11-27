@@ -1,6 +1,9 @@
 /** Former extension identities, used only to prevent duplicate implementations.
  * Core features have no manifests, loader entries, or extension enable flags. */
+import { legacySnippetFolder } from './user-settings/snippets-data.js';
+
 export const integratedFeatures = [
+    { id: 'chlo-css-snippets', folders: [legacySnippetFolder], titles: ['CSS Snippets'] },
     { id: 'chlo-moonlit-echoes', folders: ['SillyTavern-MoonlitEchoesTheme'], titles: ['Moonlit Echoes Theme'] },
     { id: 'chlo-courtyard', folders: ['SillyTavern-MoonlitCourtyardSuit'], titles: ['Moonlit Courtyard Suit', 'Moonlit Courtyard Suite'] },
     { id: 'chlo-chat-completion-tabs', folders: ['SillyTavern-ChatCompletionTabs'], titles: ['Chat Completion Tabs'] },
