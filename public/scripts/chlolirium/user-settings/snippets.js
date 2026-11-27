@@ -10,6 +10,7 @@ import { SlashCommandEnumValue } from '../../slash-commands/SlashCommandEnumValu
 import { SlashCommandParser } from '../../slash-commands/SlashCommandParser.js';
 import { activeSnippets, legacySnippetFolder, mergeSyncedSnippets, normalizeSnippet, parseSnippetImport, readSnippetSettings, syncedSnippetKey } from './snippets-data.js';
 import { button, element, icon } from './components.js';
+import { themeDisplayName } from './theme-data.js';
 
 const legacyName = `third-party/${legacySnippetFolder}`;
 let settings;
@@ -199,7 +200,7 @@ function searchMatches(snippet, text) {
     const query = text.trim().toLowerCase();
     const match = /^(all|name|title|content|css|theme):\s*(.*)$/.exec(query);
     const term = match?.[2] ?? query;
-    const values = { name: snippet.name, title: snippet.name, content: snippet.content, css: snippet.content, theme: snippet.themeList.join(' ') };
+    const values = { name: snippet.name, title: snippet.name, content: snippet.content, css: snippet.content, theme: snippet.themeList.map(themeDisplayName).join(' ') };
     const fields = !match || match[1] === 'all' ? [values.name, values.content, values.theme] : [values[match[1]]];
     return fields.some(value => value.toLowerCase().includes(term));
 }
@@ -306,7 +307,7 @@ function mountManager(container) {
                 for (const [field, label] of [['themeList', 'Theme'], ['charList', 'Character'], ['groupList', 'Group']]) {
                     for (const key of snippet[field]) {
                         const target = field === 'groupList' ? ctx.groups?.find(group => String(group.id) === key)?.name
-                            : field === 'charList' ? ctx.characters.find(char => char?.avatar === key)?.name : key;
+                            : field === 'charList' ? ctx.characters.find(char => char?.avatar === key)?.name : themeDisplayName(key);
                         const chip = button(`${label}: ${target ?? key} ×`, () => {
                             setLink(snippet, field, key, false);
                             save(snippet);

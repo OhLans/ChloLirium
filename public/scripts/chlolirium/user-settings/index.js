@@ -2,6 +2,7 @@ import { power_user } from '../../power-user.js';
 import { accountStorage } from '../../util/AccountStorage.js';
 import { button, element, icon } from './components.js';
 import { initCssSnippets } from './snippets.js';
+import { themeDisplayName } from './theme-data.js';
 
 const recentKey = 'chlo-user-settings-recent';
 const byId = id => document.getElementById(id);
@@ -44,6 +45,7 @@ function regroupSettings(pages) {
     const editor = section('Custom CSS');
     appendExisting(appearance, theme, layout, portraits, display, accessibility, notifications, editor);
     const avatarDisplay = theme.querySelector('[name="AvatarAndChatDisplay"]');
+    const themeColors = byId('color-picker-block')?.closest('.inline-drawer');
     for (const id of ['avatar_style', 'hideChatAvatarsEnabled', 'hotswapEnabled', 'aux_field', 'show_card_avatar_urls', 'bogus_folders', 'background_thumbnails_animation']) {
         const node = labeledControl(id);
         appendExisting(portraits, node?.tagName === 'LABEL' && byId(id)?.tagName === 'SELECT' ? node.parentElement : node);
@@ -92,6 +94,11 @@ function regroupSettings(pages) {
     for (const id of ['fast_ui_mode', 'noShadowsmode', 'enableZenSliders', 'zoomed_avatar_magnification']) {
         labeledControl(id)?.classList.add('chlo-settings-retired');
     }
+    // Native controls have moved into their own sections. Keep compatibility
+    // inputs in the DOM, but collapse their old layout wrappers and separators.
+    const previousThemeLayout = theme.querySelector('[name="themeElements"]');
+    if (themeColors) previousThemeLayout.before(themeColors);
+    previousThemeLayout.hidden = true;
 }
 
 function controlName(node) {
@@ -161,7 +168,7 @@ export function initUserSettings() {
         searchRow.hidden = id !== 'home' && id !== 'search';
         back.hidden = id === 'home' || id === 'search';
         for (const [key, page] of Object.entries(pages)) page.hidden = key !== id;
-        themeLabel.textContent = power_user.theme || 'Themes';
+        themeLabel.textContent = themeDisplayName(power_user.theme) || 'Themes';
         scroll.scrollTop = 0;
         if (id === 'home') renderRecent();
         if (focus) heading.focus({ preventScroll: true });
@@ -243,15 +250,6 @@ export function initUserSettings() {
     bounds.append(top, searchRow, scroll);
     drawer.append(bounds);
     regroupSettings(pages);
-    const appearance = () => {
-        showDrawer();
-        openPage('interface');
-        const panel = byId('chlo-theme-settings');
-        const toggle = panel?.querySelector('.inline-drawer-toggle');
-        if (toggle && !toggle.classList.contains('open')) toggle.click();
-        panel?.scrollIntoView({ block: 'nearest' });
-    };
-    document.addEventListener('chlo:open-appearance', appearance);
     const snippetsLink = navRow('CSS Snippets', () => openPage('snippets'), 'Manage reusable CSS rules', 'code');
     snippetsLink.id = 'chlo-css-snippets-link';
     snippetsLink.dataset.settingLabel = 'CSS Snippets';
@@ -289,7 +287,7 @@ export function initUserSettings() {
     });
     new MutationObserver(() => {
         const open = drawer.classList.contains('openDrawer');
-        if (open && !wasOpen) themeLabel.textContent = power_user.theme || 'Themes';
+        if (open && !wasOpen) themeLabel.textContent = themeDisplayName(power_user.theme) || 'Themes';
         railToggle?.setAttribute('aria-expanded', String(open));
         if (!open && wasOpen) {
             query.value = '';
