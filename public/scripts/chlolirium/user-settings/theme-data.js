@@ -1,0 +1,41 @@
+export const themeAppearanceKey = 'chlo_appearance';
+export const appearanceOnlyKey = 'chlo_appearance_only';
+
+export function isThemeObject(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+/** Pick appearance values only; never copy settings such as the legacy library,
+ * theme selection, or any other extension data into a portable theme. */
+export function appearanceSnapshot(values, definitions, fallback = {}) {
+    const entries = [
+        { varId: 'enabled', default: true },
+        { varId: 'useOriginalAvatarImages', default: false },
+        ...definitions,
+    ];
+    return Object.fromEntries(entries.map(({ varId, default: initial }) => {
+        const valid = value => typeof value === typeof initial && (typeof value !== 'number' || Number.isFinite(value));
+        const own = Object.hasOwn(values ?? {}, varId) ? values[varId] : undefined;
+        const inherited = Object.hasOwn(fallback, varId) ? fallback[varId] : undefined;
+        return [varId, valid(own) ? own : valid(inherited) ? inherited : initial];
+    }));
+}
+
+/** The extended part of a unified file takes precedence over a legacy pair. */
+export function resolveThemeAppearance(theme, legacy) {
+    if (isThemeObject(theme?.[themeAppearanceKey])) return theme[themeAppearanceKey];
+    return isThemeObject(legacy) ? legacy : null;
+}
+
+export function readThemeImport(data) {
+    if (!isThemeObject(data)) throw new Error('Choose a UI theme JSON file.');
+    if (data.moonlitEchoesPreset === true) {
+        if (typeof data.presetName !== 'string' || !isThemeObject(data.settings)) throw new Error('Invalid Moonlit appearance preset.');
+        return { name: data.presetName.replace(/^\[Moonlit\]\s*/i, '').trim(), appearance: data.settings, legacyAppearance: true };
+    }
+    if (typeof data.name !== 'string') throw new Error('Missing theme name.');
+    if (Object.hasOwn(data, themeAppearanceKey) && !isThemeObject(data[themeAppearanceKey])) {
+        throw new Error('Invalid extended appearance settings.');
+    }
+    return { name: data.name.trim(), appearance: data[themeAppearanceKey] ?? null, legacyAppearance: false };
+}

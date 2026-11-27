@@ -26,22 +26,7 @@ export function initializeSlashCommands() {
 
             chatDisplaySelect.value = styleValue;
 
-            document.body.classList.remove(
-                'flatchat',
-                'bubblechat',
-                'documentstyle',
-                'echostyle',
-                'whisperstyle',
-                'hushstyle',
-                'ripplestyle',
-                'tidestyle',
-            );
-
-            document.body.classList.add(styleName);
-
-            window.updateAvatars?.();
-
-            localStorage.setItem('savedChatStyle', styleValue);
+            chatDisplaySelect.dispatchEvent(new Event('change'));
 
             return t`Chat style switched to ${styleName}`;
         } catch (error) {

@@ -22,7 +22,7 @@ export async function initThemeSettings({ initThemeUI, toggleCss }) {
 
     for (const key of Object.keys(defaultSettings)) {
         if (key !== 'presets' && key !== 'activePreset' && extensionSettings[key] === undefined) {
-            extensionSettings[key] = defaultSettings[key];
+            extensionSettings[key] = extensionSettings.presets[extensionSettings.activePreset]?.[key] ?? defaultSettings[key];
         }
     }
 

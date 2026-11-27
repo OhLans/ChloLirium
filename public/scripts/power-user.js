@@ -1,3 +1,4 @@
+import { appearanceOnlyKey, readThemeImport, resolveThemeAppearance, themeAppearanceKey } from './chlolirium/user-settings/theme-data.js';
 import { Fuse, Handlebars } from '../lib.js';
 
 import {
@@ -343,6 +344,38 @@ export const power_user = {
 };
 
 let themes = [];
+let themeAppearance;
+const legacyAppearanceOptions = new Set();
+
+export function registerThemeAppearance(adapter) {
+    themeAppearance = adapter;
+    refreshLegacyThemeOptions();
+}
+
+export function refreshLegacyThemeOptions() {
+    if (!themeAppearance) return;
+    const legacy = new Set(themeAppearance.names());
+    for (const name of legacyAppearanceOptions) {
+        if (legacy.has(name)) continue;
+        legacyAppearanceOptions.delete(name);
+        themes = themes.filter(theme => theme.name !== name);
+        $('#themes option').filter((_, option) => option.value === name).remove();
+    }
+    for (const name of legacy) {
+        if (themes.some(theme => theme.name === name)) continue;
+        const theme = getBaseThemeObject(name);
+        theme[appearanceOnlyKey] = true;
+        themes.push(theme);
+        legacyAppearanceOptions.add(name);
+        $('#themes').append(new Option(name, name));
+    }
+    if (themes.some(theme => theme.name === power_user.theme)) $('#themes').val(power_user.theme);
+}
+
+function announceThemeChange() {
+    void eventSource.emit(event_types.UI_THEME_CHANGED, power_user.theme);
+}
+
 let movingUIPresets = [];
 /** @type {ContextSettings[]} */
 export let context_presets = [];
@@ -1047,26 +1080,11 @@ function applyChatDisplay() {
     console.debug(`poweruser.chat_display ${power_user.chat_display}`);
     $('#chat_display').val(power_user.chat_display).prop('selected', true);
 
-    switch (power_user.chat_display) {
-        case 0: {
-            console.debug('applying default chat');
-            $('body').removeClass('bubblechat');
-            $('body').removeClass('documentstyle');
-            break;
-        }
-        case 1: {
-            console.debug('applying bubblechat');
-            $('body').addClass('bubblechat');
-            $('body').removeClass('documentstyle');
-            break;
-        }
-        case 2: {
-            console.debug('applying document style');
-            $('body').removeClass('bubblechat');
-            $('body').addClass('documentstyle');
-            break;
-        }
-    }
+    const styles = ['flatchat', 'bubblechat', 'documentstyle', 'echostyle', 'whisperstyle', 'hushstyle', 'ripplestyle', 'tidestyle'];
+    const style = styles[power_user.chat_display] ?? styles[0];
+    document.body.classList.remove(...styles);
+    document.body.classList.add(style);
+    window.updateAvatars?.();
 }
 
 function applyToastrPosition() {
@@ -1437,6 +1455,9 @@ function applyTheme(name) {
         }
     }
 
+    const extended = themeAppearance && resolveThemeAppearance(theme, themeAppearance.legacy(name));
+    if (extended) themeAppearance.apply(extended);
+    announceThemeChange();
     console.log('theme applied: ' + name);
 }
 
@@ -2401,87 +2422,88 @@ async function deleteTheme() {
         return;
     }
 
-    const response = await fetch('/api/themes/delete', {
-        method: 'POST',
-        headers: getRequestHeaders(),
-        body: JSON.stringify({ name: themeName }),
-    });
-
-    if (!response.ok) {
-        toastr.error('Failed to delete theme. Check the console for more information.');
-        return;
-    }
-
-    const themeIndex = themes.findIndex(x => x.name == themeName);
-
-    if (themeIndex !== -1) {
-        themes.splice(themeIndex, 1);
-        $(`#themes option[value="${themeName}"]`).remove();
-        power_user.theme = themes[0]?.name;
-        saveSettingsDebounced();
-        if (power_user.theme) {
-            applyTheme(power_user.theme);
-        }
-        toastr.success('Theme deleted.');
-    }
-}
-
-/**
- * Exports the current theme to a file.
- */
-async function exportTheme() {
-    const themeFile = await saveTheme(power_user.theme);
-    const fileName = `${themeFile.name}.json`;
-    download(JSON.stringify(themeFile, null, 4), fileName, 'application/json');
-}
-
-/**
- * Imports a theme from a file.
- * @param {File} file File to import.
- * @returns {Promise<void>} A promise that resolves when the theme is imported.
- */
-async function importTheme(file) {
-    if (!file) {
-        return;
-    }
-
-    const fileText = await getFileText(file);
-    const parsed = JSON.parse(fileText);
-
-    if (!parsed.name) {
-        throw new Error('Missing name');
-    }
-
-    if (themes.some(t => t.name === parsed.name)) {
-        throw new Error('Theme with that name already exists');
-    }
-
-    if (typeof parsed.custom_css === 'string' && parsed.custom_css.includes('@import')) {
-        const template = $(await renderTemplateAsync('themeImportWarning'));
-        const confirm = await callGenericPopup(template, POPUP_TYPE.CONFIRM);
-        if (!confirm) {
-            throw new Error('Theme contains @import lines');
+    if (!legacyAppearanceOptions.has(themeName)) {
+        const response = await fetch('/api/themes/delete', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify({ name: themeName }),
+        });
+        if (!response.ok) {
+            toastr.error('Failed to delete theme. Check the console for more information.');
+            return;
         }
     }
 
-    themes.push(parsed);
-    await saveTheme(parsed.name, getNewTheme(parsed));
-    const option = document.createElement('option');
-    option.selected = false;
-    option.value = parsed.name;
-    option.innerText = parsed.name;
-    $('#themes').append(option);
+    legacyAppearanceOptions.delete(themeName);
+    themeAppearance?.removeLegacy(themeName);
+    themes = themes.filter(theme => theme.name !== themeName);
+    $('#themes option').filter((_, option) => option.value === themeName).remove();
+    power_user.theme = themes[0]?.name;
+    if (power_user.theme) {
+        $('#themes').val(power_user.theme);
+        applyTheme(power_user.theme);
+    } else {
+        announceThemeChange();
+    }
     saveSettingsDebounced();
-    toastr.success(parsed.name, 'Theme imported');
+    toastr.success('Theme deleted.');
+}
+
+/** Export both appearance layers without changing the saved theme. */
+function exportTheme() {
+    const theme = getThemeObject(power_user.theme || 'UI Theme');
+    download(JSON.stringify(theme, null, 4), `${theme.name}.json`, 'application/json');
+}
+
+/** Accept a unified export, either old theme format, or a complementary legacy pair. */
+async function importTheme(file) {
+    if (!file) return;
+    const parsed = JSON.parse(await getFileText(file));
+    const incoming = readThemeImport(parsed);
+    if (!incoming.name) throw new Error('Missing theme name.');
+    const name = await getSanitizedFilename(incoming.name);
+    if (!name) throw new Error('Invalid theme name.');
+    const existing = themes.find(theme => theme.name === name);
+    const virtual = legacyAppearanceOptions.has(name);
+
+    if (!incoming.legacyAppearance && existing && (incoming.appearance || !existing[appearanceOnlyKey])) {
+        throw new Error('Theme with that name already exists.');
+    }
+    if (incoming.legacyAppearance && !themeAppearance) throw new Error('Extended appearance is not ready.');
+    if (incoming.legacyAppearance && existing?.[themeAppearanceKey]) {
+        const confirmed = await callGenericPopup('Replace the extended appearance of the matching UI theme?', POPUP_TYPE.CONFIRM);
+        if (!confirmed) return;
+    }
+
+    const css = [parsed.custom_css, incoming.appearance?.rawCustomCss];
+    if (css.some(value => typeof value === 'string' && /@import\b/i.test(value))) {
+        const template = $(await renderTemplateAsync('themeImportWarning'));
+        if (!await callGenericPopup(template, POPUP_TYPE.CONFIRM)) return;
+    }
+
+    let theme;
+    if (incoming.legacyAppearance) {
+        theme = { ...(existing ?? getBaseThemeObject(name)), name };
+        theme[themeAppearanceKey] = themeAppearance.normalize(incoming.appearance);
+        if (!existing || virtual) theme[appearanceOnlyKey] = true;
+    } else {
+        theme = getNewTheme({ ...parsed, name });
+        const appearance = incoming.appearance ?? existing?.[themeAppearanceKey] ?? themeAppearance?.legacy(name);
+        if (appearance && themeAppearance) theme[themeAppearanceKey] = themeAppearance.normalize(appearance);
+        if (incoming.appearance && parsed[appearanceOnlyKey] === true) theme[appearanceOnlyKey] = true;
+    }
+    await saveTheme(name, theme, { select: false });
+    toastr.success(name, 'Theme imported');
 }
 
 /**
  * Saves the current theme to the server.
  * @param {string|undefined} name Theme name. If undefined, a popup will be shown to enter a name.
  * @param {object|undefined} theme Theme object. If undefined, the current theme will be saved.
- * @returns {Promise<object>} A promise that resolves when the theme is saved.
+ * @param {{select?: boolean}} options Select the saved theme.
+ * @returns {Promise<object|undefined>} A promise that resolves when the theme is saved.
  */
-async function saveTheme(name = undefined, theme = undefined) {
+async function saveTheme(name = undefined, theme = undefined, { select = true } = {}) {
     if (typeof name !== 'string') {
         const newName = await callGenericPopup('Enter a theme preset name:', POPUP_TYPE.INPUT, power_user.theme);
 
@@ -2492,6 +2514,7 @@ async function saveTheme(name = undefined, theme = undefined) {
         name = await getSanitizedFilename(String(newName));
     }
 
+    if (!name) return;
     if (typeof theme !== 'object') {
         theme = getThemeObject(name);
     }
@@ -2508,31 +2531,33 @@ async function saveTheme(name = undefined, theme = undefined) {
         throw new Error('Theme could not be saved');
     }
 
-    const themeIndex = themes.findIndex(x => x.name == name);
-
-    if (themeIndex == -1) {
+    const themeIndex = themes.findIndex(item => item.name === name);
+    legacyAppearanceOptions.delete(name);
+    if (themeIndex === -1) {
         themes.push(theme);
-        const option = document.createElement('option');
-        option.selected = true;
-        option.value = name;
-        option.innerText = name;
-        $('#themes').append(option);
+        $('#themes').append(new Option(name, name));
     } else {
         themes[themeIndex] = theme;
-        $(`#themes option[value="${name}"]`).prop('selected', true);
     }
-
-    power_user.theme = name;
+    if (select) {
+        power_user.theme = name;
+        $('#themes').val(name);
+        announceThemeChange();
+    } else if (power_user.theme) {
+        $('#themes').val(power_user.theme);
+    }
     saveSettingsDebounced();
-
     return theme;
 }
 
-/**
- * Gets a snapshot of the current theme settings.
- * @param {string} name Name of the theme
- */
+/** Snapshot both layers of the current look in one native theme file. */
 export function getThemeObject(name) {
+    const theme = getBaseThemeObject(name);
+    if (themeAppearance) theme[themeAppearanceKey] = themeAppearance.capture();
+    return theme;
+}
+
+function getBaseThemeObject(name) {
     return {
         name,
         blur_strength: power_user.blur_strength,
@@ -2583,7 +2608,7 @@ export function getThemeObject(name) {
  * @returns {Theme} Theme assigned to the parsed object.
  */
 function getNewTheme(parsed) {
-    const theme = getThemeObject(parsed.name);
+    const theme = getBaseThemeObject(parsed.name);
     for (const key in parsed) {
         if (Object.hasOwn(theme, key)) {
             theme[key] = parsed[key];

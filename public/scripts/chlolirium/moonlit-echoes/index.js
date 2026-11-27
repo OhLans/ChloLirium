@@ -9,35 +9,25 @@ import { THEME_VERSION } from './src/config/theme-info.js';
 export { THEME_VERSION } from './src/config/theme-info.js';
 
 import { t } from '../../i18n.js';
+import { power_user, refreshLegacyThemeOptions, registerThemeAppearance } from '../../power-user.js';
+import { appearanceSnapshot } from '../user-settings/theme-data.js';
 import { tabMappings, themeCustomSettings } from './src/config/theme-settings.js';
 import { settingsKey, getSettings as getExtensionSettings, saveSettings as saveExtensionSettings } from './src/services/settings-service.js';
 import { initializeSlashCommands } from './src/services/slash-commands.js';
 import { initThemeSettings } from './src/bootstrap/init-theme.js';
 import { registerChatDisplaySelect } from './src/services/chat-controls.js';
 import { initControls } from './src/ui/controls.js';
-import {
-    configurePresetManager,
-    createPresetManagerUI,
-    initPresetManager,
-    applyActivePreset,
-    loadPreset,
-    applyPresetToSettings,
-    syncMoonlitPresetsWithThemeList,
-} from './src/ui/preset-manager.js';
 import { configureSettingsTabs, createTabbedSettingsUI } from './src/ui/settings-tabs.js';
 import {
     configureSettingsFactory,
     createCustomSettingsUI,
     createSettingItem,
     updateSettingsUI,
-    updateColorPickerUI,
-    updateSelectUI,
     addModernCompactStyles,
 } from './src/ui/settings-factory.js';
 import { applyAllThemeSettings as applyAllThemeSettingsCore } from './src/core/theme-applier.js';
 import { initAvatarInjector, initFormSheldHeightMonitor } from './src/core/observers.js';
 import { addThemeButtonsHint } from './src/services/hints.js';
-import { integrateWithThemeSelector } from './src/services/theme-selector.js';
 
 // Track if custom chat styles have been added
 let customChatStylesAdded = false;
@@ -52,19 +42,6 @@ export function applyAllThemeSettings(contextOverride) {
  * Includes settings panel, chat style and color picker
  */
 function initThemeUI() {
-    configurePresetManager({
-        settingsKey,
-        themeVersion: THEME_VERSION,
-        t,
-        themeCustomSettings,
-        applyThemeSetting,
-        applyAllThemeSettings,
-        updateSettingsUI,
-        updateColorPickerUI,
-        updateSelectUI,
-        updateThemeSelector,
-    });
-
     configureSettingsTabs({
         t,
         tabMappings,
@@ -77,11 +54,17 @@ function initThemeUI() {
     initChatDisplaySwitcher();
     initAvatarInjector();
 
-    // Initialize preset manager
-    initPresetManager();
-
-    // Apply active preset
-    applyActivePreset();
+    // Account settings hold the live values, including edits made since the
+    // last theme save. Opening the app must not re-apply the saved preset.
+    applyCurrentAppearance();
+    registerThemeAppearance({
+        capture: () => appearanceSnapshot(getExtensionSettings(), themeCustomSettings),
+        normalize: normalizeExtendedAppearance,
+        apply: applyAppearanceSnapshot,
+        names: () => Object.keys(getExtensionSettings()?.presets ?? {}),
+        legacy: getLegacyAppearance,
+        removeLegacy: removeLegacyAppearance,
+    });
 
     // Add creator information
     addThemeCreatorInfo();
@@ -92,9 +75,6 @@ function initThemeUI() {
     // Add theme version information
     addThemeVersionInfo();
 
-    // Integrate with theme selector
-    integrateWithThemeSelector();
-
     // Add theme buttons hint
     addThemeButtonsHint();
 
@@ -103,10 +83,6 @@ function initThemeUI() {
 
     // Initialize slash commands (only when enabled)
     initializeSlashCommands();
-
-    const context = getContext();
-    const settings = getExtensionSettings(context) || {};
-    applyRawCustomCss(settings.rawCustomCss || '');
 }
 
 /**
@@ -318,34 +294,57 @@ function addSlashCommandsTip(container) {
 }
 
 
-/**
-* Handle Moonlit Echoes preset import
-* @param {Object} jsonData - Imported JSON data
-*/
-/**
-* Update theme selector
-* @param {string} presetName - Preset name
-*/
-function updateThemeSelector(presetName) {
-    const themeSelector = document.getElementById('themes');
-    if (!themeSelector) return;
+/** The old appearance catalog remains readable for existing themes and scripts. */
+function getLegacyAppearance(name) {
+    const presets = getExtensionSettings()?.presets ?? {};
+    return Object.hasOwn(presets, name) ? presets[name] : null;
+}
 
-    // Only update theme selector when option already exists, don't add any new options
-    let optionExists = false;
+function removeLegacyAppearance(name) {
+    const settings = getExtensionSettings();
+    if (!getLegacyAppearance(name)) return;
+    delete settings.presets[name];
+    if (settings.activePreset === name) settings.activePreset = Object.keys(settings.presets)[0];
+}
 
-    // Check if option already exists
-    for (let i = 0; i < themeSelector.options.length; i++) {
-        if (themeSelector.options[i].value === presetName) {
-            optionExists = true;
-            themeSelector.selectedIndex = i; // Select that option
-            break;
-        }
+function applyCurrentAppearance() {
+    const settings = getExtensionSettings();
+    for (const { varId } of themeCustomSettings) applyThemeSetting(varId, settings[varId]);
+    applyAllThemeSettings();
+    updateSettingsUI();
+}
+
+function normalizeExtendedAppearance(values) {
+    const { enabled, useOriginalAvatarImages } = getExtensionSettings();
+    return appearanceSnapshot(values, themeCustomSettings, { enabled, useOriginalAvatarImages });
+}
+
+function applyAppearanceSnapshot(values) {
+    const settings = getExtensionSettings();
+    Object.assign(settings, normalizeExtendedAppearance(values));
+    const enabledControl = document.getElementById(`${settingsKey}-enabled`);
+    if (enabledControl) enabledControl.checked = settings.enabled;
+    const avatars = document.getElementById(`${settingsKey}-use-original-avatars`);
+    if (avatars) avatars.checked = settings.useOriginalAvatarImages;
+    toggleCss(settings.enabled);
+    applyCurrentAppearance();
+    window.updateAvatars?.();
+}
+
+function loadLegacyAppearance(name) {
+    const values = getLegacyAppearance(name);
+    if (!values) return false;
+    const settings = getExtensionSettings();
+    settings.activePreset = name;
+    const select = document.getElementById('themes');
+    if (select && [...select.options].some(option => option.value === name)) {
+        select.value = name;
+        select.dispatchEvent(new Event('change'));
+    } else {
+        applyAppearanceSnapshot(values);
+        saveExtensionSettings();
     }
-
-    // Only trigger change event if option exists
-    if (optionExists) {
-        themeSelector.dispatchEvent(new Event('change'));
-    }
+    return true;
 }
 
 /**
@@ -574,9 +573,6 @@ function renderThemeSettings() {
     spacer.style.height = '15px';
     inlineDrawerContent.append(spacer);
 
-    // Create preset manager
-    createPresetManagerUI(inlineDrawerContent, settings);
-
     // Add tips
     addThumbnailTip(inlineDrawerContent);
     addSlashCommandsTip(inlineDrawerContent);
@@ -755,49 +751,17 @@ function initChatDisplaySwitcher() {
         customChatStylesAdded = true;
     }
 
-    // Apply the selected chat style by toggling body classes
-    function applyChatDisplayStyle() {
-        document.body.classList.remove(
-            'flatchat', 'bubblechat', 'documentstyle',
-            'echostyle', 'whisperstyle', 'hushstyle',
-            'ripplestyle', 'tidestyle',
-        );
-
-        switch (chatDisplaySelect.value) {
-            case '0': document.body.classList.add('flatchat'); break;
-            case '1': document.body.classList.add('bubblechat'); break;
-            case '2': document.body.classList.add('documentstyle'); break;
-            case '3': document.body.classList.add('echostyle'); break;
-            case '4': document.body.classList.add('whisperstyle'); break;
-            case '5': document.body.classList.add('hushstyle'); break;
-            case '6': document.body.classList.add('ripplestyle'); break;
-            case '7': document.body.classList.add('tidestyle'); break;
-        }
-
-        window.updateAvatars?.();
-    }
-
-    // Always add our options
     addCustomStyleOptions();
 
-    // Restore saved selections
-    const savedTheme = localStorage.getItem('savedTheme');
-    const savedChatStyle = localStorage.getItem('savedChatStyle');
-    if (savedTheme) themeSelect.value = savedTheme;
-    if (savedChatStyle) chatDisplaySelect.value = savedChatStyle;
-
-    // Events
-    themeSelect.addEventListener('change', function () {
-        localStorage.setItem('savedTheme', themeSelect.value);
-        applyChatDisplayStyle();
-    });
-
-    chatDisplaySelect.addEventListener('change', function () {
-        localStorage.setItem('savedChatStyle', chatDisplaySelect.value);
-        applyChatDisplayStyle();
-    });
-
-    applyChatDisplayStyle();
+    // Older builds restored a browser-only chat style over the account value.
+    // Adopt it once, then let the native UI theme own this setting.
+    const legacyStyle = localStorage.getItem('savedChatStyle');
+    const savedStyle = legacyStyle ?? String(power_user.chat_display);
+    if ([...chatDisplaySelect.options].some(option => option.value === savedStyle)) {
+        chatDisplaySelect.value = savedStyle;
+        chatDisplaySelect.dispatchEvent(new Event('change'));
+    }
+    if (legacyStyle !== null) localStorage.removeItem('savedChatStyle');
 }
 
 
@@ -910,15 +874,15 @@ function runStartupDomReadyTasks() {
     }
 
     try {
-        syncMoonlitPresetsWithThemeList();
+        refreshLegacyThemeOptions();
     } catch (error) {
-        console.error('Moonlit Echoes failed to sync presets after DOM ready', error);
+        console.error('Could not refresh legacy appearance themes', error);
     }
 }
 
 function initializeThemeColorOnDemand() {
     applyAllThemeSettings();
-    syncMoonlitPresetsWithThemeList();
+    refreshLegacyThemeOptions();
 }
 
 function setupPublicMoonlitApi() {
@@ -928,7 +892,7 @@ function setupPublicMoonlitApi() {
         init: function () {
             applyAllThemeSettings();
             initializeThemeColorOnDemand();
-            syncMoonlitPresetsWithThemeList();
+            refreshLegacyThemeOptions();
         },
 
         addSetting: addCustomSetting,
@@ -969,13 +933,13 @@ function setupPublicMoonlitApi() {
 
                 settings.presets[name] = settingsObj || {};
                 saveExtensionSettings(context);
-                syncMoonlitPresetsWithThemeList();
+                refreshLegacyThemeOptions();
 
                 return true;
             },
 
             load: function (name) {
-                return loadPreset(name);
+                return loadLegacyAppearance(name);
             },
 
             update: function (name, settingsObj) {
@@ -1010,12 +974,12 @@ function setupPublicMoonlitApi() {
 
                 if (settings.activePreset === name) {
                     settings.activePreset = 'Default';
-                    applyPresetToSettings('Default');
+                    if (getLegacyAppearance('Default')) applyAppearanceSnapshot(getLegacyAppearance('Default'));
                 }
 
                 delete settings.presets[name];
                 saveExtensionSettings(context);
-                syncMoonlitPresetsWithThemeList();
+                refreshLegacyThemeOptions();
 
                 return true;
             },
@@ -1047,7 +1011,7 @@ function setupPublicMoonlitApi() {
 
                 settings.presets[presetName] = jsonData.settings;
                 saveExtensionSettings(context);
-                syncMoonlitPresetsWithThemeList();
+                refreshLegacyThemeOptions();
 
                 return true;
             },
