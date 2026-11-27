@@ -51,18 +51,21 @@ describe('Moonlit Echoes settings preservation', () => {
         }
     });
 
-    test('existing named presets, selection, colors and custom CSS survive initialization', () => {
+    test('migration removes the old master switch and preserves all appearance choices', () => {
+        const preset = { customThemeColor: 'rgba(174,149,149,1)', customTopBarColor: 'rgba(30,30,30,0.5)', hideAvatarBorder: false };
         const settings = {
-            enabled: false,
             activePreset: 'My Courtyard',
-            presets: { 'My Courtyard': { customThemeColor: 'rgba(174,149,149,1)', customTopBarColor: 'rgba(30,30,30,0.5)' } },
+            presets: { 'My Courtyard': preset },
             customThemeColor: 'rgba(174,149,149,1)',
             rawCustomCss: '#chat { max-width: 950px; }',
             useOriginalAvatarImages: true,
         };
         const before = structuredClone(settings);
-        ensureSettingsStructure(settings);
+        settings.enabled = false;
+        preset.enabled = false;
+        expect(ensureSettingsStructure(settings)).toBe(true);
         expect(settings).toEqual(before);
+        expect(ensureSettingsStructure(settings)).toBe(false);
     });
 
     test('legacy ungrouped settings seed a preset using existing values', () => {

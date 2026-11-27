@@ -15,7 +15,6 @@ let tabsConfig = {
     tabMappings: defaultTabMappings,
     themeCustomSettings: defaultThemeCustomSettings,
     createSettingItem: noop,
-    addModernCompactStyles: noop,
 };
 
 export function configureSettingsTabs(options = {}) {
@@ -26,7 +25,6 @@ export function configureSettingsTabs(options = {}) {
         tabMappings: options.tabMappings || tabsConfig.tabMappings,
         themeCustomSettings: options.themeCustomSettings || tabsConfig.themeCustomSettings,
         createSettingItem: options.createSettingItem || tabsConfig.createSettingItem,
-        addModernCompactStyles: options.addModernCompactStyles || tabsConfig.addModernCompactStyles,
     };
 }
 
@@ -200,8 +198,6 @@ function populateTabContent(tabs, tabContents, settings, firstSectionAlwaysExpan
             isFirstSection = false;
         });
     });
-
-    tabsConfig.addModernCompactStyles();
 }
 
 function saveSectionExpandState(category, isExpanded) {
