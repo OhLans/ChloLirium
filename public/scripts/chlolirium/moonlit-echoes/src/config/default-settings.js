@@ -6,7 +6,6 @@ import { themeCustomSettings } from './theme-settings.js';
  */
 function generateDefaultSettings() {
     const settings = {
-        enabled: true,
         useOriginalAvatarImages: false,
         presets: {
             'Moonlit Echoes - by Rivelle': {},
@@ -27,13 +26,24 @@ export const defaultSettings = generateDefaultSettings();
 /**
  * Ensure the settings structure is up-to-date.
  * @param {Object} settings - Settings object
+ * @returns {boolean} Whether any settings needed migration
  */
 export function ensureSettingsStructure(settings) {
+    let changed = false;
     if (!settings.presets) {
         settings.presets = {};
+        changed = true;
+    }
+
+    for (const appearance of [settings, ...Object.values(settings.presets)]) {
+        if (appearance && Object.hasOwn(appearance, 'enabled')) {
+            delete appearance.enabled;
+            changed = true;
+        }
     }
 
     if (Object.keys(settings.presets).length === 0) {
+        changed = true;
         settings.presets['Moonlit Echoes - by Rivelle'] = {};
 
         themeCustomSettings.forEach((setting) => {
@@ -49,6 +59,7 @@ export function ensureSettingsStructure(settings) {
     if (!settings.activePreset || !settings.presets[settings.activePreset]) {
         const firstPreset = Object.keys(settings.presets)[0] || 'Moonlit Echoes - by Rivelle';
         settings.activePreset = firstPreset;
+        changed = true;
     }
 
     if (settings.presets['Moonlit Echoes']) {
@@ -57,9 +68,11 @@ export function ensureSettingsStructure(settings) {
         }
 
         delete settings.presets['Moonlit Echoes'];
+        changed = true;
 
         if (settings.activePreset === 'Moonlit Echoes') {
             settings.activePreset = 'Moonlit Echoes - by Rivelle';
         }
     }
+    return changed;
 }

@@ -1,35 +1,49 @@
-import { getContext } from '../../../context.js';
+import { EXTENSION_FOLDER_PATH } from '../config/theme-info.js';
+
 /**
- * Apply all theme settings by writing computed CSS variables to the document root.
- * @param {string} settingsKey - Extension settings key.
- * @param {Array} themeCustomSettings - Array of setting definitions containing varId/value pairs.
- * @param {Object} [contextOverride] - Optional SillyTavern context override.
+ * Update an appearance variable and any stylesheet controlled by that setting.
+ * @param {{ varId: string, cssBlock?: string, cssFile?: string }} setting - Appearance control definition.
+ * @param {string|number|boolean} value - Current control value.
+ * @returns {boolean} Whether anything was changed.
  */
-export function applyAllThemeSettings(settingsKey, themeCustomSettings, contextOverride) {
-    if (!settingsKey || !Array.isArray(themeCustomSettings)) {
-        return;
+export function applyAppearanceProperty({ varId, cssBlock, cssFile }, value) {
+    const root = document.documentElement.style;
+    const property = `--${varId}`;
+    const cssValue = String(value);
+    let changed = root.getPropertyValue(property).trim() !== cssValue.trim() || root.getPropertyPriority(property) !== 'important';
+    if (changed) {
+        root.setProperty(property, cssValue, 'important');
     }
 
-    const context = contextOverride || getContext();
-    const settings = context?.extensionSettings?.[settingsKey];
-    if (!settings) {
-        return;
-    }
-
-    let themeStyleElement = document.getElementById('dynamic-theme-styles');
-    if (!themeStyleElement) {
-        themeStyleElement = document.createElement('style');
-        themeStyleElement.id = 'dynamic-theme-styles';
-        document.head.appendChild(themeStyleElement);
-    }
-
-    let cssVars = ':root {\n';
-    themeCustomSettings.forEach(({ varId }) => {
-        if (varId && settings[varId] !== undefined) {
-            cssVars += `  --${varId}: ${settings[varId]} !important;\n`;
+    if (!cssBlock && !cssFile) return changed;
+    const enabled = value === true || value === 'true';
+    const id = `css-block-${varId}`;
+    let stylesheet = document.getElementById(id);
+    if (!stylesheet) {
+        if (cssFile && !enabled) return changed;
+        // Keep inline rules in a fixed cascade order across theme switches.
+        stylesheet = document.createElement(cssFile ? 'link' : 'style');
+        stylesheet.id = id;
+        if (cssFile) {
+            stylesheet.rel = 'stylesheet';
+            stylesheet.href = `${EXTENSION_FOLDER_PATH}/css/${cssFile}`;
         }
-    });
-    cssVars += '}';
+        const customCss = document.getElementById('moonlit-raw-css');
+        if (customCss) customCss.before(stylesheet);
+        else document.head.append(stylesheet);
+    }
 
-    themeStyleElement.textContent = cssVars;
+    if (cssFile) {
+        if (stylesheet.disabled !== !enabled) {
+            stylesheet.disabled = !enabled;
+            changed = true;
+        }
+    } else {
+        const css = enabled ? cssBlock : '';
+        if (stylesheet.textContent !== css) {
+            stylesheet.textContent = css;
+            changed = true;
+        }
+    }
+    return changed;
 }

@@ -1,12 +1,8 @@
 import { getContext } from '../../../context.js';
 import { t } from '../../../../i18n.js';
-import { EXTENSION_FOLDER_PATH } from '../config/theme-info.js';
 import { themeCustomSettings } from '../config/theme-settings.js';
 import { getSettings as getExtensionSettings, saveSettings as saveExtensionSettings } from '../services/settings-service.js';
 import { rgbaToHex, getAlphaFromRgba } from '../utils/color.js';
-
-const SETTINGS_STYLES_ID = 'moonlit-modern-styles';
-const SETTINGS_STYLES_URL = new URL('./settings-factory.css', import.meta.url).href;
 
 let applyThemeSettingFn = () => {};
 let applyRawCustomCssFn = () => {};
@@ -14,18 +10,6 @@ let applyRawCustomCssFn = () => {};
 export function configureSettingsFactory(options = {}) {
     applyThemeSettingFn = options.applyThemeSetting || (() => {});
     applyRawCustomCssFn = options.applyRawCustomCss || (() => {});
-}
-
-export function addModernCompactStyles() {
-    if (document.getElementById(SETTINGS_STYLES_ID)) {
-        return;
-    }
-
-    const linkElement = document.createElement('link');
-    linkElement.id = SETTINGS_STYLES_ID;
-    linkElement.rel = 'stylesheet';
-    linkElement.href = SETTINGS_STYLES_URL;
-    document.head.appendChild(linkElement);
 }
 
 export function createCustomSettingsUI(container, settings) {
@@ -108,8 +92,6 @@ export function createCustomSettingsUI(container, settings) {
         categoryContainer.appendChild(contentContainer);
         container.appendChild(categoryContainer);
     });
-
-    addModernCompactStyles();
 }
 
 export function createSettingItem(container, setting, settings) {
@@ -214,6 +196,7 @@ function createColorPicker(container, setting, settings) {
     const alphaSlider = document.createElement('input');
     alphaSlider.id = `cts-${varId}-alpha`;
     alphaSlider.type = 'range';
+    alphaSlider.classList.add('chlo-appearance-opacity');
     alphaSlider.min = '0';
     alphaSlider.max = '100';
     alphaSlider.step = '1';
@@ -230,10 +213,6 @@ function createColorPicker(container, setting, settings) {
     alphaValue.textContent = Math.round(getAlphaFromRgba(currentValue) * 100);
     alphaValue.style.minWidth = '28px';
     alphaValue.style.textAlign = 'right';
-
-    const styleElem = document.createElement('style');
-    styleElem.id = `color-slider-style-${varId}`;
-    document.head.appendChild(styleElem);
 
     textInput.addEventListener('input', () => {
         const hexValue = textInput.value;
@@ -309,22 +288,10 @@ function createColorPicker(container, setting, settings) {
         colorInput.click();
     });
 
-    colorInput.addEventListener('input', () => {
-        updateColorAndAlpha();
-        alphaSlider.dispatchEvent(new Event('input'));
-    });
-
+    colorInput.addEventListener('input', updateColor);
     alphaSlider.addEventListener('input', () => {
         alphaValue.textContent = alphaSlider.value;
-        const hexColor = colorInput.value;
-        updateSliderThumbColor(hexColor);
-        updateColorAndAlpha();
-    });
-
-    alphaSlider.addEventListener('change', () => {
-        const hexColor = colorInput.value;
-        updateSliderThumbColor(hexColor);
-        updateColorAndAlpha();
+        updateColor();
     });
 
     textInput.addEventListener('focusout', () => {
@@ -336,29 +303,7 @@ function createColorPicker(container, setting, settings) {
     });
 
     function updateSliderThumbColor(hexColor) {
-        const newThumbStyle = `
-            #${alphaSlider.id}::-webkit-slider-thumb {
-                appearance: none;
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                background: ${hexColor};
-                border: 1px solid color-mix(in srgb, var(--SmartThemeBodyColor) 10%, transparent);
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-                cursor: pointer;
-            }
-            #${alphaSlider.id}::-moz-range-thumb {
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                background: ${hexColor};
-                border: 1px solid color-mix(in srgb, var(--SmartThemeBodyColor) 10%, transparent);
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-                cursor: pointer;
-            }
-        `;
-
-        styleElem.textContent = newThumbStyle;
+        alphaSlider.style.setProperty('--appearance-thumb-color', hexColor);
     }
 
     function updateColor() {
@@ -384,24 +329,6 @@ function createColorPicker(container, setting, settings) {
         }));
     }
 
-    function updateColorAndAlpha() {
-        const hexColor = colorInput.value;
-        const alpha = alphaSlider.value / 100;
-
-        const r = parseInt(hexColor.slice(1, 3), 16);
-        const g = parseInt(hexColor.slice(3, 5), 16);
-        const b = parseInt(hexColor.slice(5, 7), 16);
-
-        const rgbaColor = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-
-        colorPreview.style.background = rgbaColor;
-        updateSliderThumbColor(hexColor);
-
-        settings[varId] = rgbaColor;
-        applyThemeSettingFn(varId, rgbaColor);
-        saveExtensionSettings(context);
-    }
-
     alphaRow.appendChild(alphaSlider);
     alphaRow.appendChild(alphaValue);
     alphaContainer.appendChild(alphaLabel);
@@ -414,10 +341,7 @@ function createColorPicker(container, setting, settings) {
 
     container.appendChild(colorPickerContainer);
 
-    setTimeout(() => {
-        const hexColor = rgbaToHex(currentValue) || '#ffffff';
-        updateSliderThumbColor(hexColor);
-    }, 10);
+    updateSliderThumbColor(rgbaToHex(currentValue) || '#ffffff');
 }
 
 function createSlider(container, setting, settings) {
@@ -540,7 +464,7 @@ function createTextareaInput(container, setting, settings) {
 
 function createCheckbox(container, setting, settings) {
     const context = getContext();
-    const { varId, displayText, cssBlock, cssFile, description } = setting;
+    const { varId, displayText, description } = setting;
 
     const checkboxContainer = document.createElement('div');
     checkboxContainer.classList.add('checkbox-container');
@@ -564,60 +488,9 @@ function createCheckbox(container, setting, settings) {
     checkbox.checked = settings[varId] === true;
     checkbox.style.marginLeft = 'auto';
 
-    let styleElement = document.getElementById(`css-block-${varId}`);
-    if (!styleElement) {
-        styleElement = document.createElement('style');
-        styleElement.id = `css-block-${varId}`;
-        document.head.appendChild(styleElement);
-    }
-
-    function updateInlineCssBlock(enabled) {
-        if (!settings.enabled) {
-            styleElement.textContent = '';
-            return;
-        }
-
-        if (styleElement && cssBlock) {
-            styleElement.textContent = enabled ? cssBlock : '';
-        }
-    }
-
-    async function loadExternalCss(enabled) {
-        if (!settings.enabled || !enabled || !cssFile) {
-            if (styleElement) {
-                styleElement.textContent = '';
-            }
-            return;
-        }
-
-        try {
-            const cssFilePath = `${EXTENSION_FOLDER_PATH}/css/${cssFile}`;
-            const response = await fetch(cssFilePath);
-            if (response.ok) {
-                const cssText = await response.text();
-                if (styleElement) {
-                    styleElement.textContent = cssText;
-                }
-            }
-        } catch {
-            // Silently ignore CSS loading errors
-        }
-    }
-
-    async function applyCss(enabled) {
-        if (cssFile) {
-            await loadExternalCss(enabled);
-        } else if (cssBlock) {
-            updateInlineCssBlock(enabled);
-        }
-    }
-
-    void applyCss(checkbox.checked);
-
     checkbox.addEventListener('change', () => {
         settings[varId] = checkbox.checked;
-        void applyCss(checkbox.checked);
-        applyThemeSettingFn(varId, checkbox.checked ? 'true' : 'false');
+        applyThemeSettingFn(varId, checkbox.checked);
         saveExtensionSettings(context);
     });
 
@@ -638,12 +511,13 @@ function createCheckbox(container, setting, settings) {
     container.appendChild(checkboxContainer);
 }
 
-export function updateSettingsUI() {
+export function updateSettingsUI(changed) {
     const context = getContext();
     const settings = getExtensionSettings(context);
 
     themeCustomSettings.forEach(setting => {
         const { varId, type } = setting;
+        if (!changed.has(varId)) return;
         const value = settings[varId];
 
         switch (type) {
@@ -657,6 +531,7 @@ export function updateSettingsUI() {
                 updateSelectUI(varId, value);
                 break;
             case 'text':
+            case 'textarea':
                 updateTextInputUI(varId, value);
                 break;
             case 'checkbox':
@@ -676,6 +551,9 @@ export function updateColorPickerUI(varId, value) {
     if (colorPicker) {
         if (typeof colorPicker.setColor === 'function') {
             colorPicker.setColor(value);
+        } else if (colorPicker instanceof HTMLInputElement) {
+            const hexColor = rgbaToHex(value);
+            if (hexColor) colorPicker.value = hexColor;
         } else {
             colorPicker.setAttribute('color', value);
         }
@@ -698,9 +576,7 @@ export function updateColorPickerUI(varId, value) {
 
         const hexColor = rgbaToHex(value);
         if (hexColor) {
-            setTimeout(() => {
-                updateColorSliderThumb(varId, hexColor);
-            }, 10);
+            updateColorSliderThumb(varId, hexColor);
         }
     }
 }
@@ -721,19 +597,6 @@ export function updateSelectUI(varId, value) {
     const select = document.querySelector(`#cts-${varId}`);
     if (!select) return;
 
-    const settingConfig = themeCustomSettings.find(s => s.varId === varId);
-    if (!settingConfig || !settingConfig.options) return;
-
-    select.innerHTML = '';
-
-    settingConfig.options.forEach(option => {
-        const optionElement = document.createElement('option');
-        optionElement.value = option.value;
-        optionElement.textContent = option.label;
-        optionElement.selected = value === option.value;
-        select.appendChild(optionElement);
-    });
-
     select.value = value;
 }
 
@@ -752,39 +615,7 @@ export function updateCheckboxUI(varId, value) {
 }
 
 function updateColorSliderThumb(varId, hexColor) {
-    const alphaSlider = document.querySelector(`#cts-${varId}-alpha`);
-    if (!alphaSlider) return;
-
-    let styleElement = document.getElementById(`thumb-style-${varId}`);
-    if (!styleElement) {
-        styleElement = document.createElement('style');
-        styleElement.id = `thumb-style-${varId}`;
-        document.head.appendChild(styleElement);
-    }
-
-    const newThumbStyle = `
-        #cts-${varId}-alpha::-webkit-slider-thumb {
-            appearance: none;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: ${hexColor};
-            border: 1px solid color-mix(in srgb, var(--SmartThemeBodyColor) 10%, transparent);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-        }
-        #cts-${varId}-alpha::-moz-range-thumb {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: ${hexColor};
-            border: 1px solid color-mix(in srgb, var(--SmartThemeBodyColor) 10%, transparent);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-        }
-    `;
-
-    styleElement.textContent = newThumbStyle;
+    document.getElementById(`cts-${varId}-alpha`)?.style.setProperty('--appearance-thumb-color', hexColor);
 }
 
 document.addEventListener('colorChanged', (event) => {

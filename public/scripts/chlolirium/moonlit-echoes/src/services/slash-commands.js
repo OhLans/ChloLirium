@@ -1,21 +1,10 @@
 import { getContext } from '../../../context.js';
 import { t } from '../../../../i18n.js';
-import { getSettings as getExtensionSettings } from './settings-service.js';
 import { getChatDisplaySelect } from './chat-controls.js';
 
-/**
- * Initialize slash commands - only when theme is enabled.
- * Register the chat style slash commands.
- */
+/** Register the built-in chat style slash commands. */
 export function initializeSlashCommands() {
-    const context = getContext();
-    const settings = getExtensionSettings(context);
-
-    if (!settings?.enabled) {
-        return;
-    }
-
-    const { SlashCommandParser, SlashCommand } = context;
+    const { SlashCommandParser, SlashCommand } = getContext();
 
     function switchChatStyle(styleName, styleValue) {
         try {

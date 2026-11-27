@@ -3,32 +3,30 @@ import { defaultSettings, ensureSettingsStructure } from '../config/default-sett
 import { settingsKey, getSettings as getExtensionSettings, saveSettings as saveExtensionSettings } from '../services/settings-service.js';
 
 /**
- * Initialize the Moonlit Echoes theme settings and UI.
- * Handles settings bootstrapping, CSS toggling, and defers UI initialization
- * after core settings and DOM are ready.
- *
- * @param {{ initThemeUI: Function, toggleCss: Function }} dependencies - Startup dependencies provided by index.js.
+ * Restore native appearance settings after the account loads.
+ * @param {Function} initThemeUI - Initialize the appearance controls.
  */
-export async function initThemeSettings({ initThemeUI, toggleCss }) {
+export async function initThemeSettings(initThemeUI) {
     const context = getContext();
 
+    let changed = false;
     let extensionSettings = getExtensionSettings(context);
     if (!extensionSettings) {
         context.extensionSettings[settingsKey] = structuredClone(defaultSettings);
         extensionSettings = getExtensionSettings(context);
+        changed = true;
     }
 
-    ensureSettingsStructure(extensionSettings);
+    changed = ensureSettingsStructure(extensionSettings) || changed;
 
     for (const key of Object.keys(defaultSettings)) {
         if (key !== 'presets' && key !== 'activePreset' && extensionSettings[key] === undefined) {
             extensionSettings[key] = extensionSettings.presets[extensionSettings.activePreset]?.[key] ?? defaultSettings[key];
+            changed = true;
         }
     }
 
-    saveExtensionSettings(context);
-
-    toggleCss(extensionSettings.enabled);
+    if (changed) saveExtensionSettings(context);
 
     await initThemeUI();
 }
