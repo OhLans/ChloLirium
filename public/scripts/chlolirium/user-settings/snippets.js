@@ -386,7 +386,7 @@ export function initCssSnippets(container, open) {
     refresh();
     eventSource.on(event_types.CHAT_CHANGED, refresh);
     eventSource.on(event_types.SETTINGS_UPDATED, refresh);
-    $('#themes').on('change.chloCssSnippets', refresh);
+    eventSource.on(event_types.UI_THEME_CHANGED, refresh);
     window.addEventListener('storage', event => {
         if (event.key !== syncedSnippetKey) return;
         const next = mergeSyncedSnippets(settings.snippetList, readSynced(), uuidv4);
