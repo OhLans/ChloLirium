@@ -453,6 +453,15 @@ function renderConnectionProfiles(profiles) {
         option.selected = profile.id === extension_settings.connectionManager.selectedProfile;
         profiles.appendChild(option);
     }
+
+    setProfileActionAvailability(profiles.value);
+}
+
+function setProfileActionAvailability(profileId) {
+    for (const id of ['update_connection_profile', 'edit_connection_profile', 'reload_connection_profile', 'delete_connection_profile']) {
+        const button = /** @type {HTMLButtonElement} */ (document.getElementById(id));
+        button.disabled = !profileId;
+    }
 }
 
 /**
@@ -704,21 +713,14 @@ export async function init() {
         }
     }
 
-    const container = document.getElementById('rm_api_block');
+    const container = document.getElementById('chlo-connection-profiles');
     const settings = await renderExtensionTemplateAsync(MODULE_NAME, 'settings');
-    container.insertAdjacentHTML('afterbegin', settings);
+    container.insertAdjacentHTML('beforeend', settings);
 
     /** @type {HTMLSelectElement} */
     // @ts-ignore
     const profiles = document.getElementById('connection_profiles');
     renderConnectionProfiles(profiles);
-
-    function toggleProfileSpecificButtons() {
-        const profileId = extension_settings.connectionManager.selectedProfile;
-        const profileSpecificButtons = ['update_connection_profile', 'reload_connection_profile', 'delete_connection_profile'];
-        profileSpecificButtons.forEach(id => document.getElementById(id).classList.toggle('disabled', !profileId));
-    }
-    toggleProfileSpecificButtons();
 
     profiles.addEventListener('change', async function () {
         const selectedProfile = profiles.selectedOptions[0];
@@ -733,7 +735,7 @@ export async function init() {
         saveSettingsDebounced();
         await renderDetailsContent(detailsContent);
 
-        toggleProfileSpecificButtons();
+        setProfileActionAvailability(profileId);
 
         // None option selected
         if (!profileId) {
@@ -886,7 +888,8 @@ export async function init() {
     const detailsContent = document.getElementById('connection_profile_details_content');
     viewDetails.addEventListener('click', async () => {
         viewDetails.classList.toggle('active');
-        detailsContent.classList.toggle('hidden');
+        const hidden = detailsContent.classList.toggle('hidden');
+        viewDetails.setAttribute('aria-expanded', String(!hidden));
         await renderDetailsContent(detailsContent);
     });
 

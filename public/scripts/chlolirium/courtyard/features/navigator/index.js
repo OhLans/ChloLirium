@@ -16,6 +16,7 @@ const LEFT_NAV = [
     {
         key: 'api',
         title: 'API Connections',
+        disclosure: true,
         click: '#sys-settings-button > .drawer-toggle',
         icon: '#API-status-top',
         panel: '#rm_api_block',
@@ -126,6 +127,7 @@ function makeButton(item, className) {
     button.className = className;
     button.dataset.rnKey = item.key;
     button.title = item.title;
+    if (item.disclosure) button.setAttribute('aria-controls', item.panel.slice(1));
     button.innerHTML = '<span class="rn-icon-host" aria-hidden="true"></span>';
     button.addEventListener('click', (event) => {
         event.preventDefault();
@@ -604,7 +606,7 @@ function syncOneActiveState(item) {
     const button = $(`[data-rn-key="${item.key}"]`);
     if (button) {
         toggleClass(button, 'active', open);
-        if (item.available) setAttribute(button, 'aria-expanded', String(open));
+        if (item.available || item.disclosure) setAttribute(button, 'aria-expanded', String(open));
     }
     if (item === AI_CONFIG) {
         // Reuse the native panel observer: no click-derived state, DOM moves,

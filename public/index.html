@@ -2293,10 +2293,17 @@
             <div class="drawer-toggle drawer-header">
                 <div id="API-status-top" class="drawer-icon fa-solid fa-plug-circle-exclamation fa-fw closedIcon" title="API Connections" data-i18n="[title]API Connections;[no_connection_text]api_no_connection" no_connection_text="No connection..."></div>
             </div>
-            <div id="rm_api_block" class="drawer-content closedDrawer">
-                <h3 class="margin0" id="title_api">API</h3>
-                <div class="flex-container flexFlowColumn">
+            <div id="rm_api_block" class="drawer-content closedDrawer fillLeft chlo-connection-drawer" role="region" aria-labelledby="chlo-connections-title">
+                <header class="chlo-settings-header">
+                    <h3 id="chlo-connections-title" data-i18n="API Connections">API Connections</h3>
+                    <button type="button" id="chlo-close-connections" class="chlo-settings-button" aria-label="Close API Connections" data-i18n="[aria-label]Close API Connections">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div class="flex-container flexFlowColumn chlo-settings-scroll chlo-connection-scroll">
+                    <div id="chlo-connection-profiles"></div>
                     <div id="main-API-selector-block">
+                        <label for="main_api" id="title_api">API</label>
                         <select id="main_api">
                             <option value="textgenerationwebui" data-i18n="Text Completion">Text Completion</option>
                             <option value="openai" data-i18n="Chat Completion">Chat Completion</option>
@@ -2926,9 +2933,7 @@
                         </div>
                     </div>
                     <div id="openai_api" style="display: none;position: relative;">
-                        <h4 class="margin0" data-i18n="Chat Completion Source">
-                            Chat Completion Source
-                        </h4>
+                        <label for="chat_completion_source" data-i18n="Chat Completion Source">Chat Completion Source</label>
                         <select id="chat_completion_source">
                             <optgroup>
                                 <option value="openai">OpenAI</option>
@@ -3243,40 +3248,43 @@
                                     <option value="" data-i18n="-- Connect to the API --">-- Connect to the API --</option>
                                 </select>
                             </div>
-                            <label for="openrouter_use_fallback" class="checkbox_label marginTopBot5" data-i18n="[title]Allow fallback routes Description" title="Automatically chooses an alternative model if the chosen model can't serve your request.">
-                                <input id="openrouter_use_fallback" type="checkbox" />
-                                <span data-i18n="Allow fallback models">Allow fallback models</span>
-                            </label>
-                            <div>
-                                <h4>
-                                    <span data-i18n="Model Providers">Model Providers</span>
-                                    <i id="openrouter_provider_warning_chat" class="fa-solid fa-circle-exclamation displayNone" title="Deselect inapplicable provider(s) or select an applicable provider to avoid a 404 error."></i>
-                                </h4>
-                                <select id="openrouter_providers_chat" class="openrouter_providers" multiple>
-                                </select>
-                                <label class="checkbox_label marginTopBot5" for="openrouter_allow_fallbacks" data-i18n="[title]Automatically chooses an alternative provider if chosen providers can't serve your request." title="Automatically chooses an alternative provider if chosen providers can't serve your request.">
-                                    <input id="openrouter_allow_fallbacks" type="checkbox" />
-                                    <span data-i18n="Allow fallback providers">Allow fallback providers</span>
+                            <details class="chlo-connection-details">
+                                <summary data-i18n="Model routing">Model routing</summary>
+                                <label for="openrouter_use_fallback" class="checkbox_label marginTopBot5" data-i18n="[title]Allow fallback routes Description" title="Automatically chooses an alternative model if the chosen model can't serve your request.">
+                                    <input id="openrouter_use_fallback" type="checkbox" />
+                                    <span data-i18n="Allow fallback models">Allow fallback models</span>
                                 </label>
-                            </div>
-                            <small class="marginTopBot5">
-                                <i class="fa-solid fa-lightbulb"></i>
-                                <span data-i18n="To use instruct formatting, switch to OpenRouter under Text Completion API.">To use instruct formatting, switch to OpenRouter under Text Completion API.</span>
-                            </small>
-                            <div>
-                                <h4 data-i18n="Model Quantizations">Model Quantizations</h4>
-                                <select id="openrouter_quantizations_chat" class="openrouter_quantizations" multiple>
-                                    <option data-i18n="Integer (4 bit)" value="int4">Integer (4 bit)</option>
-                                    <option data-i18n="Integer (8 bit)" value="int8">Integer (8 bit)</option>
-                                    <option data-i18n="Floating point (4 bit)" value="fp4">Floating point (4 bit)</option>
-                                    <option data-i18n="Floating point (6 bit)" value="fp6">Floating point (6 bit)</option>
-                                    <option data-i18n="Floating point (8 bit)" value="fp8">Floating point (8 bit)</option>
-                                    <option data-i18n="Floating point (16 bit)" value="fp16">Floating point (16 bit)</option>
-                                    <option data-i18n="Brain floating point (16 bit)" value="bf16">Brain floating point (16 bit)</option>
-                                    <option data-i18n="Floating point (32 bit)" value="fp32">Floating point (32 bit)</option>
-                                    <option data-i18n="Unknown" value="unknown">Unknown</option>
-                                </select>
-                            </div>
+                                <div>
+                                    <h4>
+                                        <span data-i18n="Model Providers">Model Providers</span>
+                                        <i id="openrouter_provider_warning_chat" class="fa-solid fa-circle-exclamation displayNone" title="Deselect inapplicable provider(s) or select an applicable provider to avoid a 404 error."></i>
+                                    </h4>
+                                    <select id="openrouter_providers_chat" class="openrouter_providers" multiple>
+                                    </select>
+                                    <label class="checkbox_label marginTopBot5" for="openrouter_allow_fallbacks" data-i18n="[title]Automatically chooses an alternative provider if chosen providers can't serve your request." title="Automatically chooses an alternative provider if chosen providers can't serve your request.">
+                                        <input id="openrouter_allow_fallbacks" type="checkbox" />
+                                        <span data-i18n="Allow fallback providers">Allow fallback providers</span>
+                                    </label>
+                                </div>
+                                <small class="marginTopBot5">
+                                    <i class="fa-solid fa-lightbulb"></i>
+                                    <span data-i18n="To use instruct formatting, switch to OpenRouter under Text Completion API.">To use instruct formatting, switch to OpenRouter under Text Completion API.</span>
+                                </small>
+                                <div>
+                                    <h4 data-i18n="Model Quantizations">Model Quantizations</h4>
+                                    <select id="openrouter_quantizations_chat" class="openrouter_quantizations" multiple>
+                                        <option data-i18n="Integer (4 bit)" value="int4">Integer (4 bit)</option>
+                                        <option data-i18n="Integer (8 bit)" value="int8">Integer (8 bit)</option>
+                                        <option data-i18n="Floating point (4 bit)" value="fp4">Floating point (4 bit)</option>
+                                        <option data-i18n="Floating point (6 bit)" value="fp6">Floating point (6 bit)</option>
+                                        <option data-i18n="Floating point (8 bit)" value="fp8">Floating point (8 bit)</option>
+                                        <option data-i18n="Floating point (16 bit)" value="fp16">Floating point (16 bit)</option>
+                                        <option data-i18n="Brain floating point (16 bit)" value="bf16">Brain floating point (16 bit)</option>
+                                        <option data-i18n="Floating point (32 bit)" value="fp32">Floating point (32 bit)</option>
+                                        <option data-i18n="Unknown" value="unknown">Unknown</option>
+                                    </select>
+                                </div>
+                            </details>
                         </form>
                         <form id="ai21_form" data-source="ai21" action="javascript:void(null);" method="post" enctype="multipart/form-data">
                             <h4 data-i18n="AI21 API Key">AI21 API Key</h4>
@@ -4060,7 +4068,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="prompt_post_processing_form">
+                        <details id="prompt_post_processing_form" class="chlo-connection-details">
+                            <summary data-i18n="Prompt formatting">Prompt formatting</summary>
                             <h4>
                                 <span data-i18n="Prompt Post-Processing">
                                     Prompt Post-Processing
@@ -4083,10 +4092,10 @@
                                     <option data-i18n="prompt_post_processing_single" value="single">Single user message (no tools)</option>
                                 </optgroup>
                             </select>
-                        </div>
-                        <div class="flex-container flex">
+                        </details>
+                        <div class="flex-container flex chlo-connection-actions">
                             <div id="api_button_openai" class="api_button menu_button menu_button_icon" type="submit" data-i18n="Connect">Connect</div>
-                            <div class="api_loading menu_button menu_button_icon" data-i18n="Cancel">Cancel</div>
+                            <div class="api_loading menu_button menu_button_icon" style="display: none;" data-i18n="Cancel">Cancel</div>
                             <div data-source="custom" id="customize_additional_parameters" class="menu_button menu_button_icon" data-i18n="Additional Parameters">Additional Parameters</div>
                             <div data-source="openrouter" class="menu_button menu_button_icon openrouter_authorize" title="Get your OpenRouter API token using OAuth flow. You will be redirected to openrouter.ai" data-i18n="Authorize;[title]Get your OpenRouter API token using OAuth flow. You will be redirected to openrouter.ai">Authorize</div>
                             <div id="test_api_button" class="menu_button menu_button_icon" title="Verifies your API connection by sending a short test message. This may incur usage charges." data-i18n="Test Message;[title]Verifies your API connection by sending a short test message. This may incur usage charges.">Test Message</div>
@@ -4096,14 +4105,15 @@
                             <div class="online_status_text" data-i18n="No connection...">No connection...</div>
                         </div>
                     </div>
-                </div>
-                <div class="flex-container alignitemscenter spaceBetween wide100p">
-                    <label for="auto-connect-checkbox" class="checkbox_label"><input id="auto-connect-checkbox" type="checkbox" />
-                        <span data-i18n="Auto-connect to Last Server">Auto-connect to Last Server</span>
-                    </label>
-                    <a id="viewSecrets" href="javascript:void(0);" data-i18n="[missing_key_text]Missing key;[key_saved_text]Key saved" missing_key_text="❌ Missing key" key_saved_text="✔️ Key saved">
-                        <span data-i18n="View hidden API keys">View hidden API keys</span>
-                    </a>
+                    <details class="chlo-connection-details">
+                        <summary data-i18n="Connection preferences">Connection preferences</summary>
+                        <label for="auto-connect-checkbox" class="checkbox_label"><input id="auto-connect-checkbox" type="checkbox" />
+                            <span data-i18n="Auto-connect to Last Server">Auto-connect to Last Server</span>
+                        </label>
+                        <a id="viewSecrets" href="javascript:void(0);" data-i18n="[missing_key_text]Missing key;[key_saved_text]Key saved" missing_key_text="❌ Missing key" key_saved_text="✔️ Key saved">
+                            <span data-i18n="View hidden API keys">View hidden API keys</span>
+                        </a>
+                    </details>
                 </div>
             </div>
         </div>

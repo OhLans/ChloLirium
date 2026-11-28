@@ -12153,6 +12153,15 @@ jQuery(async function () {
 
     $('.drawer-toggle').on('click', doNavbarIconClick);
 
+    $('#chlo-close-connections').on('click', function () {
+        const toggle = $('#sys-settings-button > .drawer-toggle');
+        if ($('#rm_api_block').hasClass('openDrawer')) {
+            toggle.trigger('click');
+            const launcher = document.querySelector('#rn-left-rail [data-rn-key="api"]:not([hidden])');
+            if (launcher instanceof HTMLElement && launcher.getClientRects().length) launcher.focus();
+        }
+    });
+
     $('html').on('touchstart mousedown', async function (e) {
         const clickTarget = $(e.target);
 
