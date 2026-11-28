@@ -168,13 +168,13 @@
 #left-nav-panel .chlo-parameter-workspace .range-block-counter { flex: 0 0 clamp(66px, 24%, 90px); min-width: 0; margin-inline: 0; }
 #left-nav-panel .chlo-parameter-workspace .range-block-counter input { width: 100%; }
 #left-nav-panel .chlo-parameter-workspace .chlo-parameter-row:has(> .wide100p > input[type="number"]):not(:has(> .toggle-description)) {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(66px, 26%, 100px);
     align-items: center;
     gap: 8px;
 }
-#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row:has(> .wide100p > input[type="number"]):not(:has(> .toggle-description)) > .wide100p {
-    width: clamp(66px, 26%, 100px);
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row:has(> .wide100p > input[type="number"]):not(:has(> .toggle-description)) > .range-block-title {
+    margin: 0;
 }
 #left-nav-panel .chlo-parameter-workspace .chlo-parameter-row > .inline-drawer,
 #left-nav-panel .chlo-parameter-workspace .chlo-parameter-row > .marginTop10 { margin-block: 0; }
