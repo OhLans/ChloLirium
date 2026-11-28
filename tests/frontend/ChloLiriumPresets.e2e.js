@@ -75,6 +75,10 @@ const shared = async page => page.evaluate(async () => {
     return { temperature: s.temp_openai, topP: s.top_p_openai, context: s.openai_max_context, reply: s.openai_max_tokens, stream: s.stream_openai, source: s.chat_completion_source, model: s.custom_model, endpoint: s.custom_url };
 });
 
+const openParameterGroup = async (page, section) => {
+    await page.locator('#openai-tab-content-parameters').locator(`[data-parameter-section="${section}"]`).click();
+};
+
 const openPromptTools = async page => {
     const button = page.getByRole('button', { name: 'Prompt tools', exact: true });
     if (await button.getAttribute('aria-expanded') !== 'true') await button.click();
@@ -150,7 +154,7 @@ test('all tabs share a compact header with their main content immediately below'
         const sizes = [];
         for (const [tab, content] of [
             ['presets', '.chlo-preset-card'],
-            ['parameters', '#openai_max_context'],
+            ['parameters', '.chlo-parameter-overview .chlo-parameter-card'],
             ['prompts', '#completion_prompt_manager_list [data-pm-identifier]'],
         ]) {
             await page.locator(`#openai-tab-btn-${tab}`).click();
@@ -192,19 +196,59 @@ test('prompt-only card and dropdown selections keep unspecified parameters and t
     expect(await shared(page)).toEqual(before);
 });
 
-test('parameters reuse the same native input and preserve its event handler through page changes', async ({ page }) => {
+test('parameter groups reuse native inputs and preserve exact values across tabs', async ({ page }) => {
     const input = await page.locator('#temp_openai').elementHandle();
+    const parameters = page.locator('#openai-tab-content-parameters');
+    const overview = parameters.getByRole('group', { name: 'Parameter groups' });
     await page.locator('#openai-tab-btn-parameters').click();
-    const firstFields = await page.locator('#range_block_openai > .range-block:visible').evaluateAll(rows => rows.slice(0, 5).map(row => row.querySelector('input')?.id));
-    expect(firstFields).toEqual(['openai_max_context', 'openai_max_tokens', 'stream_toggle', 'temp_openai', 'top_p_openai']);
-    await page.locator('#temp_counter_openai').fill('0.82');
-    await page.locator('#temp_counter_openai').press('Tab');
+    await expect(overview.getByRole('button')).toHaveCount(6);
+    await expect(parameters.locator('#temp_openai')).toBeHidden();
+
+    await openParameterGroup(page, 'reply');
+    await expect(parameters.getByRole('heading', { name: 'Reply & Context' })).toBeFocused();
+    await expect(parameters.locator('#openai_max_context')).toBeVisible();
+    await expect(parameters.locator('#openai_max_tokens')).toBeVisible();
+    const streamingHelp = parameters.locator('.range-block:has(#stream_toggle) > .toggle-description');
+    await expect(streamingHelp).toBeHidden();
+    await parameters.getByRole('button', { name: 'Show help' }).click();
+    await expect(streamingHelp).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(overview.getByRole('button', { name: /^Reply & Context/ })).toBeFocused();
+
+    await openParameterGroup(page, 'sampling');
+    await expect(parameters.locator('#openai_max_context')).toBeHidden();
+    await parameters.locator('#temp_counter_openai').fill('0.82');
+    await parameters.locator('#temp_counter_openai').press('Tab');
     expect((await shared(page)).temperature).toBe(0.82);
     await page.locator('#openai-tab-btn-presets').click();
     await page.locator('#openai-tab-btn-parameters').click();
+    await expect(overview).toBeVisible();
+    await openParameterGroup(page, 'sampling');
     expect(await page.locator('#temp_openai').evaluate((node, original) => node === original, input)).toBe(true);
-    await expect(page.locator('#temp_counter_openai')).toHaveValue('0.82');
-    await page.screenshot({ path: path.join(root, '../chlo-native-preset-parameters.png') });
+    await expect(parameters.locator('#temp_counter_openai')).toHaveValue('0.82');
+});
+
+test('parameter groups retain native model availability and keep provider warnings visible', async ({ page }) => {
+    await page.route('**/api/backends/chat-completions/status', route => route.fulfill({ json: { data: [] } }));
+    await page.locator('#openai-tab-btn-parameters').click();
+    const parameters = page.locator('#openai-tab-content-parameters');
+    await openParameterGroup(page, 'tools');
+    await expect(parameters.locator('#openai_enable_web_search')).toBeHidden();
+    await page.evaluate(() => $('#chat_completion_source').val('openrouter').trigger('change'));
+    await expect(parameters.locator('#openai_enable_web_search')).toBeVisible();
+    await expect(parameters.locator('[data-i18n="openrouter_web_search_fee"]')).toBeVisible();
+    await parameters.getByRole('button', { name: 'All parameters' }).click();
+    await openParameterGroup(page, 'reply');
+    await expect(parameters.locator('#openrouter_max_prompt_cost')).toBeVisible();
+    await parameters.getByRole('button', { name: 'All parameters' }).click();
+    await openParameterGroup(page, 'reasoning');
+    await expect(parameters.locator('#openai_reasoning_effort')).toBeVisible();
+    await expect(parameters.locator('#tool_reasoning_mode')).toBeVisible();
+    await page.evaluate(() => $('#chat_completion_source').val('cohere').trigger('change'));
+    await expect(parameters.getByText('No controls in this section for the selected provider.')).toBeVisible();
+    await page.evaluate(() => $('#chat_completion_source').val('custom').trigger('change'));
+    await expect(parameters.locator('#openai_reasoning_effort')).toBeVisible();
+    await expect(parameters.getByText('No controls in this section for the selected provider.')).toBeHidden();
 });
 
 test('native prompt edit form stays within the drawer and saves roles, content and depth normally', async ({ page }) => {
@@ -372,6 +416,7 @@ test('native import and export remain available and the collection follows the n
     await expect(page.locator('#pres_pen_openai')).toHaveValue('0');
     await expect(page.locator('#stream_toggle')).toBeChecked();
     await expect(page.locator('#openai_function_calling')).not.toBeChecked();
+    await openParameterGroup(page, 'sampling');
     await page.locator('#temp_counter_openai').fill('0.72');
     await page.locator('#temp_counter_openai').press('Tab');
     await page.locator('#openai-tab-btn-prompts').click();
@@ -383,6 +428,7 @@ test('native import and export remain available and the collection follows the n
     expect(stored).toMatchObject({ ...parameters, temperature: 0.72 });
     for (const key of ['custom_url', 'custom_model', 'chat_completion_source']) expect(stored).not.toHaveProperty(key);
     await page.locator('#openai-tab-btn-parameters').click();
+    await openParameterGroup(page, 'sampling');
     await page.locator('#temp_counter_openai').fill('1');
     await page.locator('#temp_counter_openai').press('Tab');
     await page.locator('#openai-tab-btn-presets').click();
@@ -395,6 +441,7 @@ test('native import and export remain available and the collection follows the n
         await getPresetApplicationPromise();
     });
     await page.locator('#openai-tab-btn-parameters').click();
+    await openParameterGroup(page, 'sampling');
     await page.locator('#temp_counter_openai').fill('1');
     await page.locator('#temp_counter_openai').press('Tab');
     await page.evaluate(async () => {
@@ -435,6 +482,7 @@ test('the duplicate toolbar is replaced by native actions in their respective pa
     await expect(page.locator('#completion_prompt_manager_footer_append_prompt')).toBeVisible();
     await expect(page.locator('#prompt-manager-import')).toBeVisible();
     await page.locator('#openai-tab-btn-parameters').click();
+    await openParameterGroup(page, 'advanced');
     await page.locator('#chlo-preset-layout-setting summary').click();
     const storedSetting = async () => {
         const settings = JSON.parse(await readFile(path.join(dataRoot, 'default-user/settings.json'), 'utf8'));
