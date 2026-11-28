@@ -66,7 +66,7 @@ test.beforeEach(async ({ page }) => {
     await page.waitForFunction(async () => (await import('/script.js')).settingsReady);
     await page.waitForFunction(async () => (await import('/scripts/events.js')).eventSource.autoFireLastArgs.has('app_ready'));
     await page.evaluate(() => document.querySelectorAll('dialog[open] .popup-button-ok').forEach(button => button.click()));
-    await page.locator('#rn-left-rail').waitFor();
+    await page.locator('#rn-left-rail').waitFor({ state: 'attached' });
     await page.locator('#cts-customTopBarColor-text').waitFor({ state: 'attached' });
 });
 
@@ -138,6 +138,10 @@ test('all native interface features work when the entire extension system is dis
     await expect(page.locator('#quickPersonaMenu')).toBeVisible();
     await page.locator('#addEmojiButton').click();
     await expect(page.locator('em-emoji-picker').locator('input[type="search"]')).toBeVisible();
+    await page.locator('[data-rn-key="api"]').click();
+    const connections = page.getByRole('region', { name: 'API Connections' });
+    await expect(connections.getByLabel('API', { exact: true })).toBeVisible();
+    await expect(connections.locator('#chlo-connection-profiles')).toBeHidden();
 });
 
 test('native settings stay inside the left drawer and extensions omit integrated features', async ({ page }) => {
@@ -158,6 +162,100 @@ test('native settings stay inside the left drawer and extensions omit integrated
     const names = await page.locator('.extensions_info .extension_block').allTextContents();
     expect(names.length).toBeGreaterThan(0);
     expect(names.some(name => /Moonlit|Identity Switch|Chat Completion Tabs|Emoji Picker|Quick Persona/.test(name))).toBe(false);
+});
+
+test('API Connections docks beside chat and keeps profiles and provider controls working', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    let fakeKeySaved = false;
+    await page.route('**/api/settings/save', route => route.fulfill({ status: 200 }));
+    await page.route('**/api/secrets/write', async route => {
+        fakeKeySaved = true;
+        await route.fulfill({ json: { id: 'qa-openrouter-key' } });
+    });
+    await page.route('**/api/secrets/read', route => route.fulfill({
+        json: fakeKeySaved ? { api_key_openrouter: [{ id: 'qa-openrouter-key', label: 'QA key', active: true }] } : {},
+    }));
+    await page.route('**/api/backends/chat-completions/status', route => route.fulfill({
+        json: { data: [{ id: 'qa/test-model', name: 'Test model' }] },
+    }));
+    const launcher = page.locator('[data-rn-key="api"]');
+    const drawer = page.locator('#rm_api_block');
+    await launcher.click();
+    await expect(launcher).toHaveAttribute('aria-expanded', 'true');
+
+    const rail = await page.locator('#rn-left-rail').boundingBox();
+    const chat = await page.locator('#sheld').boundingBox();
+    await expect.poll(async () => (await drawer.boundingBox())?.x).toBeGreaterThanOrEqual(rail.x + rail.width - 1);
+    const box = await drawer.boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(chat.x + 1);
+
+    const profiles = drawer.getByLabel('Connection Profile', { exact: true });
+    await expect(profiles).toBeVisible();
+    await drawer.getByLabel('Chat Completion Source').selectOption('openrouter');
+    const key = drawer.locator('#api_key_openrouter');
+    await expect(key).toBeVisible();
+    await expect(drawer.locator('#model_openrouter_select + .select2-container, #model_openrouter_select:not(.select2-hidden-accessible)')).toBeVisible();
+
+    const routing = drawer.getByText('Model routing', { exact: true });
+    const fallbacks = drawer.locator('#openrouter_allow_fallbacks');
+    await expect(fallbacks).toBeHidden();
+    await routing.click();
+    const useFallbacks = !(await fallbacks.isChecked());
+    await fallbacks.setChecked(useFallbacks);
+    expect(await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.openrouter_allow_fallbacks)).toBe(useFallbacks);
+
+    await drawer.getByText('Prompt formatting', { exact: true }).click();
+    await drawer.locator('#custom_prompt_post_processing').selectOption('strict');
+    expect(await page.evaluate(async () => (await import('/scripts/openai.js')).oai_settings.custom_prompt_post_processing)).toBe('strict');
+
+    await key.fill('fake-local-qa-key');
+    const statusRequest = page.waitForRequest('**/api/backends/chat-completions/status');
+    await drawer.getByRole('button', { name: 'Connect', exact: true }).click();
+    expect((await statusRequest).postDataJSON().chat_completion_source).toBe('openrouter');
+    await expect(key).toHaveValue('');
+    await expect(drawer.locator('#openai_api .online_status_indicator')).toHaveClass(/success/);
+
+    await drawer.getByText('Manage profiles', { exact: true }).click();
+    await expect(drawer.getByRole('button', { name: 'Update', exact: true })).toBeDisabled();
+    await drawer.getByRole('button', { name: 'New', exact: true }).click();
+    const createDialog = page.locator('dialog[open]');
+    await createDialog.locator('.popup-input').fill('Drawer QA');
+    await createDialog.locator('.popup-button-ok').click();
+    await expect(profiles.locator('option:checked')).toHaveText('Drawer QA');
+    await expect(drawer.getByRole('button', { name: 'Update', exact: true })).toBeEnabled();
+    await profiles.selectOption('');
+    await drawer.getByLabel('Chat Completion Source').selectOption('claude');
+    await expect(drawer.locator('#api_key_claude')).toBeVisible();
+    await expect(routing).toBeHidden();
+    await profiles.selectOption({ label: 'Drawer QA' });
+    await expect(drawer.getByLabel('Chat Completion Source')).toHaveValue('openrouter');
+    await expect(key).toBeVisible();
+
+    await drawer.getByRole('button', { name: 'Close API Connections' }).click();
+    await expect(drawer).toBeHidden();
+    await expect(launcher).toBeFocused();
+});
+
+test.describe('narrow viewport', () => {
+    test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+    test('API Connections fits a phone and keeps Text Completion available', async ({ page }) => {
+        const drawer = page.locator('#rm_api_block');
+        await page.locator('#API-status-top').click();
+        await expect(drawer.getByRole('heading', { name: 'API Connections' })).toBeVisible();
+        await expect.poll(async () => Math.abs((await drawer.boundingBox()).x)).toBeLessThanOrEqual(1);
+        const box = await drawer.boundingBox();
+        expect(box.width).toBeCloseTo(390, 0);
+        await page.route('**/api/settings/save', route => route.fulfill({ status: 200 }));
+        await page.route('**/api/backends/text-completions/status', route => route.fulfill({ json: { result: 'test' } }));
+        await drawer.getByLabel('API', { exact: true }).selectOption('textgenerationwebui');
+        await expect(drawer.locator('#textgenerationwebui_api')).toBeVisible();
+        await expect(drawer.getByLabel('Chat Completion Source')).toBeHidden();
+        const scroll = drawer.locator('.chlo-connection-scroll');
+        expect(await scroll.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+        await drawer.getByRole('button', { name: 'Close API Connections' }).click();
+        await expect(drawer).toBeHidden();
+    });
 });
 
 test('settings overviews route to working controls and search returns to its results', async ({ page }) => {

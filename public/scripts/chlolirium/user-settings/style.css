@@ -4,7 +4,7 @@ body {
     --chlo-settings-width: clamp(310px, calc(var(--chlo-settings-chat-edge) - var(--chlo-settings-inset)), 485px);
 }
 
-#user-settings-block.chlo-user-settings {
+:is(#user-settings-block.chlo-user-settings, #rm_api_block.chlo-connection-drawer) {
     --settings-accent: var(--customThemeColor, var(--SmartThemeQuoteColor, #bb9b9b));
     --settings-line: color-mix(in srgb, var(--SmartThemeBodyColor) 19%, transparent);
     --settings-surface: color-mix(in srgb, var(--SmartThemeBodyColor) 6%, transparent);
@@ -26,7 +26,7 @@ body {
     transform: translateX(-100%);
 }
 
-#user-settings-block.chlo-user-settings.openDrawer {
+:is(#user-settings-block.chlo-user-settings, #rm_api_block.chlo-connection-drawer).openDrawer {
     display: flex;
     transform: translateX(0);
     animation: none;
@@ -219,7 +219,7 @@ body {
 }
 
 @media (min-width: 1001px) {
-    body:not(.movingUI):has(#user-settings-block.chlo-user-settings.openDrawer) #sheld {
+    body:not(.movingUI):has(:is(#user-settings-block.chlo-user-settings, #rm_api_block.chlo-connection-drawer).openDrawer) #sheld {
         left: max(var(--chlo-settings-chat-edge), calc(var(--chlo-settings-inset) + var(--chlo-settings-width)));
         right: auto;
         width: min(var(--sheldWidth), calc(100dvw - var(--chlo-settings-inset) - var(--chlo-settings-width)));
@@ -228,7 +228,7 @@ body {
 }
 
 @media (max-width: 1000px) {
-    #user-settings-block.chlo-user-settings { width: 100dvw; }
+    :is(#user-settings-block.chlo-user-settings, #rm_api_block.chlo-connection-drawer) { width: 100dvw; }
 }
 
 @media (max-width: 380px) {
@@ -236,10 +236,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #user-settings-block.chlo-user-settings { transition: none; }
+    :is(#user-settings-block.chlo-user-settings, #rm_api_block.chlo-connection-drawer) { transition: none; }
 }
 
-body.reduced-motion #user-settings-block.chlo-user-settings { transition: none; }
+body.reduced-motion :is(#user-settings-block.chlo-user-settings, #rm_api_block.chlo-connection-drawer) { transition: none; }
 
 .chlo-appearance-preview {
     display: flex;

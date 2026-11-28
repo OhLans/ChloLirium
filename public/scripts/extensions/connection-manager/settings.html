@@ -1,21 +1,34 @@
-<div class="wide100p">
-    <div class="flex-container alignItemsBaseline">
-        <h3 class="margin0">
-            <span data-i18n="Connection Profile">Connection Profile</span>
-            <a href="https://docs.sillytavern.app/usage/core-concepts/connection-profiles" target="_blank" class="notes-link">
-                <span class="fa-solid fa-circle-question note-link-span"></span>
-            </a>
-        </h3>
+<section class="chlo-connection-profile-card">
+    <div class="chlo-connection-profile-heading">
+        <label for="connection_profiles" data-i18n="Connection Profile">Connection Profile</label>
+        <a href="https://docs.sillytavern.app/usage/core-concepts/connection-profiles" target="_blank" class="notes-link" aria-label="Connection profile help" data-i18n="[aria-label]Connection profile help">
+            <span class="fa-solid fa-circle-question note-link-span" aria-hidden="true"></span>
+        </a>
         <i id="connection_profile_spinner" class="fa-solid fa-spinner fa-spin hidden"></i>
     </div>
-    <div class="flex-container">
-        <select class="text_pole flex1" id="connection_profiles"></select>
-        <i id="view_connection_profile" class="menu_button fa-solid fa-info-circle" title="View connection profile details" data-i18n="[title]View connection profile details"></i>
-        <i id="create_connection_profile" class="menu_button fa-solid fa-file-circle-plus" title="Create a new connection profile" data-i18n="[title]Create a new connection profile"></i>
-        <i id="update_connection_profile" class="menu_button fa-solid fa-save" title="Update a connection profile" data-i18n="[title]Update a connection profile"></i>
-        <i id="edit_connection_profile" class="menu_button fa-solid fa-pencil" title="Edit a connection profile" data-i18n="[title]Edit a connection profile"></i>
-        <i id="reload_connection_profile" class="menu_button fa-solid fa-recycle" title="Reload a connection profile" data-i18n="[title]Reload a connection profile"></i>
-        <i id="delete_connection_profile" class="menu_button fa-solid fa-trash-can" title="Delete a connection profile" data-i18n="[title]Delete a connection profile"></i>
-    </div>
-    <div id="connection_profile_details_content" class="hidden"></div>
-</div>
+    <select class="text_pole" id="connection_profiles"></select>
+    <details class="chlo-connection-details chlo-connection-profile-manage">
+        <summary data-i18n="Manage profiles">Manage profiles</summary>
+        <div class="chlo-connection-profile-actions">
+            <button type="button" id="create_connection_profile" class="chlo-settings-button" title="Create a new connection profile" data-i18n="[title]Create a new connection profile">
+                <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i><span data-i18n="New">New</span>
+            </button>
+            <button type="button" id="update_connection_profile" class="chlo-settings-button" title="Update a connection profile" data-i18n="[title]Update a connection profile">
+                <i class="fa-solid fa-save" aria-hidden="true"></i><span data-i18n="Update">Update</span>
+            </button>
+            <button type="button" id="edit_connection_profile" class="chlo-settings-button" title="Edit a connection profile" data-i18n="[title]Edit a connection profile">
+                <i class="fa-solid fa-pencil" aria-hidden="true"></i><span data-i18n="Edit">Edit</span>
+            </button>
+            <button type="button" id="reload_connection_profile" class="chlo-settings-button" title="Reload a connection profile" data-i18n="[title]Reload a connection profile">
+                <i class="fa-solid fa-recycle" aria-hidden="true"></i><span data-i18n="Reload">Reload</span>
+            </button>
+            <button type="button" id="view_connection_profile" class="chlo-settings-button" aria-expanded="false" aria-controls="connection_profile_details_content" title="View connection profile details" data-i18n="[title]View connection profile details">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i><span data-i18n="Details">Details</span>
+            </button>
+            <button type="button" id="delete_connection_profile" class="chlo-settings-button" title="Delete a connection profile" data-i18n="[title]Delete a connection profile">
+                <i class="fa-solid fa-trash-can" aria-hidden="true"></i><span data-i18n="Delete">Delete</span>
+            </button>
+        </div>
+        <div id="connection_profile_details_content" class="hidden"></div>
+    </details>
+</section>

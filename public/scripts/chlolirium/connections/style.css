@@ -1,0 +1,146 @@
+#rm_api_block .chlo-connection-scroll {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+}
+
+#rm_api_block .chlo-connection-scroll > * {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+#chlo-connection-profiles:empty {
+    display: none;
+}
+
+#rm_api_block .chlo-connection-profile-card {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--settings-accent) 40%, var(--settings-line));
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--settings-accent) 11%, transparent);
+}
+
+.chlo-connection-profile-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.chlo-connection-profile-heading label,
+#title_api,
+#rm_api_block label[for="chat_completion_source"] {
+    font-weight: 600;
+}
+
+#rm_api_block .chlo-connection-scroll select,
+#rm_api_block .chlo-connection-scroll .select2-container {
+    min-width: 0;
+    max-width: 100%;
+}
+
+#connection_profiles {
+    margin-block: 0;
+}
+
+#rm_api_block .chlo-connection-profile-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr));
+    gap: 5px;
+}
+
+.chlo-connection-profile-actions > button {
+    overflow-wrap: anywhere;
+}
+
+.chlo-connection-profile-actions > button > i {
+    margin-inline-end: 6px;
+}
+
+#rm_api_block #main-API-selector-block > select,
+#rm_api_block #openai_api > select {
+    margin-top: 4px;
+}
+
+#rm_api_block #openai_api {
+    margin-bottom: 0;
+}
+
+#rm_api_block .chlo-connection-details {
+    padding: 0 10px;
+    border: 1px solid var(--settings-line);
+    border-radius: 8px;
+    background: var(--settings-surface);
+    overflow-wrap: anywhere;
+}
+
+#rm_api_block #openai_api .chlo-connection-details,
+#rm_api_block #model_sorting_form {
+    margin-block: 8px;
+}
+
+#rm_api_block .chlo-connection-profile-manage {
+    border-color: transparent;
+    background: transparent;
+    padding-inline: 0;
+}
+
+.chlo-connection-details > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    list-style: none;
+    cursor: pointer;
+    padding-block: 8px;
+    font-weight: 600;
+}
+
+.chlo-connection-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.chlo-connection-details > summary::after {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-inline-end: 3px;
+    border: solid currentColor;
+    border-width: 0 1px 1px 0;
+    rotate: 45deg;
+    opacity: .75;
+}
+
+.chlo-connection-details[open] > summary::after {
+    rotate: 225deg;
+}
+
+#rm_api_block .chlo-connection-details[open] {
+    padding-block-end: 10px;
+}
+
+#rm_api_block .online_status {
+    margin-block: 8px 0;
+}
+
+#rm_api_block .chlo-connection-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+@media (max-width: 1000px) {
+    /* The root is a containing block for fixed drawers. Keep the toolbar's
+       overflow from scrolling the viewport sideways under the open drawer. */
+    html:has(#rm_api_block.chlo-connection-drawer.openDrawer) {
+        overflow-x: clip;
+    }
+}
+
+@media (max-width: 450px) {
+    #rm_api_block .chlo-connection-profile-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
