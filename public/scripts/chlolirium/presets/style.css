@@ -85,27 +85,102 @@
 .chlo-preset-cover-dialog label { display: flex; flex-direction: column; gap: 10px; }
 .chlo-preset-cover-dialog input { max-width: min(300px, 70vw); }
 
-/* All original controls and their native event handlers stay in the drawer. */
-#left-nav-panel.chlo-preset-panel #range_block_openai > .range-block,
-#left-nav-panel.chlo-preset-panel #openai_settings > div {
-    margin: 0 0 7px;
+/* The Parameters overview filters native rows without changing provider visibility. */
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-hidden,
+#left-nav-panel .chlo-parameter-workspace [hidden] { display: none !important; }
+
+#left-nav-panel .chlo-parameter-overview {
+    display: grid;
+    align-content: start;
+    gap: 9px;
+    min-width: 0;
+}
+
+#left-nav-panel .chlo-parameter-card {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 62px;
     padding: 10px 12px;
     border: 1px solid var(--chlo-preset-line);
-    border-radius: 12px;
+    border-radius: 11px;
     background: var(--chlo-preset-surface);
+    color: inherit;
+    text-align: start;
+    font: inherit;
+    cursor: pointer;
 }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-title { text-align: start; font-size: max(15px, var(--mainFontSize)); margin-bottom: 6px; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-range-and-counter { gap: 6px; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-range { min-width: 0; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-counter { flex: 0 0 clamp(70px, 26%, 88px); min-width: 0; margin-inline: 0; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .range-block-counter input { width: 100%; }
-#left-nav-panel.chlo-preset-panel #range_block_openai .toggle-description { width: auto; margin: 2px 0 0; }
-#left-nav-panel.chlo-preset-panel #range_block_openai > .range-block:has(> .wide100p > input[type="number"]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(70px, 29%); gap: 6px; }
-#left-nav-panel.chlo-preset-panel #range_block_openai > .range-block:has(> .wide100p > input[type="number"]) .range-block-title { margin: 0; }
+
+#left-nav-panel .chlo-parameter-card > i:first-child { font-size: 17px; text-align: center; opacity: .84; }
+#left-nav-panel .chlo-parameter-card > i:last-child { font-size: 11px; opacity: .65; }
+#left-nav-panel .chlo-parameter-card-copy { display: grid; gap: 3px; min-width: 0; }
+#left-nav-panel .chlo-parameter-card-copy strong { font-size: 1.06em; }
+#left-nav-panel .chlo-parameter-card-copy small { font-size: .85em; opacity: .78; }
+#left-nav-panel .chlo-parameter-card:first-child { background: color-mix(in srgb, var(--chlo-preset-accent) 14%, transparent); }
+#left-nav-panel .chlo-parameter-card:hover,
+#left-nav-panel .chlo-parameter-header button:hover { background: color-mix(in srgb, var(--chlo-preset-accent) 23%, transparent); }
+#left-nav-panel .chlo-parameter-workspace button:focus-visible { outline: 2px solid var(--chlo-preset-accent); outline-offset: 2px; }
+
+#left-nav-panel .chlo-parameter-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 36px;
+    margin-bottom: 10px;
+}
+#left-nav-panel .chlo-parameter-heading { flex: 1; min-width: 0; margin: 0; font-size: 1.08em; }
+#left-nav-panel .chlo-parameter-header button {
+    min-width: 30px;
+    min-height: 32px;
+    padding: 3px 7px;
+    border: 1px solid var(--chlo-preset-line);
+    border-radius: 7px;
+    background: var(--chlo-preset-surface);
+    color: inherit;
+    font: inherit;
+    font-size: .82em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+#left-nav-panel .chlo-parameter-header button[aria-pressed="true"] { background: color-mix(in srgb, var(--chlo-preset-accent) 24%, transparent); }
+#left-nav-panel .chlo-parameter-empty { padding: 6px 2px; opacity: .75; }
+
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 10px 4px;
+    border: 0;
+    border-bottom: 1px solid var(--chlo-preset-line);
+    background: none;
+}
+#left-nav-panel .chlo-parameter-workspace:not(.chlo-parameter-show-help) .chlo-parameter-row > .toggle-description:not(b, strong, [id], :has(b, strong)),
+#left-nav-panel .chlo-parameter-workspace:not(.chlo-parameter-show-help) .chlo-parameter-row > .oneline-dropdown > .toggle-description:not(b, strong, [id], :has(b, strong)) {
+    display: none !important;
+}
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row .toggle-description { width: auto; margin-block: 4px 0; }
+#left-nav-panel .chlo-parameter-workspace .range-block-title { text-align: start; margin: 0 0 5px; }
+#left-nav-panel .chlo-parameter-workspace .range-block-range-and-counter { gap: 8px; }
+#left-nav-panel .chlo-parameter-workspace .range-block-range { min-width: 0; }
+#left-nav-panel .chlo-parameter-workspace .range-block-counter { flex: 0 0 clamp(66px, 24%, 90px); min-width: 0; margin-inline: 0; }
+#left-nav-panel .chlo-parameter-workspace .range-block-counter input { width: 100%; }
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row:has(> .wide100p > input[type="number"]):not(:has(> .toggle-description)) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(66px, 26%, 100px);
+    align-items: center;
+    gap: 8px;
+}
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row:has(> .wide100p > input[type="number"]):not(:has(> .toggle-description)) > .range-block-title {
+    margin: 0;
+}
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row > .inline-drawer,
+#left-nav-panel .chlo-parameter-workspace .chlo-parameter-row > .marginTop10 { margin-block: 0; }
 #left-nav-panel.chlo-preset-panel input:not([type=range]):not([type=checkbox]):not([type=radio]),
 #left-nav-panel.chlo-preset-panel select,
 #left-nav-panel.chlo-preset-panel textarea { border-radius: 9px; font-size: max(16px, var(--mainFontSize)); min-width: 0; }
-#left-nav-panel.chlo-preset-panel #range_block_openai input:not([type=range]):not([type=checkbox]) { min-height: 34px; }
 
 /* Editing groups are separate from execution order; dragging uses Prompt order. */
 #left-nav-panel.chlo-preset-panel .chlo-prompt-view-buttons { display: flex; gap: 5px; padding: 4px; border-radius: 10px; background: var(--chlo-preset-surface); }

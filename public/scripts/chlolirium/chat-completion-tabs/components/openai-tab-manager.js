@@ -7,6 +7,7 @@
 import { main_api } from '../../../../script.js';
 import { oai_settings, promptManager } from './../../../openai.js';
 import { TabManager } from './tab-manager.js';
+import { resetParameterWorkspace } from '../../presets/parameters.js';
 import { mountPresetActions } from '../../presets/actions.js';
 import { syncConfigurationWorkspace } from '../../presets/shell.js';
 
@@ -33,7 +34,10 @@ export class OpenAITabManager {
             tabPrefix: 'openai-tab',
             defaultTab: 'presets',
             className: 'openai-tab',
-            onTabSwitch: view => this.panel.dataset.presetView = view,
+            onTabSwitch: view => {
+                this.panel.dataset.presetView = view;
+                if (view === 'parameters') resetParameterWorkspace();
+            },
             tabs: {
                 presets: {
                     label: 'Presets',

@@ -1,4 +1,5 @@
 import { promptManager } from '../../openai.js';
+import { mountParameterWorkspace } from './parameters.js';
 import { confirmPromptSwitch } from './workspace.js';
 
 let synchronize = () => {};
@@ -36,6 +37,7 @@ export function initConfigurationWorkspace() {
             else primaryFields.forEach(({ row, anchor }) => anchor.after(row));
             fieldsMoved = active;
         }
+        mountParameterWorkspace(active ? document.getElementById('openai-tab-content-parameters') : null);
     };
     header.querySelector('button').addEventListener('click', async () => {
         if (!await confirmPromptSwitch(promptManager)) return;
